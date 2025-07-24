@@ -71,6 +71,10 @@ pub enum Placeholder {
     },
     DelegationNondeterminismAccess(usize),
     DelegationNondeterminismAccessNoSplits(usize),
+    DelegationIndirectAccessVariableOffset {
+        register_index: usize,
+        word_index: usize,
+    },
 }
 
 impl std::fmt::Display for Placeholder {
