@@ -156,39 +156,40 @@ fn gpu_worker<C: ProverContext>(
                 GpuWorkRequest::Proof(request) => {
                     let batch_id = request.batch_id;
                     let precomputations = &request.precomputations;
-                    let setup = if let Some(holder) = &current_setup
-                        && Arc::ptr_eq(&holder.trace, &precomputations.setup)
-                    {
-                        trace!(
-                            "BATCH[{batch_id}] GPU_WORKER[{device_id}] proof request reusing setup for circuit {:?}",
-                            request.circuit_type,
-                        );
-                        holder.setup.clone()
-                    } else {
-                        let lde_factor = precomputations.lde_precomputations.lde_factor;
-                        assert!(lde_factor.is_power_of_two());
-                        let log_lde_factor = lde_factor.trailing_zeros();
-                        let domain_size = precomputations.lde_precomputations.domain_size;
-                        assert!(domain_size.is_power_of_two());
-                        let log_domain_size = domain_size.trailing_zeros();
-                        let log_tree_cap_size = get_tree_cap_size(log_domain_size);
-                        let mut setup = SetupPrecomputations::new(
-                            &precomputations.compiled_circuit,
-                            log_lde_factor,
-                            log_tree_cap_size,
-                            &context,
-                        )?;
-                        trace!(
-                            "BATCH[{batch_id}] GPU_WORKER[{device_id}] transferring setup for circuit {:?}",
-                            request.circuit_type,
-                        );
-                        setup.schedule_transfer(precomputations.setup.clone(), &context)?;
-                        let setup = Rc::new(RefCell::new(setup));
-                        current_setup = Some(SetupHolder {
-                            setup: setup.clone(),
-                            trace: precomputations.setup.clone(),
-                        });
-                        setup
+                    let setup = match &current_setup {
+                        Some(holder) if Arc::ptr_eq(&holder.trace, &precomputations.setup) => {
+                            trace!(
+                                "BATCH[{batch_id}] GPU_WORKER[{device_id}] proof request reusing setup for circuit {:?}",
+                                request.circuit_type,
+                            );
+                            holder.setup.clone()
+                        }
+                        _ => {
+                            let lde_factor = precomputations.lde_precomputations.lde_factor;
+                            assert!(lde_factor.is_power_of_two());
+                            let log_lde_factor = lde_factor.trailing_zeros();
+                            let domain_size = precomputations.lde_precomputations.domain_size;
+                            assert!(domain_size.is_power_of_two());
+                            let log_domain_size = domain_size.trailing_zeros();
+                            let log_tree_cap_size = get_tree_cap_size(log_domain_size);
+                            let mut setup = SetupPrecomputations::new(
+                                &precomputations.compiled_circuit,
+                                log_lde_factor,
+                                log_tree_cap_size,
+                                &context,
+                            )?;
+                            trace!(
+                                "BATCH[{batch_id}] GPU_WORKER[{device_id}] transferring setup for circuit {:?}",
+                                request.circuit_type,
+                            );
+                            setup.schedule_transfer(precomputations.setup.clone(), &context)?;
+                            let setup = Rc::new(RefCell::new(setup));
+                            current_setup = Some(SetupHolder {
+                                setup: setup.clone(),
+                                trace: precomputations.setup.clone(),
+                            });
+                            setup
+                        }
                     };
                     (
                         request.batch_id,
