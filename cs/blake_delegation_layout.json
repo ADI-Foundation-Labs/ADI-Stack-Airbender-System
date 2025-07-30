@@ -8,10 +8,6 @@
       "start": 1,
       "num_elements": 1
     },
-    "multiplicities_columns_for_decoder_in_executor_families": {
-      "start": 0,
-      "num_elements": 0
-    },
     "multiplicities_columns_for_generic_lookup": {
       "start": 2,
       "num_elements": 1
@@ -16414,7 +16410,7 @@
     "total_width": 647
   },
   "memory_layout": {
-    "shuffle_ram_inits_and_teardowns": [],
+    "shuffle_ram_inits_and_teardowns": null,
     "shuffle_ram_access_sets": [],
     "delegation_request_layout": null,
     "delegation_processor_layout": {
@@ -16431,8 +16427,6 @@
         "num_elements": 1
       }
     },
-    "machine_state_layout": null,
-    "intermediate_state_layout": null,
     "batched_ram_accesses": [],
     "register_and_indirect_accesses": [
       {
@@ -17337,10 +17331,6 @@
       "start": 2,
       "num_elements": 1
     },
-    "preprocessed_decoder_setup_columns": {
-      "start": 0,
-      "num_elements": 0
-    },
     "total_width": 6
   },
   "stage_2_layout": {
@@ -17376,10 +17366,6 @@
       "start": 1132,
       "num_elements": 1
     },
-    "intermediate_poly_for_decoder_accesses": {
-      "start": 0,
-      "num_elements": 0
-    },
     "intermediate_poly_for_timestamp_range_check_multiplicity": {
       "start": 1136,
       "num_elements": 1
@@ -17388,33 +17374,13 @@
       "start": 1140,
       "num_elements": 1
     },
-    "intermediate_polys_for_decoder_multiplicities": {
-      "start": 0,
-      "num_elements": 0
-    },
     "delegation_processing_aux_poly": {
       "start": 1144,
       "num_elements": 1
     },
-    "intermediate_polys_for_memory_init_teardown": {
-      "start": 1148,
-      "num_elements": 0
-    },
     "intermediate_polys_for_memory_argument": {
       "start": 1148,
-      "num_elements": 44
-    },
-    "intermediate_polys_for_state_permutation": {
-      "start": 0,
-      "num_elements": 0
-    },
-    "intermediate_polys_for_permutation_masking": {
-      "start": 0,
-      "num_elements": 0
-    },
-    "intermediate_poly_for_grand_product": {
-      "start": 1324,
-      "num_elements": 1
+      "num_elements": 45
     },
     "ext4_polys_offset": 60,
     "total_width": 1328
@@ -34097,7 +34063,7 @@
     }
   },
   "scratch_space_size_for_witness_gen": 0,
-  "lazy_init_address_aux_vars": [],
+  "lazy_init_address_aux_vars": null,
   "memory_queries_timestamp_comparison_aux_vars": [],
   "batched_memory_access_timestamp_comparison_aux_vars": {
     "predicate": {
@@ -34282,8 +34248,6 @@
       ]
     ]
   },
-  "executor_family_circuit_next_timestamp_aux_var": null,
-  "executor_family_decoder_table_size": 0,
   "trace_len": 1048576,
   "table_offsets": [
     0,

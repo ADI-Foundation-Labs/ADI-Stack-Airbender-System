@@ -199,7 +199,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         };
         control_reg[1] // only the high 16 bits contain control info (to accomodate for LUI)
     };
-    // TODO: state_indices are not currently being used
     let state_indexes = {
         let [s1, s2] = cs.get_variables_from_lookup_constrained(
             &[LookupInput::from(control)],
@@ -217,11 +216,25 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
     };
     // TODO: is it ok that indirects_alignment_log2 and indirect_accesses.len() mismatch?
     let (state_inputs, state_outputs) = {
+        let state_accesses = state_indexes.iter().flat_map(|&var| [
+            IndirectAccessOffset{
+                variable_dependent: Some((8, var)),
+                offset_constant: 0,
+                assume_no_alignment_overflow: true,
+                is_write_access: true,
+            },
+            IndirectAccessOffset{
+                variable_dependent: Some((8, var)),
+                offset_constant: 4,
+                assume_no_alignment_overflow: true,
+                is_write_access: true,
+            },
+        ]).collect();
         let x11_request = RegisterAccessRequest {
             register_index: 11,
             register_write: false,
             indirects_alignment_log2: 8, // 256 bytes: 25 u64 state + 5 u64 scratch = 240 bytes
-            indirect_accesses: vec![true; 12], // we just r/w 6 u64 words
+            indirect_accesses: state_accesses, // we just r/w 6 u64 words
         };
         let x11_and_indirects = cs.create_register_and_indirect_memory_accesses(x11_request);
         assert_eq!(x11_and_indirects.indirect_accesses.len(), 12);
@@ -237,6 +250,7 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
             let IndirectAccessType::Write {
                 read_value: in_low,
                 write_value: out_low,
+                ..
             } = x11_and_indirects.indirect_accesses[i * 2]
             else {
                 unreachable!()
@@ -244,6 +258,7 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
             let IndirectAccessType::Write {
                 read_value: in_high,
                 write_value: out_high,
+                ..
             } = x11_and_indirects.indirect_accesses[i * 2 + 1]
             else {
                 unreachable!()
