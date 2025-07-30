@@ -1390,17 +1390,19 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                         IndirectAccessColumns::ReadAccess {
                                             read_timestamp,
                                             read_value,
-                                            offset,
+                                            variable_dependent,
+                                            offset_constant,
                                             ..
                                         } => {
-                                            debug_assert!(*offset < 1<<16);
+                                            debug_assert!(*offset_constant < 1<<16);
                                             stage_2_indirect_access_assemble_read_contribution(
                                                 memory_trace_row,
                                                 *read_value,
                                                 *read_timestamp,
                                                 &delegation_write_timestamp_contribution,
                                                 base_value,
-                                                *offset as u16,
+                                                *offset_constant as u16,
+                                                *variable_dependent,
                                                 &memory_argument_challenges,
                                                 &mut numerator_acc_value,
                                                 &mut denom_acc_value,
@@ -1417,10 +1419,11 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                             read_timestamp,
                                             read_value,
                                             write_value,
-                                            offset,
+                                            variable_dependent,
+                                            offset_constant,
                                             ..
                                         } => {
-                                            debug_assert!(*offset < 1<<16);
+                                            debug_assert!(*offset_constant < 1<<16);
                                             stage_2_indirect_access_assemble_write_contribution(
                                                 memory_trace_row,
                                                 *read_value,
@@ -1428,7 +1431,8 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 *read_timestamp,
                                                 &delegation_write_timestamp_contribution,
                                                 base_value,
-                                                *offset as u16,
+                                                *offset_constant as u16,
+                                                *variable_dependent,
                                                 &memory_argument_challenges,
                                                 &mut numerator_acc_value,
                                                 &mut denom_acc_value,

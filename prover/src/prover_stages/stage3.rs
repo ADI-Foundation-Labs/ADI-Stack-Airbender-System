@@ -873,7 +873,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign_by_base(memory_trace_view_row.get_unchecked(set.start()));
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value low is 0 if predicate is 0 at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value low is 0 if predicate is 0 at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -882,7 +882,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign_by_base(memory_trace_view_row.get_unchecked(set.start() + 1));
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value high is 0 if predicate is 0 at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value high is 0 if predicate is 0 at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -898,7 +898,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign(&tau_in_domain_by_half);
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: carry bit is not boolean at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: carry bit is not boolean at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -913,7 +913,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign_by_base(memory_trace_view_row.get_unchecked(set.start()));
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value/write value low is 0 if predicate is 0 at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value/write value low is 0 if predicate is 0 at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -922,7 +922,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign_by_base(memory_trace_view_row.get_unchecked(set.start() + 1));
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value/write value high is 0 if predicate is 0 at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: read timestamp/read value/write value high is 0 if predicate is 0 at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -938,7 +938,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                                 term_contribution.mul_assign(&tau_in_domain_by_half);
                                                 if DEBUG_QUOTIENT {
                                                     if is_last_row == false {
-                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: carry bit is not boolean at row {} for access to register {} indirect access with offset {}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.get_offset());
+                                                        assert_eq!(term_contribution, Mersenne31Complex::ZERO, "unsatisfied for delegation convention: carry bit is not boolean at row {} for access to register {} indirect access with offset_constant {} and variable_dependent {:?}", absolute_row_idx, access.register_access.get_register_index(), indirect_access.offset_constant(), indirect_access.variable_dependent());
                                                     }
                                                 }
                                                 add_quotient_term_contribution_in_ext2(&mut other_challenges_ptr, term_contribution, &mut quotient_term);
@@ -2483,15 +2483,18 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                     let read_value_columns = indirect_access_columns.get_read_value_columns();
                                     let read_timestamp_columns = indirect_access_columns.get_read_timestamp_columns();
                                     let carry_bit_column = indirect_access_columns.get_address_derivation_carry_bit_column();
-                                    let offset = indirect_access_columns.get_offset();
-                                    assert!(offset < 1<<16, "offset {} is too large and not supported", offset);
-                                    // we expect offset == 0 for the first indirect access and offset > 0 for others
-                                    assert_eq!(indirect_access_idx == 0, offset == 0);
+                                    let offset_constant = indirect_access_columns.offset_constant();
+                                    assert!(offset_constant < 1<<16, "offset_constant {} is too large and not supported", offset_constant);
                                     // address contribution is literal constant common, but a little convoluated
 
-                                    // let will multiply offset by inverse of tau in domain by half to make our live simpler below
+                                    // let will multiply offset_constant by inverse of tau in domain by half to make our live simpler below
                                     let mut offset_adjusted = tau_in_domain_by_half_inv;
-                                    offset_adjusted.mul_assign_by_base(&Mersenne31Field(offset));
+                                    offset_adjusted.mul_assign_by_base(&Mersenne31Field(offset_constant));
+                                    if let Some((c, v)) = indirect_access_columns.variable_dependent() {
+                                        let mut t: Mersenne31Field = *memory_trace_view_row.get_unchecked(v.start());
+                                        t.mul_assign(&Mersenne31Field(c));
+                                        offset_adjusted.add_assign_base(&t);
+                                    }
 
                                     let address_contribution = if indirect_access_idx == 0 || carry_bit_column.num_elements() == 0 {
                                         let mem_offset_low = register_read_value_low;
@@ -2509,6 +2512,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
 
                                         address_contribution
                                     } else {
+                                        assert!(indirect_access_columns.variable_dependent().is_none());
                                         // we compute an absolute address as read value + offset, so low part is register_low + offset - 2^16 * carry_bit
                                         let carry_bit = *memory_trace_view_row
                                             .get_unchecked(carry_bit_column.start());

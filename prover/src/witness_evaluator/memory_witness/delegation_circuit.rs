@@ -250,7 +250,7 @@ pub(crate) unsafe fn evaluate_indirect_memory_accesses<
             for (indirect_access_idx, indirect_access) in
                 mem_query.indirect_accesses.iter().enumerate()
             {
-                write_timestamp_placeholder_into_columns(
+                write_timestamp_placeholder_into_memory_columns(
                     indirect_access.get_read_timestamp_columns(),
                     Placeholder::DelegationIndirectReadTimestamp {
                         register_index,

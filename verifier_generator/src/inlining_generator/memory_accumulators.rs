@@ -909,10 +909,22 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                     let read_timestamp_columns = indirect_access.get_read_timestamp_columns();
                     let carry_bit_column =
                         indirect_access.get_address_derivation_carry_bit_column();
-                    let offset = indirect_access.get_offset();
-                    assert!(offset < 1 << 16);
-                    assert_eq!(offset % 4, 0);
-                    assert_eq!(offset as usize, indirect_access_idx * 4);
+                    // TODO: VERY WRONG
+                    let mut offset_constant = indirect_access.offset_constant();
+                    let is_indirect_access_variable_dependent = indirect_access.variable_dependent().is_some();
+                    let (variable_dependent_con, variable_dependent_var) = if let Some((c, v)) = indirect_access.variable_dependent() {
+                        let vexpr = read_value_expr(
+                            ColumnAddress::MemorySubtree(v.start()),
+                            idents,
+                            false
+                        );
+                        (c, vexpr)
+                    } else {
+                        (0, TokenStream::new())
+                    };
+                    assert!(offset_constant < 1 << 16); // NOT GOOD
+                    assert_eq!(offset_constant % 4, 0);
+                    // assert_eq!(offset_constant as usize, indirect_access_idx * 4);
 
                     let register_read_value_low_expr = read_value_expr(
                         ColumnAddress::MemorySubtree(register_read_value_columns.start()),
@@ -952,7 +964,12 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                     {
                         quote! {
                             let mut address_low = #register_read_value_low_expr;
-                            address_low.add_assign_base(&Mersenne31Field(#offset));
+                            address_low.add_assign_base(&Mersenne31Field(#offset_constant));
+                            if #is_indirect_access_variable_dependent {
+                                let mut extra = Mersenne31Field(#variable_dependent_con);
+                                extra.mul_assign(#variable_dependent_var);
+                                address_low.add_assign_base(&extra);
+                            };
 
                             let mut address_contribution = #memory_argument_linearization_challenges_ident
                                 [MEM_ARGUMENT_CHALLENGE_POWERS_ADDRESS_LOW_IDX];
@@ -1002,7 +1019,7 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
 
                         quote! {
                             let mut address_low = #register_read_value_low_expr;
-                            address_low.add_assign_base(&Mersenne31Field(#offset));
+                            address_low.add_assign_base(&Mersenne31Field(#offset_constant));
                             let carry = #carry_bit_expr;
                             let mut carry_bit_shifted = carry;
                             carry_bit_shifted.mul_assign_by_base(&Mersenne31Field(1u32 << 16));

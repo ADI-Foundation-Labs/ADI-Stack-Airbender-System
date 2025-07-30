@@ -441,12 +441,18 @@ impl<F: PrimeField> OneRowCompiler<F> {
 
                     // layout variable part column
                     let variable_part = access.variable_dependent().map(|(offset, var)| {
-                        let variable_column = layout_memory_subtree_variable(
-                            &mut memory_tree_offset,
-                            var,
-                            &mut all_variables_to_place,
-                            &mut layout,
-                        );
+                        let variable_column = if layout.get(&var).is_none() {
+                            layout_memory_subtree_variable(
+                                &mut memory_tree_offset,
+                                var,
+                                &mut all_variables_to_place,
+                                &mut layout,
+                            )
+                        } else {
+                            let ColumnAddress::MemorySubtree(offset) = layout.get(&var).unwrap() else {unreachable!()};
+                            dbg!("probably dependent_variable of u64 access..");
+                            ColumnSet::<1>{ start: *offset, num_elements: 1}
+                        };
 
                         (offset, variable_column)
                     });
