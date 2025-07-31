@@ -13,7 +13,7 @@ use crate::tables::TableDriver;
 use crate::tables::TableType;
 use crate::types::*;
 use field::PrimeField;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::vec;
 
 #[cfg(feature = "debug_evaluate_witness")]

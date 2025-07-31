@@ -200,18 +200,28 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         control_reg[1] // only the high 16 bits contain control info (to accomodate for LUI)
     };
     let state_indexes = {
-        let [s1, s2] = cs.get_variables_from_lookup_constrained(
-            &[LookupInput::from(control)],
-            TableType::KeccakPermutationIndices12,
-        );
-        let [s3, s4] = cs.get_variables_from_lookup_constrained(
-            &[LookupInput::from(control)],
-            TableType::KeccakPermutationIndices34,
-        );
-        let [s5, s6] = cs.get_variables_from_lookup_constrained(
-            &[LookupInput::from(control)],
-            TableType::KeccakPermutationIndices56,
-        );
+        // let [s1, s2] = cs.get_variables_from_lookup_constrained(
+        //     &[LookupInput::from(control)],
+        //     TableType::KeccakPermutationIndices12,
+        // );
+        // let [s3, s4] = cs.get_variables_from_lookup_constrained(
+        //     &[LookupInput::from(control)],
+        //     TableType::KeccakPermutationIndices34,
+        // );
+        // let [s5, s6] = cs.get_variables_from_lookup_constrained(
+        //     &[LookupInput::from(control)],
+        //     TableType::KeccakPermutationIndices56,
+        // );
+
+        // we can't assign to these variables by lookup
+        // since these variables belong to memory subtree
+        // they will be assigned through placeholder by
+        // cs.create_register_and_indirect_memory_accesses
+        let [s1, s2, s3, s4, s5, s6] = from_fn(|_| cs.add_variable());
+        // dbg!([s1, s2, s3, s4, s5, s6]);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s1, s2].map(LookupInput::from), TableType::KeccakPermutationIndices12, true);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s3, s4].map(LookupInput::from), TableType::KeccakPermutationIndices34, true);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s5, s6].map(LookupInput::from), TableType::KeccakPermutationIndices56, true);
         [s1, s2, s3, s4, s5, s6]
     };
     let (state_inputs, state_outputs) = {
