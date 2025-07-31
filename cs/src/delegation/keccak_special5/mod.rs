@@ -214,7 +214,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         );
         [s1, s2, s3, s4, s5, s6]
     };
-    // TODO: is it ok that indirects_alignment_log2 and indirect_accesses.len() mismatch?
     let (state_inputs, state_outputs) = {
         let state_accesses = state_indexes.iter().flat_map(|&var| [
             IndirectAccessOffset{

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cs::utils::timestamp_sub;
 
 use super::*;
@@ -158,6 +160,8 @@ pub(crate) unsafe fn evaluate_indirect_memory_accesses<
         (0, 0, false)
     };
 
+    let mut tot_register_and_indirect_offset_variables = 0;
+
     for (access_idx, mem_query) in compiled_circuit
         .memory_layout
         .register_and_indirect_accesses
@@ -246,6 +250,8 @@ pub(crate) unsafe fn evaluate_indirect_memory_accesses<
 
             let high = base_address >> 16;
 
+            let mut indirect_offset_variables = Vec::with_capacity(mem_query.indirect_accesses.len());
+
             // then all indirects
             for (indirect_access_idx, indirect_access) in
                 mem_query.indirect_accesses.iter().enumerate()
@@ -297,14 +303,7 @@ pub(crate) unsafe fn evaluate_indirect_memory_accesses<
                 }
 
                 if let Some((_, v)) = indirect_access.variable_dependent() {
-                    // need oracle support for that, as we can not have a generic logic to derive it
-                    let placeholder = Placeholder::DelegationIndirectAccessVariableOffset {
-                        register_index,
-                        word_index: indirect_access_idx,
-                    };
-                    let offset =
-                        oracle.get_u16_witness_from_placeholder(placeholder, absolute_row_idx);
-                    memory_row[v.start()] = Mersenne31Field(offset as u32);
+                    indirect_offset_variables.push(v);
                 }
 
                 if COMPUTE_WITNESS {
@@ -347,6 +346,21 @@ pub(crate) unsafe fn evaluate_indirect_memory_accesses<
                     );
                 }
             }
+
+            // we sometimes have offsets with variables repeating one after the other (u64 access)
+            // so we dedup instead (works as long as variables are not disordered)
+            indirect_offset_variables.dedup();
+            assert_eq!(indirect_offset_variables.len(), indirect_offset_variables.iter().collect::<HashSet<_>>().len(), "indirect accesses using the same offset variable must be consecutive");
+            for (idx, v) in indirect_offset_variables.iter().enumerate() {
+                // need oracle support for that, as we can not have a generic logic to derive it
+                let placeholder = Placeholder::DelegationIndirectAccessVariableOffset {
+                    variable_index: tot_register_and_indirect_offset_variables + idx
+                };
+                let offset =
+                    oracle.get_u16_witness_from_placeholder(placeholder, absolute_row_idx);
+                memory_row[v.start()] = Mersenne31Field(offset as u32);
+            }
+            tot_register_and_indirect_offset_variables += indirect_offset_variables.len();
         }
     }
 

@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 pub struct ColumnSet<const WIDTH: usize> {
     pub start: usize,
     pub num_elements: usize,

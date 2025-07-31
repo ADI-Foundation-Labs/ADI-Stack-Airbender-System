@@ -295,5 +295,6 @@ pub fn keccak_special5_over_unrolled_state<M: MemorySource, TR: Tracer<C>, C: Ma
         &mut [],
         &state_read_addresses,
         &mut state_accesses,
+        &state_indexes.map(|x| RegisterOrIndirectVariableOffsetData::from(x as u16))
     );
 }

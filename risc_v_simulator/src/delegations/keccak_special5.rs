@@ -305,5 +305,6 @@ pub fn keccak_special5<
         &mut [],
         &state_read_addresses,
         &mut state_accesses,
+        &state_indexes.map(|x| RegisterOrIndirectVariableOffsetData::from(x as u16))
     );
 }

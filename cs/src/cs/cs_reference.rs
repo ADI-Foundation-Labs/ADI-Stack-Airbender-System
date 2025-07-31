@@ -36,6 +36,7 @@ pub struct BasicAssembly<F: PrimeField, W: WitnessPlacer<F> = CSDebugWitnessEval
     degegated_request_to_process: Option<DelegatedProcessingData>,
     batched_memory_accesses: Vec<BatchedMemoryAccessType>,
     register_and_indirect_memory_accesses: Vec<RegisterAndIndirectAccesses>,
+    register_and_indirect_offset_variables: Vec<Variable>,
 
     pub witness_placer: Option<W>,
     witness_graph: WitnessResolutionGraph<F, W>,
@@ -65,8 +66,9 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
             degegated_request_to_process: None,
             batched_memory_accesses: vec![],
             register_and_indirect_memory_accesses: vec![],
-            witness_graph: WitnessResolutionGraph::new(),
+            register_and_indirect_offset_variables: vec![],
 
+            witness_graph: WitnessResolutionGraph::new(),
             witness_placer: None,
 
             logger: vec![],
@@ -342,11 +344,12 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
         };
 
         let mut indirect_accesses = vec![];
+        let mut indirect_offset_variables = Vec::with_capacity(request.indirect_accesses.len());
 
         for (indirect_access_idx, access_description) in
             request.indirect_accesses.into_iter().enumerate()
         {
-            if let Some((c, _)) = access_description.variable_dependent {
+            if let Some((c, v)) = access_description.variable_dependent {
                 assert!(
                     c < 1 << 16,
                     "constant multiplier {} is too large and unsupported",
@@ -356,6 +359,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
                     access_description.assume_no_alignment_overflow,
                     "overflowing address generation with variable part is not yet supported"
                 );
+                indirect_offset_variables.push(v);
             }
             if access_description.variable_dependent.is_none() {
                 if access_description.assume_no_alignment_overflow {
@@ -454,6 +458,24 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
             indirect_accesses.push(access);
         }
 
+        // we sometimes have offsets with variables repeating one after the other (u64 access)
+        // so we dedup instead (works as long as variables are used in order)
+        indirect_offset_variables.dedup();
+        assert_eq!(indirect_offset_variables.len(), indirect_offset_variables.iter().collect::<HashSet<_>>().len(), "indirect accesses using the same offset variable must be consecutive");
+        for (idx, &var) in indirect_offset_variables.iter().enumerate() {
+            let placeholder = Placeholder::DelegationIndirectAccessVariableOffset { 
+                variable_index: self.register_and_indirect_offset_variables.len() + idx
+            };
+
+            self.require_invariant(var, Invariant::Substituted((placeholder, 0)));
+
+            let value_fn = move |placer: &mut Self::WitnessPlacer| {
+                let value = placer.get_oracle_u16(placeholder);
+                placer.assign_u16(var, &value);
+            };
+            self.set_values(value_fn);
+        }
+
         let access = RegisterAndIndirectAccesses {
             register_index: request.register_index,
             indirects_alignment_log2: request.indirects_alignment_log2,
@@ -463,6 +485,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
 
         self.register_and_indirect_memory_accesses
             .push(access.clone());
+        self.register_and_indirect_offset_variables.extend(&indirect_offset_variables);
 
         access
     }

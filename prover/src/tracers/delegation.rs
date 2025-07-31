@@ -1,7 +1,7 @@
 use cs::definitions::TimestampData;
 use fft::GoodAllocator;
 use risc_v_simulator::abstractions::tracer::{
-    RegisterOrIndirectReadData, RegisterOrIndirectReadWriteData,
+    RegisterOrIndirectReadData, RegisterOrIndirectReadWriteData, RegisterOrIndirectVariableOffsetData,
 };
 use std::alloc::Global;
 
@@ -15,7 +15,8 @@ pub struct IndirectAccessLocation {
 #[serde(bound = "\
         Vec<TimestampData, A>: serde::Serialize + serde::de::DeserializeOwned, \
         Vec<RegisterOrIndirectReadData, A>: serde::Serialize + serde::de::DeserializeOwned, \
-        Vec<RegisterOrIndirectReadWriteData, A>: serde::Serialize + serde::de::DeserializeOwned\
+        Vec<RegisterOrIndirectReadWriteData, A>: serde::Serialize + serde::de::DeserializeOwned, \
+        Vec<RegisterOrIndirectVariableOffsetData, A>: serde::Serialize + serde::de::DeserializeOwned, \
         ")]
 pub struct DelegationWitness<A: GoodAllocator = Global> {
     pub num_requests: usize,
@@ -31,6 +32,7 @@ pub struct DelegationWitness<A: GoodAllocator = Global> {
     pub register_accesses: Vec<RegisterOrIndirectReadWriteData, A>,
     pub indirect_reads: Vec<RegisterOrIndirectReadData, A>,
     pub indirect_writes: Vec<RegisterOrIndirectReadWriteData, A>,
+    pub indirect_offset_variables: Vec<RegisterOrIndirectVariableOffsetData, A>,
 }
 
 impl<A: GoodAllocator> DelegationWitness<A> {
@@ -141,6 +143,7 @@ pub fn blake2_with_control_factory_fn<A: GoodAllocator>(
         register_accesses: Vec::with_capacity_in(capacity * 4, A::default()),
         indirect_reads: Vec::with_capacity_in(capacity * 16, A::default()),
         indirect_writes: Vec::with_capacity_in(capacity * 24, A::default()),
+        indirect_offset_variables: Vec::new_in(A::default())
     }
 }
 
@@ -186,6 +189,7 @@ pub fn bigint_with_control_factory_fn<A: GoodAllocator>(
         register_accesses: Vec::with_capacity_in(capacity * 3, A::default()),
         indirect_reads: Vec::with_capacity_in(capacity * 8, A::default()),
         indirect_writes: Vec::with_capacity_in(capacity * 8, A::default()),
+        indirect_offset_variables: Vec::new_in(A::default())
     }
 }
 
@@ -221,5 +225,6 @@ pub fn keccak_special5_with_control_factory_fn<A: GoodAllocator>(
         register_accesses: Vec::with_capacity_in(capacity * 2, A::default()),
         indirect_reads: Vec::with_capacity_in(capacity * 0, A::default()),
         indirect_writes: Vec::with_capacity_in(capacity * 12, A::default()),
+        indirect_offset_variables: Vec::with_capacity_in(capacity * 6, A::default())
     }
 }

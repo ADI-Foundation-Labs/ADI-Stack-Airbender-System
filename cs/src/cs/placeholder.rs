@@ -72,8 +72,7 @@ pub enum Placeholder {
     DelegationNondeterminismAccess(usize),
     DelegationNondeterminismAccessNoSplits(usize),
     DelegationIndirectAccessVariableOffset {
-        register_index: usize,
-        word_index: usize,
+        variable_index: usize, // must be ordered by indirect register
     },
 }
 
