@@ -33366,8 +33366,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(0u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33433,8 +33433,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(4u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33500,8 +33500,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(8u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33567,8 +33567,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(12u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33634,8 +33634,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(16u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33701,8 +33701,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(20u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33768,8 +33768,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(24u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33835,8 +33835,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(28u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33902,8 +33902,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(32u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -33969,8 +33969,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(36u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34036,8 +34036,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(40u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34103,8 +34103,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(44u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34170,8 +34170,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(48u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34237,8 +34237,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(52u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34304,8 +34304,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(56u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34371,8 +34371,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(60u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34438,8 +34438,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(64u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34505,8 +34505,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(68u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34572,8 +34572,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(72u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34639,8 +34639,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(76u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34706,8 +34706,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(80u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34773,8 +34773,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(84u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34840,8 +34840,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(88u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -34907,8 +34907,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(6usize));
                         address_low.add_assign_base(&Mersenne31Field(92u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges
@@ -35019,8 +35019,8 @@ unsafe fn evaluate_every_row_except_last(
                         let mut address_low = *(memory.get_unchecked(154usize));
                         address_low.add_assign_base(&Mersenne31Field(0u32));
                         if false {
-                            let mut extra = Mersenne31Field(0u32);
-                            extra.mul_assign();
+                            let mut extra = *(memory.get_unchecked(0usize));
+                            extra.mul_assign_by_base(&Mersenne31Field(0u32));
                             address_low.add_assign_base(&extra);
                         };
                         let mut address_contribution = memory_argument_linearization_challenges

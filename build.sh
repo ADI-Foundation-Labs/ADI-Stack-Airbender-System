@@ -5,20 +5,20 @@
 cd cs
 
 # RISC-V machines
-cargo test compile_minimal_machine_with_delegation
-cargo test reduced_machine_with_delegation_get_witness_graph
-cargo test compile_full_machine_with_delegation
-cargo test full_machine_with_delegation_get_witness_graph
+cargo test --profile test-release compile_minimal_machine_with_delegation
+cargo test --profile test-release reduced_machine_with_delegation_get_witness_graph
+cargo test --profile test-release compile_full_machine_with_delegation
+cargo test --profile test-release full_machine_with_delegation_get_witness_graph
 # Delegations
-cargo test compile_blake2_with_extended_control
-cargo test blake_delegation_get_witness_graph
-cargo test compile_u256_ops_extended_control
-cargo test bigint_delegation_get_witness_graph
-cargo test compile_keccak_special5
-cargo test keccak_delegation_get_witness_graph
+cargo test --profile test-release compile_blake2_with_extended_control
+cargo test --profile test-release blake_delegation_get_witness_graph
+cargo test --profile test-release compile_u256_ops_extended_control
+cargo test --profile test-release bigint_delegation_get_witness_graph
+cargo test --profile test-release compile_keccak_special5
+cargo test --profile test-release keccak_delegation_get_witness_graph
 
 cd ../witness_eval_generator
-cargo test gen_for_prover_tests
+cargo test --profile test-release gen_for_prover_tests
 
 wait
 

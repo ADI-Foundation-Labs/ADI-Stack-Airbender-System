@@ -920,7 +920,11 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                         );
                         (c, vexpr)
                     } else {
-                        (0, TokenStream::new())
+                        let dummy = read_value_expr(
+                            ColumnAddress::MemorySubtree(0), 
+                            idents, 
+                            false);
+                        (0, dummy)
                     };
                     assert!(offset_constant < 1 << 16); // NOT GOOD
                     assert_eq!(offset_constant % 4, 0);
@@ -966,8 +970,10 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                             let mut address_low = #register_read_value_low_expr;
                             address_low.add_assign_base(&Mersenne31Field(#offset_constant));
                             if #is_indirect_access_variable_dependent {
-                                let mut extra = Mersenne31Field(#variable_dependent_con);
-                                extra.mul_assign(#variable_dependent_var);
+                                // let mut extra = Mersenne31Field(#variable_dependent_con);
+                                // extra.mul_assign(#variable_dependent_var);
+                                let mut extra = #variable_dependent_var;
+                                extra.mul_assign_by_base(&Mersenne31Field(#variable_dependent_con));
                                 address_low.add_assign_base(&extra);
                             };
 
