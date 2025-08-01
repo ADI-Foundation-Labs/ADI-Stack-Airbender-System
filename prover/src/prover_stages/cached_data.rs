@@ -158,6 +158,7 @@ pub fn get_range_check_16_lookup_accesses(
         .range_check_16_lookup_expressions
         .iter();
 
+    // ONLY THE TOTAL RANGE CHECKS NEED TO BE % 2 ??
     assert!(
         compiled_circuit
             .witness_layout

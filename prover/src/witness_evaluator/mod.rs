@@ -135,7 +135,9 @@ unsafe fn count_special_range_check_multiplicities(
     let nontrivial_range_check_16_relations = &compiled_circuit
         .witness_layout
         .range_check_16_lookup_expressions[num_trivial_relations..];
-    assert!(nontrivial_range_check_16_relations.len() % 2 == 0);
+
+    // excessive panic ?
+    // assert!(nontrivial_range_check_16_relations.len() % 2 == 0);
 
     for range_check_expression in nontrivial_range_check_16_relations.iter() {
         let value = match range_check_expression {

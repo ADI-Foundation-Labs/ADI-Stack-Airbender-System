@@ -8187,6 +8187,20 @@ const COMPILED_WITNESS_LAYOUT: CompiledWitnessSubtree<Mersenne31Field> = Compile
         }),
         VerifierCompiledLookupExpression::Expression(StaticVerifierCompiledDegree1Constraint {
             linear_terms: &[(
+                Mersenne31Field(16777216u32),
+                ColumnAddress::MemorySubtree(6usize),
+            )],
+            constant_term: Mersenne31Field(0u32),
+        }),
+        VerifierCompiledLookupExpression::Expression(StaticVerifierCompiledDegree1Constraint {
+            linear_terms: &[(
+                Mersenne31Field(536870912u32),
+                ColumnAddress::MemorySubtree(154usize),
+            )],
+            constant_term: Mersenne31Field(0u32),
+        }),
+        VerifierCompiledLookupExpression::Expression(StaticVerifierCompiledDegree1Constraint {
+            linear_terms: &[(
                 Mersenne31Field(536870912u32),
                 ColumnAddress::MemorySubtree(154usize),
             )],
@@ -11004,55 +11018,55 @@ const COMPILED_SETUP_LAYOUT: SetupLayout = SetupLayout {
 };
 const COMPILED_STAGE_2_LAYOUT: LookupAndMemoryArgumentLayout = LookupAndMemoryArgumentLayout {
     intermediate_polys_for_range_check_16: OptimizedOraclesForLookupWidth1 {
-        num_pairs: 16usize,
+        num_pairs: 17usize,
         base_field_oracles: AlignedColumnSet::<1usize> {
             start: 0usize,
-            num_elements: 16usize,
+            num_elements: 17usize,
         },
         ext_4_field_oracles: AlignedColumnSet::<4usize> {
-            start: 60usize,
-            num_elements: 16usize,
+            start: 64usize,
+            num_elements: 17usize,
         },
     },
     intermediate_polys_for_timestamp_range_checks: OptimizedOraclesForLookupWidth1 {
         num_pairs: 44usize,
         base_field_oracles: AlignedColumnSet::<1usize> {
-            start: 16usize,
+            start: 17usize,
             num_elements: 44usize,
         },
         ext_4_field_oracles: AlignedColumnSet::<4usize> {
-            start: 124usize,
+            start: 132usize,
             num_elements: 44usize,
         },
     },
     remainder_for_range_check_16: None,
     lazy_init_address_range_check_16: None,
     intermediate_polys_for_generic_lookup: AlignedColumnSet::<4usize> {
-        start: 300usize,
+        start: 308usize,
         num_elements: 208usize,
     },
     intermediate_poly_for_range_check_16_multiplicity: AlignedColumnSet::<4usize> {
-        start: 1132usize,
-        num_elements: 1usize,
-    },
-    intermediate_polys_for_generic_multiplicities: AlignedColumnSet::<4usize> {
         start: 1140usize,
         num_elements: 1usize,
     },
+    intermediate_polys_for_generic_multiplicities: AlignedColumnSet::<4usize> {
+        start: 1148usize,
+        num_elements: 1usize,
+    },
     intermediate_poly_for_timestamp_range_check_multiplicity: AlignedColumnSet::<4usize> {
-        start: 1136usize,
+        start: 1144usize,
         num_elements: 1usize,
     },
     intermediate_polys_for_memory_argument: AlignedColumnSet::<4usize> {
-        start: 1148usize,
+        start: 1156usize,
         num_elements: 45usize,
     },
     delegation_processing_aux_poly: Some(AlignedColumnSet::<4usize> {
-        start: 1144usize,
+        start: 1152usize,
         num_elements: 1usize,
     }),
-    ext4_polys_offset: 60usize,
-    total_width: 1328usize,
+    ext4_polys_offset: 64usize,
+    total_width: 1336usize,
 };
 pub const VERIFIER_COMPILED_LAYOUT: VerifierCompiledCircuitArtifact<'static, Mersenne31Field> =
     VerifierCompiledCircuitArtifact {

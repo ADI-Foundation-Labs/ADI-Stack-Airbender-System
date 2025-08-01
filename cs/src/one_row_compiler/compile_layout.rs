@@ -346,7 +346,12 @@ impl<F: PrimeField> OneRowCompiler<F> {
                         constant_term: F::ZERO,
                     };
                     let expression = LookupExpression::Expression(compiled_constraint);
+                    
+                    let dummy = expression.clone();
                     compiled_extra_range_check_16_expressions.push(expression);
+
+                    // TMP FIX (dummy check) to make sure all extra range check expressions come in pairs
+                    compiled_extra_range_check_16_expressions.push(dummy);
                 }
 
                 // now process potential indirects
@@ -996,11 +1001,14 @@ impl<F: PrimeField> OneRowCompiler<F> {
                 &mut all_variables_to_place,
                 &mut layout,
             );
+            // dbg!(variable);
             let lookup_expr = LookupExpression::Variable(place);
             range_check_16_lookup_expressions.push(lookup_expr)
         }
 
+        assert!(range_check_16_lookup_expressions.len() % 2 == 0, "witness range checked expressions are only supported in pairs for now");
         range_check_16_lookup_expressions.extend(compiled_extra_range_check_16_expressions);
+        assert!(range_check_16_lookup_expressions.len() % 2 == 0, "total range checked expressions are only supported in pairs for now");
 
         // Now we will pause and place boolean variables, as those can have their constraints special-handled in quotient
 

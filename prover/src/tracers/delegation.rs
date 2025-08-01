@@ -216,9 +216,11 @@ pub fn keccak_special5_with_control_factory_fn<A: GoodAllocator>(
         num_register_accesses_per_delegation: 2,
         num_indirect_reads_per_delegation: 0, // ????
         num_indirect_writes_per_delegation: 12,
-        base_register_index: 11, // ????
+        base_register_index: 10, // ????
         delegation_type,
-        indirect_accesses_properties: vec![x11_indirect_access_properties], // rest is unreachable
+
+        // had to add dummy x10 access properties bc he doesn't let me have first register access not be indirect otherwise...
+        indirect_accesses_properties: vec![vec![], x11_indirect_access_properties], // rest is unreachable
 
         write_timestamp: Vec::with_capacity_in(capacity, A::default()),
 

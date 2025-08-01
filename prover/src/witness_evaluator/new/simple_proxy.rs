@@ -98,6 +98,7 @@ impl<'a, O: Oracle<Mersenne31Field>>
         table_id: u16,
         lookup_mapping_idx: usize,
     ) -> [Mersenne31Field; N] {
+        // dbg!(table_id);
         let (absolute_index, values) = self
             .table_driver
             .lookup_values_and_get_absolute_index::<N>(inputs, table_id as u32);

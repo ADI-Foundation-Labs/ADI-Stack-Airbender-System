@@ -38,10 +38,6 @@ use core::array::from_fn;
 // - the precompile with round constant is managed through special xor table
 // - the precompiles with xor/andn feed into option rotation tables and then to output
 
-// TODO: as it currently stands, delegation prover only supports batched contiguous mem. accesses
-//       because it is encoded as constant offset constraints
-//       so, it will need to be amended to support variable constraints
-
 #[derive(Copy, Clone, Debug)]
 struct LongRegister<F: PrimeField> {
     low32: Register<F>,
@@ -145,6 +141,7 @@ impl<F: PrimeField> LongRegisterRotation<F> {
 
 pub fn all_table_types() -> Vec<TableType> {
     vec![
+        TableType::ZeroEntry, // this is a possibility when delegation is disabled and all mem reads become 0
         TableType::KeccakPermutationIndices12,
         TableType::KeccakPermutationIndices34,
         TableType::KeccakPermutationIndices56,
@@ -355,40 +352,44 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
 
     // TODO: not 100% sure about this optim...
     let (precompile_bitmask, iter_bitmask, round) = {
-        let bitmask: [Boolean; 10] = from_fn(|_| cs.add_boolean_variable());
-        let round = {
-            let mut round = Constraint::from(control);
-            for i in 0..10 {
-                round = round - Term::from(1 << i) * Term::from(bitmask[i]);
-            }
-            round.scale(F::from_u64_unchecked(1 << 10).inverse().unwrap());
-            round
-        };
-        let out = cs.add_variable_with_range_check(16);
+        // let bitmask: [Boolean; 10] = from_fn(|_| cs.add_boolean_variable());
+        // let round = {
+        //     let mut round = Constraint::from(control);
+        //     for i in 0..10 {
+        //         round = round - Term::from(1 << i) * Term::from(bitmask[i]);
+        //     }
+        //     round.scale(F::from_u64_unchecked(1 << 10).inverse().unwrap());
+        //     round
+        // };
+        // let out = cs.add_variable_with_range_check(16);
 
-        let value_fn = move |placer: &mut CS::WitnessPlacer| {
-            let control_value = placer.get_u16(control);
-            let bitmask_values: [<<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::Mask;
-                10] = from_fn(|i| control_value.get_bit(i as u32));
-            for i in 0..10 {
-                placer.assign_mask(bitmask[i].get_variable().unwrap(), &bitmask_values[i]);
-            }
-            let out_value = {
-                let two5_value =
-                    <<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::U16::constant(1 << 5);
-                let round_value = control_value.shr(10);
-                two5_value.overflowing_sub(&round_value).0
-            };
-            placer.assign_u16(out.get_variable(), &out_value);
-        };
-        cs.set_values(value_fn);
+        // let value_fn = move |placer: &mut CS::WitnessPlacer| {
+        //     let control_value = placer.get_u16(control);
+        //     let bitmask_values: [<<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::Mask;
+        //         10] = from_fn(|i| control_value.get_bit(i as u32));
+        //     for i in 0..10 {
+        //         placer.assign_mask(bitmask[i].get_variable().unwrap(), &bitmask_values[i]);
+        //     }
+        //     let out_value = {
+        //         let two5_value =
+        //             <<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::U16::constant(1 << 5);
+        //         let round_value = control_value.shr(10);
+        //         two5_value.overflowing_sub(&round_value).0
+        //     };
+        //     placer.assign_u16(out.get_variable(), &out_value);
+        // };
+        // cs.set_values(value_fn);
 
-        cs.add_constraint_allow_explicit_linear(
-            (Constraint::from(1 << 5) - round.clone()) - Term::from(out),
-        );
+        // cs.add_constraint_allow_explicit_linear(
+        //     (Constraint::from(1 << 5) - round.clone()) - Term::from(out),
+        // );
+
+        // TMP FIX: we're removing this in order to have even number of u16 range checks in the witness subtree
+        let bitmask: [Boolean; 15] = Boolean::split_into_bitmask(cs, Num::Var(control));
+        let round = bitmask[10..15].iter().enumerate().fold(Constraint::empty(), |acc, (i, &el)| acc + Term::from(1 << i)*Term::from(el));
         (
             bitmask[..5].try_into().unwrap(),
-            bitmask[5..].try_into().unwrap(),
+            bitmask[5..10].try_into().unwrap(),
             round,
         )
     };
@@ -984,14 +985,8 @@ fn enforce_binop<F: PrimeField, CS: Circuit<F>>(
         let mut in1_high32_value = zero_u32.clone();
         let mut in2_low32_value = zero_u32.clone();
         let mut in2_high32_value = zero_u32;
-        let mut table_id_value =
-            <<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::U16::constant(0);
-        for (flag, (possible_table_id, (possible_in1, possible_in2, _))) in
-            precompile_flags.into_iter().zip(
-                precompile_table_ids
-                    .into_iter()
-                    .zip(input_output_candidates),
-            )
+        for (flag, (possible_in1, possible_in2, _)) in
+            precompile_flags.into_iter().zip(input_output_candidates)
         {
             let flag_value = placer.get_boolean(flag.get_variable().unwrap());
             let possible_in1_low32_value =
@@ -1002,15 +997,10 @@ fn enforce_binop<F: PrimeField, CS: Circuit<F>>(
                 placer.get_u32_from_u16_parts(possible_in2.low32.0.map(|x| x.get_variable()));
             let possible_in2_high32_value =
                 placer.get_u32_from_u16_parts(possible_in2.high32.0.map(|x| x.get_variable()));
-            let possible_table_id_value =
-                <<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::U16::constant(
-                    possible_table_id.to_table_id() as u16,
-                );
             in1_low32_value.assign_masked(&flag_value, &possible_in1_low32_value);
             in1_high32_value.assign_masked(&flag_value, &possible_in1_high32_value);
             in2_low32_value.assign_masked(&flag_value, &possible_in2_low32_value);
             in2_high32_value.assign_masked(&flag_value, &possible_in2_high32_value);
-            table_id_value.assign_masked(&flag_value, &possible_table_id_value);
         }
         // now can assign
         let zero_u8 = <<CS as Circuit<F>>::WitnessPlacer as WitnessTypeSet<F>>::U8::constant(0);

@@ -864,7 +864,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                     }
                 }
                 _ => {
-                    panic!("Unknown opcode 0x{:08x}", opcode);
+                    panic!("Unknown instruction 0x{opcode:08x} (cycle={_cycle}, pc={pc})");
                 }
             }
 
