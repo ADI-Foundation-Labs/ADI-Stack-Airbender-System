@@ -238,14 +238,22 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
     let cycles_per_circuit = trace_len - 1;
     let max_cycles_to_run = num_instances_upper_bound * cycles_per_circuit;
 
-    let lde_factor = risc_v_circuit_precomputations.lde_precomputations.lde_factor;
+    let lde_factor = risc_v_circuit_precomputations
+        .lde_precomputations
+        .lde_factor;
 
     let (
         main_circuits_witness,
         inits_and_teardowns,
         delegation_circuits_witness,
         final_register_values,
-    ) = trace_execution_for_gpu::<ND, C, A>(max_cycles_to_run, bytecode, non_determinism, trace_len, worker);
+    ) = trace_execution_for_gpu::<ND, C, A>(
+        max_cycles_to_run,
+        bytecode,
+        non_determinism,
+        trace_len,
+        worker,
+    );
 
     let (num_paddings, inits_and_teardowns) = inits_and_teardowns;
 

@@ -2,14 +2,14 @@ use crate::Machine;
 use blake2s_u32::BLAKE2S_DIGEST_SIZE_U32_WORDS;
 use clap::ValueEnum;
 use execution_utils::{
-    get_padded_binary, ProgramProof, UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER,
-    UNIVERSAL_CIRCUIT_VERIFIER,
+    get_padded_binary, ProgramProof, RECURSION_LAYER_VERIFIER,
+    UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER, UNIVERSAL_CIRCUIT_VERIFIER,
 };
 use trace_and_split::FinalRegisterValue;
 use verifier_common::parse_field_els_as_u32_checked;
 
 use prover::{
-    cs::utils::split_timestamp,
+    cs::{machine, utils::split_timestamp},
     prover_stages::Proof,
     risc_v_simulator::{
         abstractions::non_determinism::QuasiUARTSource,
@@ -17,7 +17,7 @@ use prover::{
     },
     transcript::{Blake2sBufferingTranscript, Seed},
 };
-use std::{alloc::Global, fs, io::Read, path::Path};
+use std::{alloc::Global, fmt::Binary, fs, io::Read, path::Path};
 
 fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
     let src = std::fs::File::open(filename).unwrap();
@@ -35,22 +35,31 @@ pub const DEFAULT_CYCLES: usize = 32_000_000;
 #[derive(Clone, Debug, ValueEnum)]
 pub enum ProvingLimit {
     /// Does base + recursion (reduced machine).
-    FinalRecursion,
+    RecursionProof,
     /// Also does final proof (requires 128GB of RAM).
     FinalProof,
     /// Also creates a final snark (requires zkos_wrapper)
     Snark,
 }
 
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum RecursionMode {
+    /// Does recursion until 2 reduced + 1 delegation then wrap to final machine
+    UseFinalMachine,
+    /// Does recursion until 3 reduced + 1 delegation then wrap to 1 reduced 2^23 + 1 delegation
+    UseReducedLog23Machine,
+}
+
 pub enum VerifierCircuitsIdentifiers {
     // This enum is used inside tools/verifier/main.rs
     BaseLayer = 0,
     RecursionLayer = 1,
-    FinalLayer = 2,
-    RiscV = 3,
+    RecursionLog23Layer = 2,
+    FinalLayer = 3,
+    RiscV = 4,
     /// Combine 2 proofs (from recursion layers) into one.
     // This is used in OhBender to combine previous block proof with current one.
-    CombinedRecursionLayers = 4,
+    CombinedRecursionLayers = 5,
 }
 
 pub fn u32_from_hex_string(hex_string: &str) -> Vec<u32> {
@@ -83,6 +92,7 @@ fn full_machine_allowed_delegation_types() -> Vec<u32> {
 pub struct ProofMetadata {
     pub basic_proof_count: usize,
     pub reduced_proof_count: usize,
+    pub reduced_log_23_proof_count: usize,
     pub final_proof_count: usize,
     pub delegation_proof_count: Vec<(u32, usize)>,
     pub register_values: Vec<FinalRegisterValue>,
@@ -98,6 +108,7 @@ impl ProofMetadata {
     pub fn total_proofs(&self) -> usize {
         self.basic_proof_count
             + self.reduced_proof_count
+            + self.reduced_log_23_proof_count
             + self.final_proof_count
             + self
                 .delegation_proof_count
@@ -113,6 +124,7 @@ impl ProofMetadata {
 pub struct ProofList {
     pub basic_proofs: Vec<Proof>,
     pub reduced_proofs: Vec<Proof>,
+    pub reduced_log_23_proofs: Vec<Proof>,
     pub final_proofs: Vec<Proof>,
     pub delegation_proofs: Vec<(u32, Vec<Proof>)>,
 }
@@ -131,6 +143,12 @@ impl ProofList {
             serialize_to_file(
                 proof,
                 &Path::new(output_dir).join(&format!("reduced_proof_{}.json", i)),
+            );
+        }
+        for (i, proof) in self.reduced_log_23_proofs.iter().enumerate() {
+            serialize_to_file(
+                proof,
+                &Path::new(output_dir).join(&format!("reduced_log_23_proof_{}.json", i)),
             );
         }
         for (i, proof) in self.final_proofs.iter().enumerate() {
@@ -165,6 +183,13 @@ impl ProofList {
             reduced_proofs.push(proof);
         }
 
+        let mut reduced_log_23_proofs = vec![];
+        for i in 0..metadata.reduced_proof_count {
+            let proof_path = Path::new(input_dir).join(format!("reduced_log_23_proof_{}.json", i));
+            let proof: Proof = deserialize_from_file(proof_path.to_str().unwrap());
+            reduced_log_23_proofs.push(proof);
+        }
+
         let mut final_proofs = vec![];
         for i in 0..metadata.final_proof_count {
             let proof_path = Path::new(input_dir).join(format!("final_proof_{}.json", i));
@@ -187,6 +212,7 @@ impl ProofList {
         Self {
             basic_proofs,
             reduced_proofs,
+            reduced_log_23_proofs,
             final_proofs,
             delegation_proofs,
         }
@@ -195,9 +221,11 @@ impl ProofList {
     pub fn get_last_proof(&self) -> &Proof {
         self.final_proofs.last().unwrap_or_else(|| {
             self.basic_proofs.last().unwrap_or_else(|| {
-                self.reduced_proofs
-                    .last()
-                    .expect("Neither main proof nor reduced proof is present")
+                self.reduced_log_23_proofs.last().unwrap_or_else(|| {
+                    self.reduced_proofs
+                        .last()
+                        .expect("Neither main proof nor reduced proof is present")
+                })
             })
         })
     }
@@ -210,6 +238,7 @@ pub fn program_proof_from_proof_list_and_metadata(
     // program proof doesn't distinguish between final, reduced & basic proofs.
     let mut base_layer_proofs = proof_list.final_proofs.clone();
     base_layer_proofs.extend_from_slice(&proof_list.basic_proofs);
+    base_layer_proofs.extend_from_slice(&proof_list.reduced_log_23_proofs);
     base_layer_proofs.extend_from_slice(&proof_list.reduced_proofs);
 
     ProgramProof {
@@ -229,6 +258,7 @@ pub fn proof_list_and_metadata_from_program_proof(
         basic_proofs: vec![],
         // Here we're guessing - as ProgramProof doesn't distinguish between basic and reduced proofs.
         reduced_proofs: input.base_layer_proofs,
+        reduced_log_23_proofs: vec![],
         final_proofs: vec![],
         delegation_proofs: input.delegation_proofs.into_iter().collect(),
     };
@@ -236,6 +266,7 @@ pub fn proof_list_and_metadata_from_program_proof(
     let proof_metadata = ProofMetadata {
         basic_proof_count: 0,
         reduced_proof_count,
+        reduced_log_23_proof_count: 0,
         final_proof_count: 0,
         delegation_proof_count: vec![],
         register_values: input.register_final_values,
@@ -254,6 +285,7 @@ pub fn create_proofs(
     machine: &Machine,
     cycles: &Option<usize>,
     until: &Option<ProvingLimit>,
+    recursion_mode: RecursionMode,
     tmp_dir: &Option<String>,
     use_gpu: bool,
 ) {
@@ -301,6 +333,12 @@ pub fn create_proofs(
 
     // Now we finished 'basic' proving - check if there is a need for recursion.
     if let Some(until) = until {
+        assert_eq!(
+            machine,
+            &Machine::Standard,
+            "Recursion is only supported after Standard machine"
+        );
+
         if let Some(tmp_dir) = tmp_dir {
             let base_tmp_dir = Path::new(tmp_dir).join("base");
             if !base_tmp_dir.exists() {
@@ -312,12 +350,13 @@ pub fn create_proofs(
         let (recursion_proof_list, recursion_proof_metadata) = create_recursion_proofs(
             proof_list,
             proof_metadata,
+            recursion_mode,
             tmp_dir,
             &mut gpu_state,
             &mut total_proof_time,
         );
         match until {
-            ProvingLimit::FinalRecursion => {
+            ProvingLimit::RecursionProof => {
                 recursion_proof_list.write_to_directory(Path::new(output_dir));
 
                 serialize_to_file(
@@ -334,8 +373,12 @@ pub fn create_proofs(
                 );
             }
             ProvingLimit::FinalProof => {
-                let program_proof =
-                    create_final_proofs(recursion_proof_list, recursion_proof_metadata, tmp_dir);
+                let program_proof = create_final_proofs(
+                    recursion_proof_list,
+                    recursion_proof_metadata,
+                    recursion_mode,
+                    tmp_dir,
+                );
 
                 serialize_to_file(
                     &program_proof,
@@ -368,18 +411,32 @@ pub fn load_binary_from_path(path: &String) -> Vec<u32> {
     get_padded_binary(&buffer)
 }
 
-fn should_stop_recursion(proof_metadata: &ProofMetadata) -> bool {
+fn should_stop_recursion(proof_metadata: &ProofMetadata, mode: RecursionMode) -> bool {
     let max_delegation_proofs = proof_metadata
         .delegation_proof_count
         .iter()
         .map(|(_, x)| x)
         .max()
         .unwrap_or(&0);
-    if proof_metadata.basic_proof_count > 2
-        || proof_metadata.reduced_proof_count > 2
-        || max_delegation_proofs > &1
-    {
-        return false;
+    match mode {
+        RecursionMode::UseFinalMachine => {
+            if proof_metadata.basic_proof_count > 2
+                || proof_metadata.reduced_proof_count > 2
+                || proof_metadata.final_proof_count > 1
+                || max_delegation_proofs > &1
+            {
+                return false;
+            }
+        }
+        RecursionMode::UseReducedLog23Machine => {
+            if proof_metadata.basic_proof_count > 3
+                || proof_metadata.reduced_proof_count > 3
+                || proof_metadata.final_proof_count > 1
+                || max_delegation_proofs > &1
+            {
+                return false;
+            }
+        }
     }
     true
 }
@@ -438,7 +495,7 @@ pub fn create_proofs_internal(
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
     total_proof_time: &mut Option<f64>,
 ) -> (ProofList, ProofMetadata) {
-    let worker = worker::Worker::new_with_num_threads(8);
+    let worker = worker::Worker::new();
 
     let mut non_determinism_source = QuasiUARTSource::default();
 
@@ -499,6 +556,7 @@ pub fn create_proofs_internal(
                 ProofList {
                     basic_proofs,
                     reduced_proofs: vec![],
+                    reduced_log_23_proofs: vec![],
                     final_proofs: vec![],
                     delegation_proofs,
                 },
@@ -554,6 +612,50 @@ pub fn create_proofs_internal(
                 ProofList {
                     basic_proofs: vec![],
                     reduced_proofs,
+                    reduced_log_23_proofs: vec![],
+                    final_proofs: vec![],
+                    delegation_proofs,
+                },
+                register_values,
+            )
+        }
+        Machine::ReducedLog23 => {
+            let (reduced_log_23_proofs, delegation_proofs, register_values) =
+                if let Some(gpu_shared_state) = gpu_shared_state {
+                    #[cfg(feature = "gpu")]
+                    {
+                        todo!()
+                    }
+                    #[cfg(not(feature = "gpu"))]
+                    {
+                        let _ = gpu_shared_state;
+                        let _ = total_proof_time;
+                        panic!("GPU not enabled - please compile with --features gpu flag.")
+                    }
+                } else {
+                    let main_circuit_precomputations =
+                        setups::get_reduced_riscv_log_23_circuit_setup::<Global, Global>(
+                            &binary, &worker,
+                        );
+
+                    let delegation_precomputations =
+                        setups::all_delegation_circuits_precomputations::<Global, Global>(&worker);
+
+                    prover_examples::prove_image_execution_on_reduced_machine(
+                        num_instances,
+                        &binary,
+                        non_determinism_source,
+                        &main_circuit_precomputations,
+                        &delegation_precomputations,
+                        &worker,
+                    )
+                };
+
+            (
+                ProofList {
+                    basic_proofs: vec![],
+                    reduced_proofs: vec![],
+                    reduced_log_23_proofs,
                     final_proofs: vec![],
                     delegation_proofs,
                 },
@@ -584,6 +686,7 @@ pub fn create_proofs_internal(
                 ProofList {
                     basic_proofs: vec![],
                     reduced_proofs: vec![],
+                    reduced_log_23_proofs: vec![],
                     final_proofs,
                     delegation_proofs: vec![],
                 },
@@ -599,9 +702,10 @@ pub fn create_proofs_internal(
         .sum();
 
     println!(
-        "Created {} basic proofs, {} reduced proofs and {} delegation proofs. Final proofs: {}",
+        "Created {} basic proofs, {} reduced proofs, {} reduced (log23) proofs and {} delegation proofs. Final proofs: {}",
         proof_list.basic_proofs.len(),
         proof_list.reduced_proofs.len(),
+        proof_list.reduced_log_23_proofs.len(),
         total_delegation_proofs,
         proof_list.final_proofs.len()
     );
@@ -619,6 +723,7 @@ pub fn create_proofs_internal(
     let proof_metadata = ProofMetadata {
         basic_proof_count: proof_list.basic_proofs.len(),
         reduced_proof_count: proof_list.reduced_proofs.len(),
+        reduced_log_23_proof_count: proof_list.reduced_log_23_proofs.len(),
         final_proof_count: proof_list.final_proofs.len(),
         delegation_proof_count: proof_list
             .delegation_proofs
@@ -637,6 +742,7 @@ pub fn create_proofs_internal(
 pub fn create_recursion_proofs(
     proof_list: ProofList,
     proof_metadata: ProofMetadata,
+    recursion_mode: RecursionMode,
     tmp_dir: &Option<String>,
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
     total_proof_time: &mut Option<f64>,
@@ -679,7 +785,7 @@ pub fn create_recursion_proofs(
 
         recursion_level += 1;
 
-        if should_stop_recursion(&current_proof_metadata) {
+        if should_stop_recursion(&current_proof_metadata, recursion_mode) {
             println!("Stopping recursion.");
             break;
         }
@@ -687,18 +793,31 @@ pub fn create_recursion_proofs(
     (current_proof_list, current_proof_metadata)
 }
 
-pub fn create_final_proofs_from_program_proof(input: ProgramProof) -> ProgramProof {
+pub fn create_final_proofs_from_program_proof(
+    input: ProgramProof,
+    recursion_mode: RecursionMode,
+) -> ProgramProof {
     let (proof_metadata, proof_list) = proof_list_and_metadata_from_program_proof(input);
 
-    create_final_proofs(proof_list, proof_metadata, &None)
+    create_final_proofs(proof_list, proof_metadata, recursion_mode, &None)
 }
 
 pub fn create_final_proofs(
     proof_list: ProofList,
     proof_metadata: ProofMetadata,
+    recursion_mode: RecursionMode,
     tmp_dir: &Option<String>,
 ) -> ProgramProof {
-    let binary = get_padded_binary(UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER);
+    let binary = match recursion_mode {
+        RecursionMode::UseFinalMachine => {
+            get_padded_binary(UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER)
+        }
+        RecursionMode::UseReducedLog23Machine => get_padded_binary(RECURSION_LAYER_VERIFIER),
+    };
+    let machine = match recursion_mode {
+        RecursionMode::UseFinalMachine => Machine::ReducedFinal,
+        RecursionMode::UseReducedLog23Machine => Machine::ReducedLog23,
+    };
 
     let mut final_proof_level = 0;
     let mut current_proof_list = proof_list;
@@ -706,14 +825,22 @@ pub fn create_final_proofs(
 
     loop {
         println!("*** Starting final_proofs level {} ***", final_proof_level);
-        let non_determinism_data = generate_oracle_data_for_universal_verifier(
-            &current_proof_metadata,
-            &current_proof_list,
-        );
+        let non_determinism_data = match recursion_mode {
+            RecursionMode::UseFinalMachine => generate_oracle_data_for_universal_verifier(
+                &current_proof_metadata,
+                &current_proof_list,
+            ),
+            RecursionMode::UseReducedLog23Machine => {
+                generate_oracle_data_from_metadata_and_proof_list(
+                    &current_proof_metadata,
+                    &current_proof_list,
+                )
+            }
+        };
         (current_proof_list, current_proof_metadata) = create_proofs_internal(
             &binary,
             non_determinism_data,
-            &Machine::ReducedFinal,
+            &machine,
             current_proof_metadata.total_proofs(),
             Some(current_proof_metadata.create_prev_metadata()),
             &mut None,
@@ -728,8 +855,17 @@ pub fn create_final_proofs(
             serialize_to_file(&current_proof_metadata, &base_tmp_dir.join("metadata.json"))
         }
         final_proof_level += 1;
-        if current_proof_metadata.final_proof_count == 1 {
-            break;
+        match recursion_mode {
+            RecursionMode::UseFinalMachine => {
+                if current_proof_metadata.final_proof_count == 1 {
+                    break;
+                }
+            }
+            RecursionMode::UseReducedLog23Machine => {
+                if current_proof_metadata.reduced_log_23_proof_count == 1 {
+                    break;
+                }
+            }
         }
     }
 
@@ -833,6 +969,8 @@ pub fn generate_oracle_data_for_universal_verifier(
         oracle.insert(0, VerifierCircuitsIdentifiers::BaseLayer as u32);
     } else if metadata.reduced_proof_count > 0 {
         oracle.insert(0, VerifierCircuitsIdentifiers::RecursionLayer as u32);
+    } else if metadata.reduced_log_23_proof_count > 0 {
+        oracle.insert(0, VerifierCircuitsIdentifiers::RecursionLog23Layer as u32);
     } else {
         oracle.insert(0, VerifierCircuitsIdentifiers::FinalLayer as u32);
     };
@@ -877,6 +1015,20 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
         // Or reduced proofs
         for i in 0..metadata.reduced_proof_count {
             let proof = &proofs.reduced_proofs[i];
+            oracle_data
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, true));
+            for query in proof.queries.iter() {
+                oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
+            }
+        }
+
+        reduced_machine_allowed_delegation_types()
+    } else if metadata.reduced_log_23_proof_count > 0 {
+        oracle_data.push(metadata.reduced_log_23_proof_count.try_into().unwrap());
+
+        // Or reduced log 23 proofs
+        for i in 0..metadata.reduced_log_23_proof_count {
+            let proof = &proofs.reduced_log_23_proofs[i];
             oracle_data
                 .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, true));
             for query in proof.queries.iter() {

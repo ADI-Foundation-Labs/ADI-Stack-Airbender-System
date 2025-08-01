@@ -52,6 +52,14 @@ pub const RISC_V_REDUCED_MACHINE_VERIFIER_PTR: VerifierFunctionPointer<
     2,
 > = reduced_risc_v_machine_verifier::verify;
 
+pub const RISC_V_REDUCED_LOG_23_MACHINE_VERIFIER_PTR: VerifierFunctionPointer<
+    CAP_SIZE,
+    NUM_COSETS,
+    NUM_DELEGATION_CHALLENGES,
+    1,
+    2,
+> = reduced_risc_v_log_23_machine_verifier::verify;
+
 pub const RISC_V_FINAL_REDUCED_MACHINE_VERIFIER_PTR: VerifierFunctionPointer<
     CAP_SIZE,
     NUM_COSETS,
@@ -477,6 +485,15 @@ pub fn verify_recursion_layer() -> [u32; 16] {
     unsafe {
         verify_full_statement::<false>(
             RISC_V_REDUCED_MACHINE_VERIFIER_PTR,
+            RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS,
+        )
+    }
+}
+
+pub fn verify_recursion_log_23_layer() -> [u32; 16] {
+    unsafe {
+        verify_full_statement::<false>(
+            RISC_V_REDUCED_LOG_23_MACHINE_VERIFIER_PTR,
             RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS,
         )
     }

@@ -29,6 +29,8 @@ pub const BASE_PROGRAM_TEXT_SECTION: &[u8] =
 pub const BASE_LAYER_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/base_layer.bin");
 pub const RECURSION_LAYER_VERIFIER: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer.bin");
+pub const RECURSION_LOG_23_LAYER_VERIFIER: &[u8] =
+    include_bytes!("../../tools/verifier/recursion_log_23_layer.bin");
 pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer_no_delegation.bin");
 pub const FINAL_RECURSION_LAYER_VERIFIER: &[u8] =
@@ -38,6 +40,8 @@ pub const BASE_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
     include_bytes!("../../tools/verifier/base_layer_with_output.bin");
 pub const RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer_with_output.bin");
+pub const RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
+    include_bytes!("../../tools/verifier/recursion_log_23_layer_with_output.bin");
 pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER_WITH_OUTPUT: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer_no_delegation_with_output.bin");
 pub const FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
@@ -50,9 +54,23 @@ pub const UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER: &[u8] =
 
 // Methods to fetch the verification keys for the binaries above.
 // They are usually refreshed with build_vk.sh
+pub fn base_layer_verifier_vk() -> VerificationKey {
+    serde_json::from_slice::<VerificationKey>(include_bytes!(
+        "../../tools/verifier/base_layer.reduced.vk.json"
+    ))
+    .unwrap()
+}
+
 pub fn recursion_layer_verifier_vk() -> VerificationKey {
     serde_json::from_slice::<VerificationKey>(include_bytes!(
         "../../tools/verifier/recursion_layer.reduced.vk.json"
+    ))
+    .unwrap()
+}
+
+pub fn recursion_log_23_layer_verifier_vk() -> VerificationKey {
+    serde_json::from_slice::<VerificationKey>(include_bytes!(
+        "../../tools/verifier/recursion_log_23_layer.reduced.vk.json"
     ))
     .unwrap()
 }
@@ -310,7 +328,7 @@ pub fn verify_recursion_layer(full_proof: &ProgramProof) -> bool {
     run_verifier_binary(binary, responses).is_some()
 }
 
-pub fn verify_log_23_recursion_layer(full_proof: &ProgramProof) -> bool {
+pub fn verify_recursion_log_23_layer(full_proof: &ProgramProof) -> bool {
     println!("Verifying recursion layer proof using RISC-V simulator and the verifier program");
     let allowed_delegation_types: Vec<_> = RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS
         .iter()
@@ -318,15 +336,12 @@ pub fn verify_log_23_recursion_layer(full_proof: &ProgramProof) -> bool {
         .collect();
     let responses = full_proof.flatten_for_delegation_circuits_set(&allowed_delegation_types);
     let binary = if RUN_VERIFIERS_WITH_OUTPUT {
-        RECURSION_LAYER_VERIFIER_WITH_OUTPUT
+        RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT
     } else {
-        RECURSION_LAYER_VERIFIER
+        RECURSION_LOG_23_LAYER_VERIFIER
     };
 
-    // Skip to avoid adding more binaries
-    // run_verifier_binary(binary, responses).is_some()
-
-    true
+    run_verifier_binary(binary, responses).is_some()
 }
 
 pub fn verify_final_recursion_layer(full_proof: &ProgramProof) -> bool {
@@ -398,6 +413,8 @@ pub fn compute_chain_encoding(data: Vec<[u32; 8]>) -> [u32; 8] {
     let mut hasher = Blake2sBufferingTranscript::new();
     let mut previous = data[0];
 
+    dbg!(&data);
+
     for index in 1..data.len() {
         // continue the chain, only if the data is different
         if data[index] != data[index - 1] {
@@ -458,7 +475,7 @@ mod test {
             );
         }
 
-        let worker = prover::worker::Worker::new_with_num_threads(8);
+        let worker = prover::worker::Worker::new();
 
         let delegation_precomputations =
             trace_and_split::setups::all_delegation_circuits_precomputations::<Global, Global>(
@@ -526,7 +543,7 @@ mod test {
 
     #[test]
     fn test_prove_recursion_over_base() {
-        let worker = prover::worker::Worker::new_with_num_threads(8);
+        let worker = prover::worker::Worker::new();
 
         let delegation_precomputations =
             trace_and_split::setups::all_delegation_circuits_precomputations::<Global, Global>(
@@ -612,7 +629,7 @@ mod test {
 
     #[test]
     fn test_prove_recursion_over_recursion() {
-        let worker = prover::worker::Worker::new_with_num_threads(8);
+        let worker = prover::worker::Worker::new();
 
         let delegation_precomputations =
             trace_and_split::setups::all_delegation_circuits_precomputations::<Global, Global>(
@@ -702,7 +719,7 @@ mod test {
 
     #[test]
     fn test_prove_log_23_recursion_over_recursion() {
-        let worker = prover::worker::Worker::new_with_num_threads(8);
+        let worker = prover::worker::Worker::new();
 
         let delegation_precomputations =
             trace_and_split::setups::all_delegation_circuits_precomputations::<Global, Global>(
@@ -726,10 +743,10 @@ mod test {
         dbg!(proofs.recursion_chain_hash);
         dbg!(proofs.recursion_chain_preimage);
 
-        let main_circuit_precomputations = trace_and_split::setups::get_reduced_riscv_log_23_circuit_setup::<
-            Global,
-            Global,
-        >(&binary, &worker);
+        let main_circuit_precomputations =
+            trace_and_split::setups::get_reduced_riscv_log_23_circuit_setup::<Global, Global>(
+                &binary, &worker,
+            );
 
         let new_end_params =
             compute_end_parameters(expected_final_pc, &main_circuit_precomputations);
@@ -783,7 +800,7 @@ mod test {
             recursion_chain_hash: Some(chain_hash),
         };
 
-        let is_valid = verify_log_23_recursion_layer(&program_proof);
+        let is_valid = verify_recursion_log_23_layer(&program_proof);
         assert!(is_valid);
 
         let mut dst = std::fs::File::create("log_23_recursion_over_recursion_layer.json").unwrap();

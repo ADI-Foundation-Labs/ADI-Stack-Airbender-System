@@ -9,7 +9,8 @@ pub fn get_reduced_riscv_log_23_circuit_setup<A: GoodAllocator, B: GoodAllocator
         ::reduced_risc_v_log_23_machine::get_machine(bytecode, delegation_csrs);
     let table_driver = ::reduced_risc_v_log_23_machine::get_table_driver(bytecode, delegation_csrs);
 
-    let twiddles: Twiddles<_, A> = Twiddles::new(::reduced_risc_v_log_23_machine::DOMAIN_SIZE, &worker);
+    let twiddles: Twiddles<_, A> =
+        Twiddles::new(::reduced_risc_v_log_23_machine::DOMAIN_SIZE, &worker);
     let lde_precomputations = LdePrecomputations::new(
         ::reduced_risc_v_log_23_machine::DOMAIN_SIZE,
         ::reduced_risc_v_log_23_machine::LDE_FACTOR,
@@ -34,6 +35,7 @@ pub fn get_reduced_riscv_log_23_circuit_setup<A: GoodAllocator, B: GoodAllocator
         twiddles,
         lde_precomputations,
         setup,
-        witness_eval_fn_for_gpu_tracer: ::reduced_risc_v_log_23_machine::witness_eval_fn_for_gpu_tracer,
+        witness_eval_fn_for_gpu_tracer:
+            ::reduced_risc_v_log_23_machine::witness_eval_fn_for_gpu_tracer,
     }
 }

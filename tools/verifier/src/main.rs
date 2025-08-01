@@ -114,6 +114,12 @@ unsafe fn workload() -> ! {
     riscv_common::zksync_os_finish_success_extended(&output);
 }
 
+#[cfg(any(feature = "recursion_log_23_step"))]
+unsafe fn workload() -> ! {
+    let output = full_statement_verifier::verify_recursion_log_23_layer();
+    riscv_common::zksync_os_finish_success_extended(&output);
+}
+
 #[cfg(feature = "final_recursion_step")]
 unsafe fn workload() -> ! {
     let output = full_statement_verifier::verify_final_recursion_layer();
@@ -142,10 +148,14 @@ unsafe fn workload() -> ! {
             riscv_common::zksync_os_finish_success_extended(&output);
         }
         2 => {
-            let output = full_statement_verifier::verify_final_recursion_layer();
+            let output = full_statement_verifier::verify_recursion_log_23_layer();
             riscv_common::zksync_os_finish_success_extended(&output);
         }
         3 => {
+            let output = full_statement_verifier::verify_final_recursion_layer();
+            riscv_common::zksync_os_finish_success_extended(&output);
+        }
+        4 => {
             full_statement_verifier::RISC_V_VERIFIER_PTR(
                 &mut core::mem::MaybeUninit::uninit().assume_init_mut(),
                 &mut full_statement_verifier::verifier_common::ProofPublicInputs::uninit(),
@@ -153,7 +163,7 @@ unsafe fn workload() -> ! {
             riscv_common::zksync_os_finish_success(&[1, 2, 3, 0, 0, 0, 0, 0]);
         }
         // Combine 2 proofs into one.
-        4 => {
+        5 => {
             // First - verify both proofs (keep reading from the CSR).
             let output1 = full_statement_verifier::verify_recursion_layer();
             let output2 = full_statement_verifier::verify_recursion_layer();

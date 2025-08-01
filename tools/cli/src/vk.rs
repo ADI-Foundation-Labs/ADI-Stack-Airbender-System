@@ -51,7 +51,10 @@ pub fn generate_params_for_binary(bin: &[u8], machine: Machine) -> [u32; 8] {
             expected_final_pc,
             &setups::get_reduced_riscv_circuit_setup::<Global, Global>(&binary, &worker),
         ),
-
+        Machine::ReducedLog23 => execution_utils::compute_end_parameters(
+            expected_final_pc,
+            &setups::get_reduced_riscv_log_23_circuit_setup::<Global, Global>(&binary, &worker),
+        ),
         Machine::ReducedFinal => execution_utils::compute_end_parameters(
             expected_final_pc,
             &setups::get_final_reduced_riscv_circuit_setup::<Global, Global>(&binary, &worker),
