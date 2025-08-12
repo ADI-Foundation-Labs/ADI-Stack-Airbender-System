@@ -28,10 +28,10 @@ pub fn blake2_round_function_with_extended_control_over_unrolled_state<
     tracer: &mut TR,
 ) {
     // read registers first
-    let x10 = machine_state.registers[10];
-    let x11 = machine_state.registers[11];
-    let x12 = machine_state.registers[12];
-    let x13 = machine_state.registers[13];
+    let x10 = machine_state.observable.registers[10];
+    let x11 = machine_state.observable.registers[11];
+    let x12 = machine_state.observable.registers[12];
+    let x13 = machine_state.observable.registers[13];
 
     assert!(x10 % 128 == 0, "input pointer is unaligned");
     assert!(x11 % 4 == 0, "input pointer is unaligned");
@@ -55,18 +55,24 @@ pub fn blake2_round_function_with_extended_control_over_unrolled_state<
         std::array::from_fn(|i| x11 + (core::mem::size_of::<u32>() * i) as u32);
 
     let mut state: [u32; BLAKE2S_STATE_WIDTH_IN_U32_WORDS] = state_accesses
-        .array_chunks::<BLAKE2S_STATE_WIDTH_IN_U32_WORDS>()
+        .as_chunks::<BLAKE2S_STATE_WIDTH_IN_U32_WORDS>()
+        .0
+        .iter()
         .next()
         .unwrap()
         .map(|el| el.read_value);
     let mut extended_state: [u32; BLAKE2S_EXTENDED_STATE_WIDTH_IN_U32_WORDS] = state_accesses
         [BLAKE2S_STATE_WIDTH_IN_U32_WORDS..]
-        .array_chunks::<BLAKE2S_EXTENDED_STATE_WIDTH_IN_U32_WORDS>()
+        .as_chunks::<BLAKE2S_EXTENDED_STATE_WIDTH_IN_U32_WORDS>()
+        .0
+        .iter()
         .next()
         .unwrap()
         .map(|el| el.read_value);
     let input: [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS] = input_accesses
-        .array_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+        .as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+        .0
+        .iter()
         .next()
         .unwrap()
         .map(|el| el.read_value);

@@ -128,6 +128,19 @@ impl<I: Iterator<Item = LazyInitAndTeardown>> SetupAndTeardownChunker<I> {
             chunk
         };
         dst.fill_with(|| unsafe { self.iterator.next().unwrap_unchecked() });
+        self.next_chunk_index += 1;
+    }
+
+    pub fn skip_next_chunk(&mut self) {
+        let chunks_count = self.get_chunks_count();
+        assert!(self.next_chunk_index < chunks_count);
+        let count = if self.next_chunk_index == 0 {
+            self.touched_ram_cells_count % self.chunk_size
+        } else {
+            self.chunk_size
+        };
+        self.iterator.advance_by(count).unwrap();
+        self.next_chunk_index += 1;
     }
 
     pub fn skip_next_chunk(&mut self) {
@@ -307,7 +320,7 @@ impl<
             return;
         }
         let mut element = EMPTY_SINGLE_CYCLE_TRACING_DATA;
-        element.pc = current_state.pc;
+        element.pc = current_state.observable.pc;
         unsafe {
             self.cycle_tracing_data
                 .per_cycle_data
@@ -331,7 +344,7 @@ impl<
             return;
         }
         let mut element = EMPTY_SINGLE_CYCLE_TRACING_DATA;
-        element.pc = current_state.pc;
+        element.pc = current_state.observable.pc;
         unsafe {
             self.cycle_tracing_data
                 .per_cycle_data

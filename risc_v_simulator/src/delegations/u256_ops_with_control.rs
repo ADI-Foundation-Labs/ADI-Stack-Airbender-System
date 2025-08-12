@@ -32,6 +32,8 @@ pub fn u256_ops_with_control_impl<
 ) {
     assert_eq!(rs1_value, 0, "aligned memory access is unused");
 
+    let mut state = state.observable;
+
     // read registers first
     let x10 = state.registers[10];
     let x11 = state.registers[11];
@@ -61,7 +63,7 @@ pub fn u256_ops_with_control_impl<
             for (dst, [l, h]) in result
                 .as_limbs_mut()
                 .iter_mut()
-                .zip(words.array_chunks::<2>())
+                .zip(words.as_chunks::<2>().0.iter())
             {
                 *dst = ((h.read_value as u64) << 32) | (l.read_value as u64);
             }
@@ -76,7 +78,7 @@ pub fn u256_ops_with_control_impl<
             for (dst, [l, h]) in result
                 .as_limbs_mut()
                 .iter_mut()
-                .zip(words.array_chunks::<2>())
+                .zip(words.as_chunks::<2>().0.iter())
             {
                 *dst = ((h.read_value as u64) << 32) | (l.read_value as u64);
             }
@@ -150,7 +152,9 @@ pub fn u256_ops_with_control_impl<
     };
 
     for ([l, h], src) in a_accesses
-        .array_chunks_mut::<2>()
+        .as_chunks_mut::<2>()
+        .0
+        .iter_mut()
         .zip(result.as_limbs().iter())
     {
         l.write_value = *src as u32;
