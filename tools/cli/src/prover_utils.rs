@@ -276,10 +276,16 @@ pub fn create_proofs(
         vec![]
     };
 
-    let mut gpu_state = if use_gpu {
-        Some(GpuSharedState::new(&binary))
+    // Serialization and deserialization of artifacts
+    // (as requested by user arguments) can take a lot of time,
+    // and typically won't be needed in production.
+    // total_proof_time accumulates the actual time spent on
+    // the production critical path
+    // (tracing, witness generation, proving, recursion).
+    let (mut gpu_state, mut total_proof_time) = if use_gpu {
+        (Some(GpuSharedState::new(&binary)), Some(0f64))
     } else {
-        None
+        (None, None)
     };
     let mut gpu_state = gpu_state.as_mut();
 
@@ -290,6 +296,7 @@ pub fn create_proofs(
         num_instances,
         prev_metadata.map(|x| x.create_prev_metadata()),
         &mut gpu_state,
+        &mut total_proof_time,
     );
 
     // Now we finished 'basic' proving - check if there is a need for recursion.
@@ -302,8 +309,13 @@ pub fn create_proofs(
             proof_list.write_to_directory(&base_tmp_dir);
             serialize_to_file(&proof_metadata, &base_tmp_dir.join("metadata.json"))
         }
-        let (recursion_proof_list, recursion_proof_metadata) =
-            create_recursion_proofs(proof_list, proof_metadata, tmp_dir, &mut gpu_state);
+        let (recursion_proof_list, recursion_proof_metadata) = create_recursion_proofs(
+            proof_list,
+            proof_metadata,
+            tmp_dir,
+            &mut gpu_state,
+            &mut total_proof_time,
+        );
         match until {
             ProvingLimit::FinalRecursion => {
                 recursion_proof_list.write_to_directory(Path::new(output_dir));
@@ -340,6 +352,13 @@ pub fn create_proofs(
             &Path::new(output_dir).join("metadata.json"),
         )
     }
+
+    if gpu_state.is_some() {
+        println!(
+            "**** Total time on production critical path {:.3}s ****",
+            total_proof_time.unwrap(),
+        );
+    }
 }
 
 pub fn load_binary_from_path(path: &String) -> Vec<u32> {
@@ -366,13 +385,12 @@ fn should_stop_recursion(proof_metadata: &ProofMetadata) -> bool {
 }
 
 // For now, we share the setup cache, only for GPU (as we really care for performance there).
+#[cfg(feature = "gpu")]
 pub struct GpuSharedState<'a> {
-    #[cfg(feature = "gpu")]
     pub prover: gpu_prover::execution::prover::ExecutionProver<'a, usize>,
-    #[cfg(not(feature = "gpu"))]
-    _phantom: std::marker::PhantomData<&'a ()>,
 }
 
+#[cfg(feature = "gpu")]
 impl<'a> GpuSharedState<'a> {
     const MAIN_BINARY_KEY: usize = 0;
     const RECURSION_BINARY_KEY: usize = 1;
@@ -395,8 +413,15 @@ impl<'a> GpuSharedState<'a> {
         let prover = ExecutionProver::new(1, vec![main_binary, recursion_binary]);
         Self { prover }
     }
+}
 
-    #[cfg(not(feature = "gpu"))]
+#[cfg(not(feature = "gpu"))]
+pub struct GpuSharedState<'a> {
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+#[cfg(not(feature = "gpu"))]
+impl<'a> GpuSharedState<'a> {
     pub fn new(_binary: &Vec<u32>) -> Self {
         Self {
             _phantom: std::marker::PhantomData,
@@ -411,6 +436,7 @@ pub fn create_proofs_internal(
     num_instances: usize,
     prev_end_params_output: Option<([u32; 8], Option<[u32; 16]>)>,
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
 ) -> (ProofList, ProofMetadata) {
     let worker = worker::Worker::new_with_num_threads(8);
 
@@ -438,10 +464,9 @@ pub fn create_proofs_internal(
                                 num_instances,
                                 non_determinism_source,
                             );
-                        println!(
-                            "**** proofs generated in {:.3}s ****",
-                            timer.elapsed().as_secs_f64()
-                        );
+                        let elapsed = timer.elapsed().as_secs_f64();
+                        *total_proof_time.as_mut().unwrap() += elapsed;
+                        println!("**** proofs generated in {:.3}s ****", elapsed,);
                         (
                             basic_proofs,
                             delegation_proofs,
@@ -451,6 +476,7 @@ pub fn create_proofs_internal(
                     #[cfg(not(feature = "gpu"))]
                     {
                         let _ = gpu_shared_state;
+                        let _ = total_proof_time;
                         panic!("GPU not enabled - please compile with --features gpu flag.")
                     }
                 } else {
@@ -493,10 +519,9 @@ pub fn create_proofs_internal(
                                 num_instances,
                                 non_determinism_source,
                             );
-                        println!(
-                            "**** proofs generated in {:.3}s ****",
-                            timer.elapsed().as_secs_f64()
-                        );
+                        let elapsed = timer.elapsed().as_secs_f64();
+                        *total_proof_time.as_mut().unwrap() += elapsed;
+                        println!("**** proofs generated in {:.3}s ****", elapsed);
                         (
                             basic_proofs,
                             delegation_proofs,
@@ -506,6 +531,7 @@ pub fn create_proofs_internal(
                     #[cfg(not(feature = "gpu"))]
                     {
                         let _ = gpu_shared_state;
+                        let _ = total_proof_time;
                         panic!("GPU not enabled - please compile with --features gpu flag.")
                     }
                 } else {
@@ -613,6 +639,7 @@ pub fn create_recursion_proofs(
     proof_metadata: ProofMetadata,
     tmp_dir: &Option<String>,
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
 ) -> (ProofList, ProofMetadata) {
     assert!(
         proof_metadata.basic_proof_count > 0,
@@ -638,6 +665,7 @@ pub fn create_recursion_proofs(
             current_proof_metadata.total_proofs(),
             Some(current_proof_metadata.create_prev_metadata()),
             gpu_shared_state,
+            total_proof_time,
         );
 
         if let Some(tmp_dir) = tmp_dir {
@@ -688,6 +716,7 @@ pub fn create_final_proofs(
             &Machine::ReducedFinal,
             current_proof_metadata.total_proofs(),
             Some(current_proof_metadata.create_prev_metadata()),
+            &mut None,
             &mut None,
         );
         if let Some(tmp_dir) = tmp_dir {
