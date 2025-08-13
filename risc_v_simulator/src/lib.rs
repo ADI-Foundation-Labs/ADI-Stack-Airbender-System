@@ -1,7 +1,6 @@
 #![expect(warnings)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-#![feature(array_chunks)]
 #![feature(iter_array_chunks)]
 #![feature(let_chains)]
 

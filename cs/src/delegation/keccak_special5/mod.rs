@@ -1307,6 +1307,7 @@ mod test {
         }
         define_keccak_special5_delegation_circuit(&mut cs);
         let (circuit_output, _) = cs.finalize();
+        // dbg!(&circuit_output.register_and_indirect_memory_accesses);
         let compiler = OneRowCompiler::default();
         let compiled = compiler.compile_to_evaluate_delegations(circuit_output, 20);
 

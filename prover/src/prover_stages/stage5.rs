@@ -139,7 +139,7 @@ pub fn prover_stage_5<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                 [0u32; (1usize * 4).next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)];
             Transcript::draw_randomness(seed, &mut transcript_challenges);
 
-            let mut it = transcript_challenges.array_chunks::<4>();
+            let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
             let challenge = Mersenne31Quartic::from_coeffs_in_base(
                 &it.next()
                     .unwrap()
@@ -319,7 +319,7 @@ pub fn prover_stage_5<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                 [0u32; (1usize * 4).next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)];
             Transcript::draw_randomness(seed, &mut transcript_challenges);
 
-            let mut it = transcript_challenges.array_chunks::<4>();
+            let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
             let challenge = Mersenne31Quartic::from_coeffs_in_base(
                 &it.next()
                     .unwrap()
@@ -484,7 +484,7 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                 Worker::smart_spawn(scope, thread_idx == geometry.len() - 1, move |_| {
                     let mut dst_ptr = dst_chunk.as_mut_ptr();
-                    let mut source_chunks = src_chunk.array_chunks::<8>();
+                    let mut source_chunks = src_chunk.as_chunks::<8>().0.into_iter();
                     for i in 0..chunk_size {
                         let t = chunk_start + i;
                         let absolute_set_idx = t * 4; // our twiddles are only half-size
@@ -495,15 +495,14 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
                         let (a0, a1, b0, b1) = {
                             let [a_root, b_root, c_root, d_root] = used_twiddles
                                 [absolute_set_idx..]
-                                .array_chunks::<4>()
-                                .next()
-                                .unwrap_unchecked();
+                                .as_chunks::<4>()
+                                .0[0];
                             let challenge = &challenge_powers[0];
                             let tau_inv = &tau_inv_powers[0];
 
                             let mut e0 = *a0;
                             e0.sub_assign(a1);
-                            e0.mul_assign_by_base(a_root);
+                            e0.mul_assign_by_base(&a_root);
                             e0.mul_assign_by_base(tau_inv);
                             e0.mul_assign(&challenge);
                             e0.add_assign(a0);
@@ -514,7 +513,7 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                             let mut e1 = *b0;
                             e1.sub_assign(b1);
-                            e1.mul_assign_by_base(b_root);
+                            e1.mul_assign_by_base(&b_root);
                             e1.mul_assign_by_base(tau_inv);
                             e1.mul_assign(&challenge);
                             e1.add_assign(b0);
@@ -525,7 +524,7 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                             let mut f0 = *c0;
                             f0.sub_assign(c1);
-                            f0.mul_assign_by_base(c_root);
+                            f0.mul_assign_by_base(&c_root);
                             f0.mul_assign_by_base(tau_inv);
                             f0.mul_assign(&challenge);
                             f0.add_assign(c0);
@@ -536,7 +535,7 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                             let mut f1 = *d0;
                             f1.sub_assign(d1);
-                            f1.mul_assign_by_base(d_root);
+                            f1.mul_assign_by_base(&d_root);
                             f1.mul_assign_by_base(tau_inv);
                             f1.mul_assign(&challenge);
                             f1.add_assign(d0);
@@ -551,15 +550,14 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                         let (a0, a1) = {
                             let [a_root, b_root] = used_twiddles[absolute_set_idx..]
-                                .array_chunks::<2>()
-                                .next()
-                                .unwrap_unchecked();
+                                .as_chunks::<2>()
+                                .0[0];
                             let challenge = &challenge_powers[1];
                             let tau_inv = &tau_inv_powers[1];
 
                             let mut e0 = a0;
                             e0.sub_assign(&a1);
-                            e0.mul_assign_by_base(a_root);
+                            e0.mul_assign_by_base(&a_root);
                             e0.mul_assign_by_base(tau_inv);
                             e0.mul_assign(&challenge);
                             e0.add_assign(&a0);
@@ -567,7 +565,7 @@ fn fold_by_8<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                             let mut e1 = b0;
                             e1.sub_assign(&b1);
-                            e1.mul_assign_by_base(b_root);
+                            e1.mul_assign_by_base(&b_root);
                             e1.mul_assign_by_base(tau_inv);
                             e1.mul_assign(&challenge);
                             e1.add_assign(&b0);
@@ -693,7 +691,9 @@ fn fold_by_log_n<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool, const N: usi
                                 &used_twiddles[absolute_set_idx..][..twiddles_chunk_size];
                             assert_eq!(twiddles.len() * 2, input.len());
                             for (([a, b], twiddle), dst) in input
-                                .array_chunks::<2>()
+                                .as_chunks::<2>()
+                                .0
+                                .into_iter()
                                 .zip(twiddles.iter())
                                 .zip(output_buffer_ref.iter_mut())
                             {
@@ -784,7 +784,7 @@ fn fold_by_2<A: GoodAllocator, const ADJUST_FIRST_VALUES: bool>(
 
                 Worker::smart_spawn(scope, thread_idx == geometry.len() - 1, move |_| {
                     let mut dst_ptr = dst_chunk.as_mut_ptr();
-                    let mut source_chunks = src_chunk.array_chunks::<2>();
+                    let mut source_chunks = src_chunk.as_chunks::<2>().0.into_iter();
                     for i in 0..chunk_size {
                         let absolute_set_idx = chunk_start + i; // our twiddles are only half-size
                         let [a0, a1] = source_chunks.next().unwrap_unchecked();
@@ -841,7 +841,7 @@ fn fold_by_2_in_monomial_form(
 ) -> (Vec<Mersenne31Complex>, Vec<Mersenne31Complex>) {
     let mut output_c0 = vec![];
     let mut output_c1 = vec![];
-    for ([a0, b0], [a1, b1]) in c0.array_chunks::<2>().zip(c1.array_chunks::<2>()) {
+    for ([a0, b0], [a1, b1]) in c0.as_chunks::<2>().0.into_iter().zip(c1.as_chunks::<2>().0) {
         let a = Mersenne31Quartic { c0: *a0, c1: *a1 };
         let mut tmp = Mersenne31Quartic { c0: *b0, c1: *b1 };
         tmp.mul_assign(challenge);
