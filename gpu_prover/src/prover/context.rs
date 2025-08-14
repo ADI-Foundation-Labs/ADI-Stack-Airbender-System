@@ -106,15 +106,31 @@ impl ProverContext {
     }
 
     pub fn new(config: &ProverContextConfig) -> CudaResult<Self> {
+        use log::trace;
         let slack_size = config.device_slack_blocks_count << config.allocation_block_log_size;
+        trace!("GPU block count: {}", config.device_slack_blocks_count);
+        trace!("GPU block size: {}", config.allocation_block_log_size);
+        trace!("GPU_WORKER slack size: {} bytes", slack_size);
         let slack = era_cudart::memory::DeviceAllocation::<u8>::alloc(slack_size)?;
+        trace!("Slack Allocated..");
+
         let device_id = get_device()?;
+        trace!("GPU_WORKER device_id: {}", device_id);
+        trace!("context with {}", config.powers_of_w_coarse_log_count);
         let device_context = DeviceContext::create(config.powers_of_w_coarse_log_count)?;
         let exec_stream = CudaStream::create()?;
         let aux_stream = CudaStream::create()?;
         let h2d_stream = CudaStream::create()?;
         let (free, _) = memory_get_info()?;
         let mut device_blocks_count = free >> config.allocation_block_log_size;
+
+        trace!("GPU_WORKER free: {}", free);
+        trace!("GPU_WORKER device_blocks_count: {}", device_blocks_count);
+        trace!(
+            "GPU WORKER trying to allocate {}",
+            device_blocks_count << config.allocation_block_log_size
+        );
+
         let device_allocation = loop {
             let result = era_cudart::memory::DeviceAllocation::<u8>::alloc(
                 device_blocks_count << config.allocation_block_log_size,

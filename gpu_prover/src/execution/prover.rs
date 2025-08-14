@@ -191,8 +191,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             let allocator = ConcurrentStaticHostAllocator::new([allocation], LOG_CHUNK_SIZE);
             free_allocator_sender.send(allocator).unwrap();
         }
-        info!("PROVER initializing global host allocator with 4 x 512 MB");
-        ProverContext::initialize_global_host_allocator(4, 1 << 7, 22).unwrap();
+        info!("PROVER initializing global host allocator with 8 x 4096 MB");
+        ProverContext::initialize_global_host_allocator(8, 1 << 10, 22).unwrap();
         info!("PROVER global host allocator initialized");
         let worker = Worker::new();
         info!(

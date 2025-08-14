@@ -340,7 +340,10 @@ impl<'a, T> Iterator for GeometryAwareChunksRev<'a, T> {
 
 impl Worker {
     pub fn new() -> Self {
-        let num_cores = num_cpus::get();
+        let mut num_cores = num_cpus::get();
+        if num_cores >= 128 {
+            num_cores = 127;
+        }
 
         Self::new_with_num_threads(num_cores)
     }

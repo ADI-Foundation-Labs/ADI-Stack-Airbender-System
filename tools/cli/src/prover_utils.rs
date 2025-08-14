@@ -334,8 +334,13 @@ pub fn create_proofs(
                 );
             }
             ProvingLimit::FinalProof => {
-                let program_proof =
-                    create_final_proofs(recursion_proof_list, recursion_proof_metadata, tmp_dir);
+                let program_proof = create_final_proofs(
+                    recursion_proof_list,
+                    recursion_proof_metadata,
+                    tmp_dir,
+                    &mut gpu_state,
+                    &mut total_proof_time,
+                );
 
                 serialize_to_file(
                     &program_proof,
@@ -394,6 +399,7 @@ pub struct GpuSharedState {
 impl GpuSharedState {
     const MAIN_BINARY_KEY: usize = 0;
     const RECURSION_BINARY_KEY: usize = 1;
+    const FINAL_RECURSION_KEY: usize = 2;
 
     #[cfg(feature = "gpu")]
     pub fn new(binary: &Vec<u32>) -> Self {
@@ -409,6 +415,11 @@ impl GpuSharedState {
             key: Self::RECURSION_BINARY_KEY,
             circuit_type: MainCircuitType::ReducedRiscVMachine,
             bytecode: get_padded_binary(UNIVERSAL_CIRCUIT_VERIFIER),
+        };
+        let final_recursion = ExecutableBinary {
+            key: Self::FINAL_RECURSION_KEY,
+            circuit_type: MainCircuitType::FinalReducedRiscVMachine,
+            bytecode: get_padded_binary(UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER),
         };
         let prover = ExecutionProver::new(1, vec![main_binary, recursion_binary]);
         Self { prover }
@@ -561,21 +572,53 @@ pub fn create_proofs_internal(
             )
         }
         Machine::ReducedFinal => {
-            let main_circuit_precomputations =
-                setups::get_final_reduced_riscv_circuit_setup::<Global, Global>(&binary, &worker);
-
-            let delegation_precomputations =
-                setups::all_delegation_circuits_precomputations::<Global, Global>(&worker);
-
             let (final_proofs, delegation_proofs, register_values) =
-                prover_examples::prove_image_execution_on_final_reduced_machine(
-                    num_instances,
-                    &binary,
-                    non_determinism_source,
-                    &main_circuit_precomputations,
-                    &delegation_precomputations,
-                    &worker,
-                );
+                if let Some(gpu_shared_state) = gpu_shared_state {
+                    #[cfg(feature = "gpu")]
+                    {
+                        println!("**** proving using GPU ****");
+                        let timer = std::time::Instant::now();
+                        let (final_register_values, basic_proofs, delegation_proofs) =
+                            gpu_shared_state.prover.commit_memory_and_prove(
+                                0,
+                                &GpuSharedState::RECURSION_BINARY_KEY,
+                                num_instances,
+                                non_determinism_source,
+                            );
+                        let elapsed = timer.elapsed().as_secs_f64();
+                        *total_proof_time.as_mut().unwrap() += elapsed;
+                        println!("**** proofs generated in {:.3}s ****", elapsed);
+                        (
+                            basic_proofs,
+                            delegation_proofs,
+                            final_register_values.into(),
+                        )
+                    }
+                    #[cfg(not(feature = "gpu"))]
+                    {
+                        let _ = gpu_shared_state;
+                        let _ = total_proof_time;
+                        panic!("GPU not enabled - please compile with --features gpu flag.")
+                    }
+                } else {
+                    let main_circuit_precomputations =
+                        setups::get_final_reduced_riscv_circuit_setup::<Global, Global>(
+                            &binary, &worker,
+                        );
+
+                    let delegation_precomputations =
+                        setups::all_delegation_circuits_precomputations::<Global, Global>(&worker);
+
+                    prover_examples::prove_image_execution_on_final_reduced_machine(
+                        num_instances,
+                        &binary,
+                        non_determinism_source,
+                        &main_circuit_precomputations,
+                        &delegation_precomputations,
+                        &worker,
+                    )
+                };
+
             if delegation_proofs.len() != 0 {
                 panic!("Expected no delegation proofs for final reduced machine.");
             }
@@ -687,16 +730,30 @@ pub fn create_recursion_proofs(
     (current_proof_list, current_proof_metadata)
 }
 
-pub fn create_final_proofs_from_program_proof(input: ProgramProof) -> ProgramProof {
+pub fn create_final_proofs_from_program_proof(input: ProgramProof, use_gpu: bool) -> ProgramProof {
     let (proof_metadata, proof_list) = proof_list_and_metadata_from_program_proof(input);
+    let (mut gpu_state, mut total_proof_time) = if use_gpu {
+        (Some(GpuSharedState::new(&vec![])), Some(0f64))
+    } else {
+        (None, None)
+    };
+    let mut gpu_state = gpu_state.as_mut();
 
-    create_final_proofs(proof_list, proof_metadata, &None)
+    create_final_proofs(
+        proof_list,
+        proof_metadata,
+        &None,
+        &mut gpu_state,
+        &mut total_proof_time,
+    )
 }
 
 pub fn create_final_proofs(
     proof_list: ProofList,
     proof_metadata: ProofMetadata,
     tmp_dir: &Option<String>,
+    gpu_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
 ) -> ProgramProof {
     let binary = get_padded_binary(UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER);
 
@@ -716,8 +773,8 @@ pub fn create_final_proofs(
             &Machine::ReducedFinal,
             current_proof_metadata.total_proofs(),
             Some(current_proof_metadata.create_prev_metadata()),
-            &mut None,
-            &mut None,
+            gpu_state,
+            total_proof_time,
         );
         if let Some(tmp_dir) = tmp_dir {
             let base_tmp_dir = Path::new(tmp_dir).join(format!("final_{}", final_proof_level));
