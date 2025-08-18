@@ -378,6 +378,8 @@ pub fn create_proofs(
                     recursion_proof_metadata,
                     recursion_mode,
                     tmp_dir,
+                    &mut gpu_state,
+                    &mut total_proof_time,
                 );
 
                 serialize_to_file(
@@ -451,6 +453,7 @@ pub struct GpuSharedState<'a> {
 impl<'a> GpuSharedState<'a> {
     const MAIN_BINARY_KEY: usize = 0;
     const RECURSION_BINARY_KEY: usize = 1;
+    const RECURSION_LOG_23_BINARY_KEY: usize = 2;
 
     #[cfg(feature = "gpu")]
     pub fn new(binary: &Vec<u32>) -> Self {
@@ -467,7 +470,12 @@ impl<'a> GpuSharedState<'a> {
             circuit_type: MainCircuitType::ReducedRiscVMachine,
             bytecode: get_padded_binary(UNIVERSAL_CIRCUIT_VERIFIER),
         };
-        let prover = ExecutionProver::new(1, vec![main_binary, recursion_binary]);
+        let recursion_log_23_binary = ExecutableBinary {
+            key: Self::RECURSION_LOG_23_BINARY_KEY,
+            circuit_type: MainCircuitType::ReducedLog23RiscVMachine,
+            bytecode: get_padded_binary(RECURSION_LAYER_VERIFIER),
+        };
+        let prover = ExecutionProver::new(1, vec![main_binary, recursion_binary, recursion_log_23_binary]);
         Self { prover }
     }
 }
@@ -624,7 +632,23 @@ pub fn create_proofs_internal(
                 if let Some(gpu_shared_state) = gpu_shared_state {
                     #[cfg(feature = "gpu")]
                     {
-                        todo!()
+                        println!("**** proving using GPU ****");
+                        let timer = std::time::Instant::now();
+                        let (final_register_values, basic_proofs, delegation_proofs) =
+                            gpu_shared_state.prover.commit_memory_and_prove(
+                                0,
+                                &GpuSharedState::RECURSION_BINARY_KEY,
+                                num_instances,
+                                non_determinism_source,
+                            );
+                        let elapsed = timer.elapsed().as_secs_f64();
+                        *total_proof_time.as_mut().unwrap() += elapsed;
+                        println!("**** proofs generated in {:.3}s ****", elapsed);
+                        (
+                            basic_proofs,
+                            delegation_proofs,
+                            final_register_values.into(),
+                        )
                     }
                     #[cfg(not(feature = "gpu"))]
                     {
@@ -799,7 +823,9 @@ pub fn create_final_proofs_from_program_proof(
 ) -> ProgramProof {
     let (proof_metadata, proof_list) = proof_list_and_metadata_from_program_proof(input);
 
-    create_final_proofs(proof_list, proof_metadata, recursion_mode, &None)
+    // TODO: add gpu support here
+    let mut gpu_state = None;
+    create_final_proofs(proof_list, proof_metadata, recursion_mode, &None, &mut gpu_state, &mut None)
 }
 
 pub fn create_final_proofs(
@@ -807,6 +833,8 @@ pub fn create_final_proofs(
     proof_metadata: ProofMetadata,
     recursion_mode: RecursionMode,
     tmp_dir: &Option<String>,
+    gpu_shared_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
 ) -> ProgramProof {
     let binary = match recursion_mode {
         RecursionMode::UseFinalMachine => {
@@ -843,8 +871,8 @@ pub fn create_final_proofs(
             &machine,
             current_proof_metadata.total_proofs(),
             Some(current_proof_metadata.create_prev_metadata()),
-            &mut None,
-            &mut None,
+            gpu_shared_state,
+            total_proof_time,
         );
         if let Some(tmp_dir) = tmp_dir {
             let base_tmp_dir = Path::new(tmp_dir).join(format!("final_{}", final_proof_level));

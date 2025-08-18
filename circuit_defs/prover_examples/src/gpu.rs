@@ -77,8 +77,9 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
     prover_context: &P,
     worker: &Worker,
 ) -> CudaResult<(Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>)> {
-    let cycles_per_circuit = setups::num_cycles_for_machine::<C>();
-    let trace_len = setups::trace_len_for_machine::<C>();
+    let trace_len = risc_v_circuit_precomputations.compiled_circuit.trace_len;
+    let cycles_per_circuit = trace_len - 1;
+    let lde_factor = risc_v_circuit_precomputations.lde_precomputations.lde_factor;
     assert_eq!(cycles_per_circuit + 1, trace_len);
     let max_cycles_to_run = num_instances_upper_bound * cycles_per_circuit;
 
@@ -88,7 +89,11 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
             CircuitType::Main(MainCircuitType::RiscVCycles)
         }
         id if id == std::any::TypeId::of::<IWithoutByteAccessIsaConfigWithDelegation>() => {
-            CircuitType::Main(MainCircuitType::ReducedRiscVMachine)
+            if trace_len == 1 << 23 {
+                CircuitType::Main(MainCircuitType::ReducedLog23RiscVMachine)
+            } else {
+                CircuitType::Main(MainCircuitType::ReducedRiscVMachine)
+            }
         }
         _ => {
             panic!("Unsupported machine type");
@@ -102,6 +107,7 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
         final_register_values,
     ) = trace_execution_for_gpu::<ND, C, P::HostAllocator>(
         max_cycles_to_run,
+        trace_len,
         bytecode,
         non_determinism,
         worker,
@@ -113,7 +119,6 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
     // commit memory trees
     for (circuit_sequence, witness_chunk) in main_circuits_witness.iter().enumerate() {
         let (gpu_caps, _) = {
-            let lde_factor = setups::lde_factor_for_machine::<C>();
             let log_lde_factor = lde_factor.trailing_zeros();
             let log_domain_size = trace_len.trailing_zeros();
             let log_tree_cap_size =
@@ -242,7 +247,6 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
         );
         setup_evaluations.truncate(setup_row_major.len() * setup_row_major.width());
         let circuit = &risc_v_circuit_precomputations.compiled_circuit;
-        let lde_factor = setups::lde_factor_for_machine::<C>();
         let log_lde_factor = lde_factor.trailing_zeros();
         let log_domain_size = trace_len.trailing_zeros();
         let log_tree_cap_size =
@@ -258,7 +262,6 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
     let mut main_proofs = vec![];
     for (circuit_sequence, witness_chunk) in main_circuits_witness.into_iter().enumerate() {
         let (gpu_proof, _) = {
-            let lde_factor = setups::lde_factor_for_machine::<C>();
             let (setup_and_teardown, aux_boundary_values) = if circuit_sequence < num_paddings {
                 (None, AuxArgumentsBoundaryValues::default())
             } else {
@@ -453,6 +456,7 @@ pub fn trace_execution_for_gpu<
     A: GoodAllocator,
 >(
     num_instances_upper_bound: usize,
+    domain_size: usize,
     bytecode: &[u32],
     mut non_determinism: ND,
     worker: &Worker,
@@ -465,7 +469,7 @@ pub fn trace_execution_for_gpu<
     HashMap<DelegationCircuitType, Vec<DelegationTraceHost<A>>>,
     Vec<FinalRegisterValue>,
 ) {
-    let cycles_per_circuit = setups::num_cycles_for_machine::<C>();
+    let cycles_per_circuit = domain_size - 1;
     let max_cycles_to_run = num_instances_upper_bound * cycles_per_circuit;
 
     let delegation_factories = setups::delegation_factories_for_machine::<C, A>();
@@ -478,6 +482,7 @@ pub fn trace_execution_for_gpu<
         init_and_teardown_chunks,
     ) = run_and_split_for_gpu::<ND, C, A>(
         max_cycles_to_run,
+        domain_size,
         bytecode,
         &mut non_determinism,
         delegation_factories,

@@ -26,6 +26,7 @@ cuda_kernel!(GenerateWitnessMainKernel,
 generate_witness_main_kernel!(generate_final_reduced_risc_v_machine_witness_kernel);
 generate_witness_main_kernel!(generate_machine_without_signed_mul_div_witness_kernel);
 generate_witness_main_kernel!(generate_reduced_risc_v_machine_witness_kernel);
+// generate_witness_main_kernel!(generate_reduced_risc_v_log_23_machine_witness_kernel);
 generate_witness_main_kernel!(generate_risc_v_cycles_witness_kernel);
 
 pub fn generate_witness_values_main<C: ProverContext>(
@@ -70,6 +71,9 @@ pub fn generate_witness_values_main<C: ProverContext>(
             generate_machine_without_signed_mul_div_witness_kernel
         }
         MainCircuitType::ReducedRiscVMachine => generate_reduced_risc_v_machine_witness_kernel,
+        MainCircuitType::ReducedLog23RiscVMachine => {
+            generate_reduced_risc_v_machine_witness_kernel
+        }
         MainCircuitType::RiscVCycles => generate_risc_v_cycles_witness_kernel,
     };
     GenerateWitnessMainKernelFunction(kernel).launch(&config, &args)

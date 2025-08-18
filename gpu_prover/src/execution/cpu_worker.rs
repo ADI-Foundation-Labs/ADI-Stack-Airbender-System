@@ -20,7 +20,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::time::Instant;
-use trace_and_split::setups::trace_len_for_machine;
+// use trace_and_split::setups::trace_len_for_machine;
 use trace_and_split::{setups, FinalRegisterValue, ENTRY_POINT};
 
 pub trait NonDeterminism:
@@ -78,6 +78,7 @@ pub fn get_cpu_worker_func<C: MachineConfig, A: GoodAllocator + 'static>(
     batch_id: u64,
     worker_id: usize,
     num_main_chunks_upper_bound: usize,
+    domain_size: usize,
     binary: impl Deref<Target = impl Deref<Target = [u32]>> + Send + 'static,
     non_determinism: impl Deref<Target = impl NonDeterminism> + Send + 'static,
     mode: CpuWorkerMode<A>,
@@ -127,6 +128,7 @@ pub fn get_cpu_worker_func<C: MachineConfig, A: GoodAllocator + 'static>(
                 batch_id,
                 worker_id,
                 num_main_chunks_upper_bound,
+                domain_size,
                 binary,
                 non_determinism,
                 skip_set,
@@ -151,7 +153,7 @@ fn trace_touched_ram<C: MachineConfig, A: GoodAllocator>(
     results: Sender<WorkerResult<A>>,
 ) {
     trace!("BATCH[{batch_id}] CPU_WORKER[{worker_id}] worker for tracing touched RAM started");
-    let domain_size = trace_len_for_machine::<C>();
+    let domain_size = crate::execution::prover::get_domain_size(circuit_type);
     assert!(domain_size.is_power_of_two());
     let log_domain_size = domain_size.trailing_zeros();
     let mut non_determinism = non_determinism.clone();
@@ -311,7 +313,7 @@ fn trace_cycles<C: MachineConfig, A: GoodAllocator + 'static>(
     results: Sender<WorkerResult<A>>,
 ) {
     trace!("BATCH[{batch_id}] CPU_WORKER[{worker_id}] worker for tracing cycles started");
-    let domain_size = trace_len_for_machine::<C>();
+    let domain_size = crate::execution::prover::get_domain_size(circuit_type);
     assert!(domain_size.is_power_of_two());
     let log_domain_size = domain_size.trailing_zeros();
     let mut non_determinism = non_determinism.clone();
@@ -420,6 +422,7 @@ fn trace_delegations<C: MachineConfig, A: GoodAllocator + 'static>(
     batch_id: u64,
     worker_id: usize,
     num_main_chunks_upper_bound: usize,
+    domain_size: usize,
     binary: impl Deref<Target = impl Deref<Target = [u32]>>,
     non_determinism: impl Deref<Target = impl NonDeterminism>,
     skip_set: HashSet<(CircuitType, usize)>,
@@ -428,7 +431,6 @@ fn trace_delegations<C: MachineConfig, A: GoodAllocator + 'static>(
     results: Sender<WorkerResult<A>>,
 ) {
     trace!("BATCH[{batch_id}] CPU_WORKER[{worker_id}] worker for tracing delegations started");
-    let domain_size = trace_len_for_machine::<C>();
     assert!(domain_size.is_power_of_two());
     let log_domain_size = domain_size.trailing_zeros();
     let mut non_determinism = non_determinism.clone();

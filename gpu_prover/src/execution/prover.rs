@@ -142,7 +142,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
         let device_count = get_device_count().unwrap() as usize;
         let max_num_cycles = binaries
             .iter()
-            .map(|b| Self::get_num_cycles(b.circuit_type))
+            .map(|b| get_num_cycles(b.circuit_type))
             .max()
             .unwrap();
         fn delegation_witness_size(witness: DelegationWitness) -> usize {
@@ -1011,6 +1011,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
             MainCircuitType::FinalReducedRiscVMachine => false,
             MainCircuitType::MachineWithoutSignedMulDiv => true,
             MainCircuitType::ReducedRiscVMachine => true,
+            MainCircuitType::ReducedLog23RiscVMachine => true,
             MainCircuitType::RiscVCycles => true,
         };
         let external_challenges = ExternalChallenges::draw_from_transcript_seed(
@@ -1071,6 +1072,9 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
             MainCircuitType::ReducedRiscVMachine => {
                 setups::get_reduced_riscv_circuit_setup(&bytecode, worker).into()
             }
+            MainCircuitType::ReducedLog23RiscVMachine => {
+                setups::get_reduced_riscv_log_23_circuit_setup(&bytecode, worker).into()
+            }
             MainCircuitType::RiscVCycles => {
                 setups::get_main_riscv_circuit_setup(&bytecode, worker).into()
             }
@@ -1087,10 +1091,12 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
             MainCircuitType::MachineWithoutSignedMulDiv => {
                 setups::delegation_factories_for_machine::<IMWithoutSignedMulDivIsaConfig, A>()
             }
-            MainCircuitType::ReducedRiscVMachine => setups::delegation_factories_for_machine::<
-                IWithoutByteAccessIsaConfigWithDelegation,
-                A,
-            >(),
+            MainCircuitType::ReducedRiscVMachine => {
+                setups::delegation_factories_for_machine::<IWithoutByteAccessIsaConfigWithDelegation, A>()
+            }
+            MainCircuitType::ReducedLog23RiscVMachine => {
+                setups::delegation_factories_for_machine::<IWithoutByteAccessIsaConfigWithDelegation, A>()
+            }
             MainCircuitType::RiscVCycles => {
                 setups::delegation_factories_for_machine::<IMStandardIsaConfig, A>()
             }
@@ -1099,21 +1105,6 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
             .into_iter()
             .map(|(id, factory)| (DelegationCircuitType::from(id), factory))
             .collect()
-    }
-
-    fn get_num_cycles(circuit_type: MainCircuitType) -> usize {
-        match circuit_type {
-            MainCircuitType::FinalReducedRiscVMachine => {
-                setups::num_cycles_for_machine::<IWithoutByteAccessIsaConfig>()
-            }
-            MainCircuitType::MachineWithoutSignedMulDiv => {
-                setups::num_cycles_for_machine::<IMWithoutSignedMulDivIsaConfig>()
-            }
-            MainCircuitType::ReducedRiscVMachine => {
-                setups::num_cycles_for_machine::<IWithoutByteAccessIsaConfigWithDelegation>()
-            }
-            MainCircuitType::RiscVCycles => setups::num_cycles_for_machine::<IMStandardIsaConfig>(),
-        }
     }
 
     fn spawn_cpu_worker(
@@ -1128,6 +1119,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
         results: Sender<WorkerResult<A>>,
     ) {
         let wait_group = self.wait_group.as_ref().unwrap().clone();
+        let domain_size = crate::execution::prover::get_domain_size(circuit_type);
         match circuit_type {
             MainCircuitType::FinalReducedRiscVMachine => {
                 let func = get_cpu_worker_func::<IWithoutByteAccessIsaConfig, _>(
@@ -1135,6 +1127,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
                     batch_id,
                     worker_id,
                     num_main_chunks_upper_bound,
+                    domain_size,
                     binary,
                     non_determinism,
                     mode,
@@ -1148,6 +1141,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
                     batch_id,
                     worker_id,
                     num_main_chunks_upper_bound,
+                    domain_size,
                     binary,
                     non_determinism,
                     mode,
@@ -1161,6 +1155,21 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
                     batch_id,
                     worker_id,
                     num_main_chunks_upper_bound,
+                    domain_size,
+                    binary,
+                    non_determinism,
+                    mode,
+                    results,
+                );
+                self.worker.pool.spawn(func);
+            }
+            MainCircuitType::ReducedLog23RiscVMachine => {
+                let func = get_cpu_worker_func::<IWithoutByteAccessIsaConfigWithDelegation, _>(
+                    wait_group,
+                    batch_id,
+                    worker_id,
+                    num_main_chunks_upper_bound,
+                    domain_size,
                     binary,
                     non_determinism,
                     mode,
@@ -1174,6 +1183,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
                     batch_id,
                     worker_id,
                     num_main_chunks_upper_bound,
+                    domain_size,
                     binary,
                     non_determinism,
                     mode,
@@ -1182,6 +1192,42 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<'_, K> {
                 self.worker.pool.spawn(func);
             }
         }
+    }
+}
+
+pub fn get_num_cycles(circuit_type: MainCircuitType) -> usize {
+    match circuit_type {
+        MainCircuitType::FinalReducedRiscVMachine => {
+            setups::final_reduced_risc_v_machine::NUM_CYCLES
+        }
+        MainCircuitType::MachineWithoutSignedMulDiv => {
+            setups::machine_without_signed_mul_div::NUM_CYCLES
+        }
+        MainCircuitType::ReducedRiscVMachine => {
+            setups::reduced_risc_v_machine::NUM_CYCLES
+        }
+        MainCircuitType::ReducedLog23RiscVMachine => {
+            setups::reduced_risc_v_log_23_machine::NUM_CYCLES
+        }
+        MainCircuitType::RiscVCycles => setups::risc_v_cycles::NUM_CYCLES,
+    }
+}
+
+pub fn get_domain_size(circuit_type: MainCircuitType) -> usize {
+    match circuit_type {
+        MainCircuitType::FinalReducedRiscVMachine => {
+            setups::final_reduced_risc_v_machine::DOMAIN_SIZE
+        }
+        MainCircuitType::MachineWithoutSignedMulDiv => {
+            setups::machine_without_signed_mul_div::DOMAIN_SIZE
+        }
+        MainCircuitType::ReducedRiscVMachine => {
+            setups::reduced_risc_v_machine::DOMAIN_SIZE
+        }
+        MainCircuitType::ReducedLog23RiscVMachine => {
+            setups::reduced_risc_v_log_23_machine::DOMAIN_SIZE
+        }
+        MainCircuitType::RiscVCycles => setups::risc_v_cycles::DOMAIN_SIZE,
     }
 }
 
