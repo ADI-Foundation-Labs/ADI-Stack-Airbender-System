@@ -1,6 +1,7 @@
+use crate::allocator::host::ConcurrentStaticHostAllocator;
 use crate::circuit_type::CircuitType;
 use crate::circuit_type::MainCircuitType;
-use crate::prover::context::{MemPoolProverContext, ProverContext, ProverContextConfig};
+use crate::prover::context::{ProverContext, ProverContextConfig};
 use crate::prover::memory::commit_memory;
 use crate::prover::setup::SetupPrecomputations;
 use crate::prover::tracing_data::{TracingDataHost, TracingDataTransfer};
@@ -59,13 +60,23 @@ use worker::Worker;
 pub const NUM_QUERIES: usize = 53;
 pub const POW_BITS: u32 = 28;
 
+fn init_logger() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .target(env_logger::Target::Stdout)
+        .format_timestamp_millis()
+        .format_module_path(false)
+        .format_target(false)
+        .init();
+}
+
 #[test]
 fn test_prove_hashed_fibonacci() -> CudaResult<()> {
+    init_logger();
     let instant = std::time::Instant::now();
-    MemPoolProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
+    ProverContext::initialize_global_host_allocator(4, 1 << 8, 22)?;
     let mut prover_context_config = ProverContextConfig::default();
     prover_context_config.allocation_block_log_size = 22;
-    let prover_context = MemPoolProverContext::new(&prover_context_config)?;
+    let prover_context = ProverContext::new(&prover_context_config)?;
     println!("prover_context created in {:?}", instant.elapsed());
 
     let instant = std::time::Instant::now();
@@ -115,8 +126,9 @@ fn test_prove_hashed_fibonacci() -> CudaResult<()> {
 
 #[test]
 fn bench_prove_hashed_fibonacci() -> CudaResult<()> {
+    init_logger();
     let instant = std::time::Instant::now();
-    MemPoolProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
+    ProverContext::initialize_global_host_allocator(4, 1 << 8, 22)?;
     println!("host allocator initialized in {:?}", instant.elapsed());
     let instant = std::time::Instant::now();
     let device_count = get_device_count()?;
@@ -135,7 +147,7 @@ fn bench_prove_hashed_fibonacci() -> CudaResult<()> {
         );
         let mut prover_context_config = ProverContextConfig::default();
         prover_context_config.allocation_block_log_size = 22;
-        let prover_context = MemPoolProverContext::new(&prover_context_config)?;
+        let prover_context = ProverContext::new(&prover_context_config)?;
         contexts.push(prover_context);
     }
     println!("prover contexts created in {:?}", instant.elapsed());
@@ -174,17 +186,20 @@ fn bench_prove_hashed_fibonacci() -> CudaResult<()> {
 fn prove_image_execution_for_machine_with_gpu_tracers<
     ND: NonDeterminismCSRSource<VectorMemoryImplWithRom>,
     C: MachineConfig,
-    P: ProverContext,
 >(
     num_instances_upper_bound: usize,
     bytecode: &[u32],
     non_determinism: ND,
-    risc_v_circuit_precomputations: &MainCircuitPrecomputations<C, Global, P::HostAllocator>,
+    risc_v_circuit_precomputations: &MainCircuitPrecomputations<
+        C,
+        Global,
+        ConcurrentStaticHostAllocator,
+    >,
     delegation_circuits_precomputations: &[(
         u32,
-        DelegationCircuitPrecomputations<Global, P::HostAllocator>,
+        DelegationCircuitPrecomputations<Global, ConcurrentStaticHostAllocator>,
     )],
-    prover_context: &P,
+    prover_context: &ProverContext,
     worker: &Worker,
 ) -> CudaResult<(Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>)> {
     let cycles_per_circuit = setups::num_cycles_for_machine::<C>();
@@ -197,7 +212,7 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
         inits_and_teardowns,
         delegation_circuits_witness,
         final_register_values,
-    ) = trace_execution_for_gpu::<ND, C, P::HostAllocator>(
+    ) = trace_execution_for_gpu::<ND, C, ConcurrentStaticHostAllocator>(
         max_cycles_to_run,
         bytecode,
         non_determinism,
@@ -210,7 +225,7 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
     let padding_shuffle_ram_inits_and_teardowns = ShuffleRamSetupAndTeardown {
         lazy_init_data: {
             let len = risc_v_circuit_precomputations.compiled_circuit.trace_len - 1;
-            let mut data = Vec::with_capacity_in(len, P::HostAllocator::default());
+            let mut data = Vec::with_capacity_in(len, ConcurrentStaticHostAllocator::default());
             data.spare_capacity_mut()
                 .fill(MaybeUninit::new(Default::default()));
             unsafe { data.set_len(len) };
@@ -446,7 +461,7 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
             let setup_row_major = &risc_v_circuit_precomputations.setup.ldes[0].trace;
             let mut setup_evaluations = Vec::with_capacity_in(
                 setup_row_major.as_slice().len(),
-                P::HostAllocator::default(),
+                ConcurrentStaticHostAllocator::default(),
             );
             unsafe { setup_evaluations.set_len(setup_row_major.as_slice().len()) };
             transpose::transpose(
@@ -599,7 +614,7 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
                 let setup_row_major = &prec.setup.ldes[0].trace;
                 let mut setup_evaluations = Vec::with_capacity_in(
                     setup_row_major.as_slice().len(),
-                    P::HostAllocator::default(),
+                    ConcurrentStaticHostAllocator::default(),
                 );
                 unsafe { setup_evaluations.set_len(setup_row_major.as_slice().len()) };
                 transpose::transpose(
@@ -683,15 +698,11 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
     Ok((main_proofs, delegation_proofs, final_register_values))
 }
 
-fn bench_proof_main<
-    ND: NonDeterminismCSRSource<VectorMemoryImplWithRom>,
-    C: MachineConfig,
-    P: ProverContext,
->(
+fn bench_proof_main<ND: NonDeterminismCSRSource<VectorMemoryImplWithRom>, C: MachineConfig>(
     bytecode: &[u32],
     non_determinism: ND,
-    precomputations: &MainCircuitPrecomputations<C, Global, P::HostAllocator>,
-    contexts: &[P],
+    precomputations: &MainCircuitPrecomputations<C, Global, ConcurrentStaticHostAllocator>,
+    contexts: &[ProverContext],
     worker: &Worker,
 ) -> CudaResult<()> {
     let cycles_per_circuit = setups::num_cycles_for_machine::<C>();
@@ -704,7 +715,7 @@ fn bench_proof_main<
         _inits_and_teardowns,
         _delegation_circuits_witness,
         _final_register_values,
-    ) = trace_execution_for_gpu::<ND, C, P::HostAllocator>(
+    ) = trace_execution_for_gpu::<ND, C, ConcurrentStaticHostAllocator>(
         max_cycles_to_run,
         bytecode,
         non_determinism,
@@ -726,7 +737,7 @@ fn bench_proof_main<
     let setup_row_major = &precomputations.setup.ldes[0].trace;
     let mut setup_evaluations = Vec::with_capacity_in(
         setup_row_major.as_slice().len(),
-        P::HostAllocator::default(),
+        ConcurrentStaticHostAllocator::default(),
     );
     unsafe { setup_evaluations.set_len(setup_row_major.as_slice().len()) };
     transpose::transpose(

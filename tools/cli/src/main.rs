@@ -1,4 +1,3 @@
-#![feature(array_chunks)]
 #![feature(allocator_api)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
@@ -625,7 +624,7 @@ fn run_binary(
     machine: &Machine,
 ) {
     let config = SimulatorConfig {
-        bin_path: bin_path.into(),
+        bin: prover::risc_v_simulator::sim::BinarySource::Path(bin_path.into()),
         cycles: cycles.unwrap_or(DEFAULT_CYCLES),
         entry_point: 0,
         diagnostics: None,
@@ -640,24 +639,20 @@ fn run_binary(
 
     let registers = match machine {
         Machine::Standard => {
-            let (_, final_state) =
-                run_simple_with_entry_point_and_non_determimism_source_for_config::<
-                    _,
-                    IMStandardIsaConfig,
-                >(config, non_determinism_source);
+            let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
+                _,
+                IMStandardIsaConfig,
+            >(config, non_determinism_source);
 
-            #[allow(deprecated)]
-            final_state.registers
+            result.state.registers
         }
         Machine::Reduced => {
-            let (_, final_state) =
-                run_simple_with_entry_point_and_non_determimism_source_for_config::<
-                    _,
-                    IWithoutByteAccessIsaConfigWithDelegation,
-                >(config, non_determinism_source);
+            let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
+                _,
+                IWithoutByteAccessIsaConfigWithDelegation,
+            >(config, non_determinism_source);
 
-            #[allow(deprecated)]
-            final_state.registers
+            result.state.registers
         }
         Machine::ReducedLog23 => {
             let (_, final_state) =
@@ -670,14 +665,12 @@ fn run_binary(
             final_state.registers
         }
         Machine::ReducedFinal => {
-            let (_, final_state) =
-                run_simple_with_entry_point_and_non_determimism_source_for_config::<
-                    _,
-                    IWithoutByteAccessIsaConfig,
-                >(config, non_determinism_source);
+            let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
+                _,
+                IWithoutByteAccessIsaConfig,
+            >(config, non_determinism_source);
 
-            #[allow(deprecated)]
-            final_state.registers
+            result.state.registers
         }
     };
 

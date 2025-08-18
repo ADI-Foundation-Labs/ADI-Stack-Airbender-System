@@ -6,7 +6,7 @@ use execution_utils::{
     UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER, UNIVERSAL_CIRCUIT_VERIFIER,
 };
 use trace_and_split::FinalRegisterValue;
-use verifier_common::parse_field_els_as_u32_checked;
+use verifier_common::parse_field_els_as_u32_from_u16_limbs_checked;
 
 use prover::{
     cs::{machine, utils::split_timestamp},
@@ -445,12 +445,12 @@ fn should_stop_recursion(proof_metadata: &ProofMetadata, mode: RecursionMode) ->
 
 // For now, we share the setup cache, only for GPU (as we really care for performance there).
 #[cfg(feature = "gpu")]
-pub struct GpuSharedState<'a> {
-    pub prover: gpu_prover::execution::prover::ExecutionProver<'a, usize>,
+pub struct GpuSharedState {
+    pub prover: gpu_prover::execution::prover::ExecutionProver<usize>,
 }
 
 #[cfg(feature = "gpu")]
-impl<'a> GpuSharedState<'a> {
+impl GpuSharedState {
     const MAIN_BINARY_KEY: usize = 0;
     const RECURSION_BINARY_KEY: usize = 1;
     const RECURSION_LOG_23_BINARY_KEY: usize = 2;
@@ -906,8 +906,10 @@ pub fn get_end_params_output_suffix_from_proof(last_proof: &Proof) -> Option<See
         return None;
     }
 
-    let end_pc =
-        parse_field_els_as_u32_checked([last_proof.public_inputs[2], last_proof.public_inputs[3]]);
+    let end_pc = parse_field_els_as_u32_from_u16_limbs_checked([
+        last_proof.public_inputs[2],
+        last_proof.public_inputs[3],
+    ]);
 
     // We have to compute the the hash of the final program counter, and program binary (setup tree).
     let mut hasher = Blake2sBufferingTranscript::new();

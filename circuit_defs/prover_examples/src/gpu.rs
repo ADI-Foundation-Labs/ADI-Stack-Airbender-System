@@ -8,7 +8,7 @@ use gpu_prover::witness::trace_delegation::DelegationTraceHost;
 use gpu_prover::witness::trace_main::{MainTraceHost, ShuffleRamSetupAndTeardownHost};
 use gpu_prover::{
     prover::{
-        context::{MemPoolProverContext, ProverContext, ProverContextConfig},
+        context::{ProverContext, ProverContextConfig},
         memory::commit_memory,
         setup::SetupPrecomputations,
         tracing_data::{TracingDataHost, TracingDataTransfer},
@@ -46,35 +46,38 @@ use trace_and_split::{
 use crate::{NUM_QUERIES, POW_BITS};
 
 pub fn initialize_host_allocator_if_needed() {
-    if !MemPoolProverContext::is_host_allocator_initialized() {
+    if !ProverContext::is_global_host_allocator_initialized() {
         // allocate 8 x 1 GB ((1 << 8) << 22) of pinned host memory with 4 MB (1 << 22) chunking
-        MemPoolProverContext::initialize_host_allocator(8, 1 << 8, 22).unwrap();
+        ProverContext::initialize_global_host_allocator(8, 1 << 8, 22).unwrap();
     }
 }
 
-pub fn create_default_prover_context<'a>() -> MemPoolProverContext<'a> {
+pub fn create_default_prover_context<'a>() -> ProverContext {
     initialize_host_allocator_if_needed();
     let mut prover_context_config = ProverContextConfig::default();
     prover_context_config.allocation_block_log_size = 22;
 
-    let prover_context = MemPoolProverContext::new(&prover_context_config).unwrap();
+    let prover_context = ProverContext::new(&prover_context_config).unwrap();
     prover_context
 }
 
 pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
     ND: NonDeterminismCSRSource<VectorMemoryImplWithRom>,
     C: MachineConfig,
-    P: ProverContext,
 >(
     num_instances_upper_bound: usize,
     bytecode: &[u32],
     non_determinism: ND,
-    risc_v_circuit_precomputations: &MainCircuitPrecomputations<C, Global, P::HostAllocator>,
+    risc_v_circuit_precomputations: &MainCircuitPrecomputations<
+        C,
+        Global,
+        ConcurrentStaticHostAllocator,
+    >,
     delegation_circuits_precomputations: &[(
         u32,
-        DelegationCircuitPrecomputations<Global, P::HostAllocator>,
+        DelegationCircuitPrecomputations<Global, ConcurrentStaticHostAllocator>,
     )],
-    prover_context: &P,
+    prover_context: &ProverContext,
     worker: &Worker,
 ) -> CudaResult<(Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>)> {
     let trace_len = risc_v_circuit_precomputations.compiled_circuit.trace_len;
@@ -105,7 +108,7 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
         inits_and_teardowns,
         delegation_circuits_witness,
         final_register_values,
-    ) = trace_execution_for_gpu::<ND, C, P::HostAllocator>(
+    ) = trace_execution_for_gpu::<ND, C, ConcurrentStaticHostAllocator>(
         max_cycles_to_run,
         trace_len,
         bytecode,
@@ -236,7 +239,7 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
         let setup_row_major = &risc_v_circuit_precomputations.setup.ldes[0].trace;
         let mut setup_evaluations = Vec::with_capacity_in(
             setup_row_major.as_slice().len(),
-            P::HostAllocator::default(),
+            ConcurrentStaticHostAllocator::default(),
         );
         unsafe { setup_evaluations.set_len(setup_row_major.as_slice().len()) };
         transpose::transpose(
@@ -354,7 +357,7 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
             let setup_row_major = &prec.setup.ldes[0].trace;
             let mut setup_evaluations = Vec::with_capacity_in(
                 setup_row_major.as_slice().len(),
-                P::HostAllocator::default(),
+                ConcurrentStaticHostAllocator::default(),
             );
             unsafe { setup_evaluations.set_len(setup_row_major.as_slice().len()) };
             transpose::transpose(

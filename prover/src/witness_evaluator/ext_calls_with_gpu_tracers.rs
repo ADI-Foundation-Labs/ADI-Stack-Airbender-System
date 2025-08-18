@@ -88,20 +88,22 @@ where
         if *delegation_type == BLAKE2_ROUND_FUNCTION_WITH_EXTENDED_CONTROL_ACCESS_ID {
             let num_requests_per_circuit = circuit.num_requests_per_circuit;
             let delegation_type = *delegation_type as u16;
-            let factory_fn =
-                move || blake2_with_control_factory_fn(delegation_type, num_requests_per_circuit);
+            let factory_fn = move || {
+                blake2_with_control_factory_fn(delegation_type, num_requests_per_circuit, Global)
+            };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<(dyn Fn() -> DelegationWitness)>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
             );
         } else if *delegation_type == U256_OPS_WITH_CONTROL_ACCESS_ID {
             let num_requests_per_circuit = circuit.num_requests_per_circuit;
             let delegation_type = *delegation_type as u16;
-            let factory_fn =
-                move || bigint_with_control_factory_fn(delegation_type, num_requests_per_circuit);
+            let factory_fn = move || {
+                bigint_with_control_factory_fn(delegation_type, num_requests_per_circuit, Global)
+            };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<(dyn Fn() -> DelegationWitness)>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
             );
         } else {
             panic!(
@@ -473,7 +475,7 @@ pub fn dev_run_for_num_cycles_under_convention_ext_with_gpu_tracers<
 
     let register_final_values = std::array::from_fn(|i| {
         let ts = register_last_live_timestamps[i];
-        let value = state.registers[i];
+        let value = state.observable.registers[i];
 
         RamShuffleMemStateRecord {
             last_access_timestamp: ts,
@@ -504,7 +506,7 @@ pub fn dev_run_for_num_cycles_under_convention_ext_with_gpu_tracers<
     }
 
     (
-        state.pc,
+        state.observable.pc,
         traced_chunks,
         all_per_type_logs,
         teardown_data,

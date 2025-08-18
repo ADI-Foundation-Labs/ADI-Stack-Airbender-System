@@ -1,21 +1,18 @@
-use crate::allocator::host::ConcurrentStaticHostAllocator;
-use crate::context::Context;
-use era_cudart::device::{device_get_attribute, get_device, set_device};
-use era_cudart::memory::{memory_get_info, CudaHostAllocFlags, HostAllocation};
-use era_cudart::memory_pools::{
-    AttributeHandler, CudaMemPoolAttributeU64, CudaOwnedMemPool, DevicePoolAllocation,
+use crate::allocator::device::{
+    NonConcurrentStaticDeviceAllocation, NonConcurrentStaticDeviceAllocator,
+    StaticDeviceAllocationBackend,
 };
+use crate::allocator::host::{ConcurrentStaticHostAllocator, NonConcurrentStaticHostAllocator};
+use crate::allocator::tracker::AllocationPlacement;
+use crate::device_context::DeviceContext;
+use era_cudart::device::{device_get_attribute, get_device, set_device};
+use era_cudart::memory::{memory_get_info, CudaHostAllocFlags};
 use era_cudart::result::CudaResult;
-use era_cudart::slice::{CudaSliceMut, DeviceSlice};
 use era_cudart::stream::CudaStream;
 use era_cudart_sys::{CudaDeviceAttr, CudaError};
-use fft::GoodAllocator;
-use field::Mersenne31Field;
 use log::error;
-use std::marker::PhantomData;
-use std::ops::DerefMut;
-
-static DEFAULT_STREAM: CudaStream = CudaStream::DEFAULT;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 pub struct DeviceProperties {
     pub l2_cache_size_bytes: usize,
@@ -40,236 +37,317 @@ impl DeviceProperties {
 pub struct ProverContextConfig {
     pub powers_of_w_coarse_log_count: u32,
     pub allocation_block_log_size: u32,
-    pub device_slack_blocks: usize,
+    pub device_slack_blocks_count: usize,
+    pub host_allocator_blocks_count: usize,
 }
 
 impl Default for ProverContextConfig {
     fn default() -> Self {
         Self {
             powers_of_w_coarse_log_count: 12,
-            allocation_block_log_size: 22,
-            device_slack_blocks: 1,
+            allocation_block_log_size: 22,    // 4 MB blocks
+            device_slack_blocks_count: 64,    // 256 MB slack
+            host_allocator_blocks_count: 128, // 512 MB host allocator pool
         }
     }
 }
 
-pub trait ProverContext {
-    type HostAllocator: GoodAllocator + 'static;
-    type Allocation<T: Sync>: DerefMut<Target = DeviceSlice<T>> + CudaSliceMut<T> + Sync;
-    fn is_host_allocator_initialized() -> bool;
-    fn initialize_host_allocator(
-        host_allocations_count: usize,
-        blocks_per_allocation_count: usize,
-        block_log_size: u32,
-    ) -> CudaResult<()>;
-    fn new(config: &ProverContextConfig) -> CudaResult<Self>
-    where
-        Self: Sized;
-    fn get_device_id(&self) -> i32;
-    fn switch_to_device(&self) -> CudaResult<()>;
-    fn get_exec_stream(&self) -> &CudaStream;
-    fn get_aux_stream(&self) -> &CudaStream;
-    fn get_h2d_stream(&self) -> &CudaStream;
-    fn alloc<T: Sync>(&self, size: usize) -> CudaResult<Self::Allocation<T>>;
-    fn free<T: Sync>(&self, allocation: Self::Allocation<T>) -> CudaResult<()>;
-    fn get_mem_size(&self) -> usize;
-    fn get_used_mem_current(&self) -> CudaResult<usize>;
-    fn get_used_mem_high(&self) -> CudaResult<usize>;
-    fn get_reserved_mem_current(&self) -> CudaResult<usize>;
-    fn get_reserved_mem_high(&self) -> CudaResult<usize>;
-    fn reset_used_mem_high(&self) -> CudaResult<()>;
-    fn get_device_properties(&self) -> &DeviceProperties;
+pub type DeviceAllocator = NonConcurrentStaticDeviceAllocator;
+pub type DeviceAllocation<T> = NonConcurrentStaticDeviceAllocation<T>;
+pub type HostAllocator = NonConcurrentStaticHostAllocator;
 
-    #[cfg(feature = "log_gpu_mem_usage")]
-    fn log_mem_pool_stats(&self, location: &str) -> CudaResult<()> {
-        let used_mem_current = self.get_used_mem_current()?;
-        let used_mem_high = self.get_used_mem_high()?;
-        log::debug!(
-            "GPU memory usage {location} current/high: {}/{} GB",
-            used_mem_current as f64 / ((1 << 30) as f64),
-            used_mem_high as f64 / ((1 << 30) as f64),
-        );
-        Ok(())
-    }
+pub struct ProverContext {
+    _device_context: DeviceContext,
+    device_allocator: DeviceAllocator,
+    host_allocator: HostAllocator,
+    exec_stream: CudaStream,
+    aux_stream: CudaStream,
+    h2d_stream: CudaStream,
+    device_allocator_mem_size: usize,
+    device_id: i32,
+    device_properties: DeviceProperties,
+    reversed_allocation_placement: bool,
 }
 
-pub struct MemPoolProverContext<'a> {
-    _inner: Context,
-    pub(crate) exec_stream: CudaStream,
-    pub(crate) aux_stream: CudaStream,
-    pub(crate) h2d_stream: CudaStream,
-    pub(crate) mem_pool: CudaOwnedMemPool,
-    pub(crate) mem_size: usize,
-    pub(crate) device_id: i32,
-    pub(crate) device_properties: DeviceProperties,
-    _phantom: PhantomData<&'a ()>,
-}
-
-impl<'a> ProverContext for MemPoolProverContext<'a> {
-    type HostAllocator = ConcurrentStaticHostAllocator;
-    type Allocation<T: Sync> = DevicePoolAllocation<'a, T>;
-
-    fn is_host_allocator_initialized() -> bool {
+impl ProverContext {
+    pub fn is_global_host_allocator_initialized() -> bool {
         ConcurrentStaticHostAllocator::is_initialized_global()
     }
 
-    fn initialize_host_allocator(
+    pub fn initialize_global_host_allocator(
         host_allocations_count: usize,
         blocks_per_allocation_count: usize,
         block_log_size: u32,
     ) -> CudaResult<()> {
         assert!(
-            !ConcurrentStaticHostAllocator::is_initialized_global(),
-            "ConcurrentStaticHostAllocator can only be initialized once"
+            !Self::is_global_host_allocator_initialized(),
+            "Global host allocator can only be initialized once"
         );
         let host_allocation_size = blocks_per_allocation_count << block_log_size;
-        let mut allocations = vec![];
-        for _ in 0..host_allocations_count {
-            allocations.push(HostAllocation::alloc(
-                host_allocation_size,
-                CudaHostAllocFlags::DEFAULT,
-            )?);
+        let allocations: Vec<CudaResult<era_cudart::memory::HostAllocation<u8>>> = (0
+            ..host_allocations_count)
+            .into_par_iter()
+            .map(|_| {
+                era_cudart::memory::HostAllocation::alloc(
+                    host_allocation_size,
+                    CudaHostAllocFlags::DEFAULT,
+                )
+            })
+            .collect();
+        let mut backends = vec![];
+        for allocation in allocations {
+            match allocation {
+                Ok(alloc) => backends.push(alloc),
+                Err(e) => return Err(e),
+            }
         }
-        ConcurrentStaticHostAllocator::initialize_global(allocations, block_log_size);
+        ConcurrentStaticHostAllocator::initialize_global(backends, block_log_size);
         Ok(())
     }
 
-    fn new(config: &ProverContextConfig) -> CudaResult<Self> {
-        assert!(ConcurrentStaticHostAllocator::is_initialized_global());
-        let inner = Context::create(config.powers_of_w_coarse_log_count)?;
+    pub fn new(config: &ProverContextConfig) -> CudaResult<Self> {
+        let slack_size = config.device_slack_blocks_count << config.allocation_block_log_size;
+        let slack = era_cudart::memory::DeviceAllocation::<u8>::alloc(slack_size)?;
+        let device_id = get_device()?;
+        let device_context = DeviceContext::create(config.powers_of_w_coarse_log_count)?;
         let exec_stream = CudaStream::create()?;
         let aux_stream = CudaStream::create()?;
         let h2d_stream = CudaStream::create()?;
-        let device_id = get_device()?;
-        let mem_pool = CudaOwnedMemPool::create_for_device(device_id)?;
-        mem_pool.set_attribute(CudaMemPoolAttributeU64::AttrReleaseThreshold, u64::MAX)?;
         let (free, _) = memory_get_info()?;
-        let mut size = (free >> config.allocation_block_log_size) - config.device_slack_blocks;
-        loop {
-            match DevicePoolAllocation::<Mersenne31Field>::alloc_from_pool_async(
-                size << config.allocation_block_log_size,
-                &mem_pool,
-                &DEFAULT_STREAM,
-            ) {
-                Ok(dummy) => {
-                    dummy.free_async(&DEFAULT_STREAM)?;
-                    break;
-                }
+        let mut device_blocks_count = free >> config.allocation_block_log_size;
+        let device_allocation = loop {
+            let result = era_cudart::memory::DeviceAllocation::<u8>::alloc(
+                device_blocks_count << config.allocation_block_log_size,
+            );
+            match result {
+                Ok(allocation) => break allocation,
                 Err(CudaError::ErrorMemoryAllocation) => {
                     let last_error = era_cudart::error::get_last_error();
                     if last_error != CudaError::ErrorMemoryAllocation {
                         return Err(last_error);
                     }
-                    size -= 1;
+                    device_blocks_count -= 1;
+                    continue;
                 }
                 Err(e) => return Err(e),
-            }
-            if let Ok(dummy) = DevicePoolAllocation::<u8>::alloc_from_pool_async(
-                size << config.allocation_block_log_size,
-                &mem_pool,
-                &DEFAULT_STREAM,
-            ) {
-                dummy.free_async(&DEFAULT_STREAM)?;
-                break;
-            } else {
-                size -= 1;
-            }
-        }
-        let mem_size = size << config.allocation_block_log_size;
-        mem_pool.set_attribute(CudaMemPoolAttributeU64::AttrUsedMemHigh, 0)?;
-        DEFAULT_STREAM.synchronize()?;
+            };
+        };
+        slack.free()?;
+        let device_allocation_backend =
+            StaticDeviceAllocationBackend::DeviceAllocation(device_allocation);
+        let device_allocator = NonConcurrentStaticDeviceAllocator::new(
+            [device_allocation_backend],
+            config.allocation_block_log_size,
+        );
+        let device_allocator_mem_size = device_blocks_count << config.allocation_block_log_size;
+        let host_allocation_size =
+            config.host_allocator_blocks_count << config.allocation_block_log_size;
+        let host_allocation = era_cudart::memory::HostAllocation::alloc(
+            host_allocation_size,
+            CudaHostAllocFlags::DEFAULT,
+        )?;
+        let host_allocator = NonConcurrentStaticHostAllocator::new(
+            [host_allocation],
+            config.allocation_block_log_size,
+        );
         let device_properties = DeviceProperties::new()?;
         let context = Self {
-            _inner: inner,
+            _device_context: device_context,
+            device_allocator,
+            host_allocator,
             exec_stream,
             aux_stream,
             h2d_stream,
-            mem_pool,
-            mem_size,
+            device_allocator_mem_size,
             device_id,
             device_properties,
-            _phantom: PhantomData,
+            reversed_allocation_placement: false,
         };
         Ok(context)
     }
 
-    fn get_device_id(&self) -> i32 {
+    pub fn get_host_allocator(&self) -> HostAllocator {
+        self.host_allocator.clone()
+    }
+
+    pub fn get_device_id(&self) -> i32 {
         self.device_id
     }
 
-    fn switch_to_device(&self) -> CudaResult<()> {
+    pub fn switch_to_device(&self) -> CudaResult<()> {
         set_device(self.device_id)
     }
 
-    fn get_exec_stream(&self) -> &CudaStream {
+    pub fn get_exec_stream(&self) -> &CudaStream {
         &self.exec_stream
     }
 
-    fn get_aux_stream(&self) -> &CudaStream {
+    pub fn get_aux_stream(&self) -> &CudaStream {
         &self.aux_stream
     }
 
-    fn get_h2d_stream(&self) -> &CudaStream {
+    pub fn get_h2d_stream(&self) -> &CudaStream {
         &self.h2d_stream
     }
 
-    fn alloc<T: Sync>(&self, size: usize) -> CudaResult<Self::Allocation<T>> {
+    pub fn alloc<T>(
+        &self,
+        size: usize,
+        placement: AllocationPlacement,
+    ) -> CudaResult<DeviceAllocation<T>> {
         assert_ne!(size, 0);
-        let result = DevicePoolAllocation::<T>::alloc_from_pool_async(
-            size,
-            &self.mem_pool,
-            &self.exec_stream,
-        );
-        let result: CudaResult<Self::Allocation<T>> = unsafe { std::mem::transmute(result) };
+        let placement = if self.reversed_allocation_placement {
+            match placement {
+                AllocationPlacement::BestFit => AllocationPlacement::BestFit,
+                AllocationPlacement::Bottom => AllocationPlacement::Top,
+                AllocationPlacement::Top => AllocationPlacement::Bottom,
+            }
+        } else {
+            placement
+        };
+        let result = self.device_allocator.alloc(size, placement);
         if result.is_err() {
             error!(
-                "failed to allocate {} bytes from GPU memory pool of device ID {}, currently allocated {} bytes",
+                "failed to allocate {} bytes from GPU memory allocator of device ID {}, currently allocated {} bytes",
                 size * size_of::<T>(),
                 self.device_id,
-                self.get_used_mem_current()?
+                self.get_used_mem_current()
             );
         }
         result
     }
 
-    fn free<T: Sync>(&self, allocation: Self::Allocation<T>) -> CudaResult<()> {
-        allocation.free_async(&self.exec_stream)
+    pub(crate) unsafe fn alloc_host_uninit<T: Sized>(&self) -> HostAllocation<T> {
+        HostAllocation::new_uninit(self)
     }
 
-    fn get_mem_size(&self) -> usize {
-        self.mem_size
+    pub(crate) unsafe fn alloc_host_uninit_slice<T: Sized>(
+        &self,
+        len: usize,
+    ) -> HostAllocation<[T]> {
+        HostAllocation::new_uninit_slice(len, self)
     }
 
-    fn get_used_mem_current(&self) -> CudaResult<usize> {
-        self.mem_pool
-            .get_attribute(CudaMemPoolAttributeU64::AttrUsedMemCurrent)
-            .map(|x| x as usize)
+    pub fn get_mem_size(&self) -> usize {
+        self.device_allocator_mem_size
     }
 
-    fn get_used_mem_high(&self) -> CudaResult<usize> {
-        self.mem_pool
-            .get_attribute(CudaMemPoolAttributeU64::AttrUsedMemHigh)
-            .map(|x| x as usize)
+    pub fn get_used_mem_current(&self) -> usize {
+        self.device_allocator.get_used_mem_current()
     }
 
-    fn get_reserved_mem_current(&self) -> CudaResult<usize> {
-        self.mem_pool
-            .get_attribute(CudaMemPoolAttributeU64::AttrReservedMemCurrent)
-            .map(|x| x as usize)
+    pub fn get_used_mem_peak(&self) -> usize {
+        self.device_allocator.get_used_mem_peak()
     }
 
-    fn get_reserved_mem_high(&self) -> CudaResult<usize> {
-        self.mem_pool
-            .get_attribute(CudaMemPoolAttributeU64::AttrReservedMemHigh)
-            .map(|x| x as usize)
+    pub fn reset_used_mem_peak(&self) {
+        self.device_allocator.reset_used_mem_peak();
     }
 
-    fn reset_used_mem_high(&self) -> CudaResult<()> {
-        self.mem_pool
-            .set_attribute(CudaMemPoolAttributeU64::AttrUsedMemHigh, 0)
+    #[cfg(feature = "log_gpu_mem_usage")]
+    pub fn log_gpu_mem_usage(&self, location: &str) {
+        let used_mem_current = self.get_used_mem_current();
+        let used_mem_peak = self.get_used_mem_peak();
+        log::debug!(
+            "GPU memory usage {location} current/peak: {}/{} GB",
+            used_mem_current as f64 / ((1 << 30) as f64),
+            used_mem_peak as f64 / ((1 << 30) as f64),
+        );
     }
 
-    fn get_device_properties(&self) -> &DeviceProperties {
+    pub fn get_device_properties(&self) -> &DeviceProperties {
         &self.device_properties
+    }
+
+    pub fn is_reversed_allocation_placement(&self) -> bool {
+        self.reversed_allocation_placement
+    }
+
+    pub fn set_reversed_allocation_placement(&mut self, reversed: bool) {
+        self.reversed_allocation_placement = reversed;
+    }
+}
+
+#[repr(transparent)]
+pub(crate) struct UnsafeAccessor<T: ?Sized>(*const T);
+
+impl<T: ?Sized> UnsafeAccessor<T> {
+    pub fn new(value: &T) -> Self {
+        UnsafeAccessor(value as *const T)
+    }
+
+    pub unsafe fn get(&self) -> &T {
+        &*self.0
+    }
+}
+
+impl<T: ?Sized> Clone for UnsafeAccessor<T> {
+    fn clone(&self) -> Self {
+        UnsafeAccessor(self.0)
+    }
+}
+
+impl<T: ?Sized> Copy for UnsafeAccessor<T> {}
+
+unsafe impl<T: ?Sized> Send for UnsafeAccessor<T> {}
+unsafe impl<T: ?Sized> Sync for UnsafeAccessor<T> {}
+
+#[repr(transparent)]
+pub(crate) struct UnsafeMutAccessor<T: ?Sized>(*mut T);
+
+impl<T: ?Sized> UnsafeMutAccessor<T> {
+    pub fn new(value: &mut T) -> Self {
+        UnsafeMutAccessor(value as *mut T)
+    }
+
+    pub unsafe fn get(&self) -> &T {
+        &*self.0
+    }
+
+    pub unsafe fn get_mut(&self) -> &mut T {
+        &mut *(self.0)
+    }
+
+    pub unsafe fn set(&self, value: T)
+    where
+        T: Sized,
+    {
+        *(self.0) = value;
+    }
+}
+
+impl<T: ?Sized> Clone for UnsafeMutAccessor<T> {
+    fn clone(&self) -> Self {
+        UnsafeMutAccessor(self.0)
+    }
+}
+
+impl<T: ?Sized> Copy for UnsafeMutAccessor<T> {}
+
+unsafe impl<T: ?Sized> Send for UnsafeMutAccessor<T> {}
+unsafe impl<T: ?Sized> Sync for UnsafeMutAccessor<T> {}
+
+pub(crate) struct HostAllocation<T: ?Sized>(Box<T, HostAllocator>);
+
+impl<T: ?Sized> HostAllocation<T> {
+    unsafe fn new_uninit(context: &ProverContext) -> Self
+    where
+        T: Sized,
+    {
+        Self(Box::new_uninit_in(context.get_host_allocator()).assume_init())
+    }
+
+    pub fn get_accessor(&self) -> UnsafeAccessor<T> {
+        UnsafeAccessor::new(&self.0)
+    }
+
+    pub fn get_mut_accessor(&mut self) -> UnsafeMutAccessor<T> {
+        UnsafeMutAccessor::new(&mut self.0)
+    }
+}
+
+impl<T> HostAllocation<[T]> {
+    unsafe fn new_uninit_slice(len: usize, context: &ProverContext) -> Self {
+        Self(Box::new_uninit_slice_in(len, context.get_host_allocator()).assume_init())
     }
 }

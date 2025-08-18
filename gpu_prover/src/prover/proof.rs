@@ -1,5 +1,5 @@
 use super::callbacks::Callbacks;
-use super::context::ProverContext;
+use super::context::{HostAllocation, ProverContext, UnsafeAccessor, UnsafeMutAccessor};
 use super::pow::PowOutput;
 use super::queries::QueriesOutput;
 use super::setup::SetupPrecomputations;
@@ -10,80 +10,44 @@ use super::stage_4::StageFourOutput;
 use super::stage_5::StageFiveOutput;
 use super::trace_holder::{flatten_tree_caps, transform_tree_caps};
 use super::tracing_data::TracingDataTransfer;
-use super::{device_tracing, BF, E4};
+use super::{device_tracing, BF};
 use crate::blake2s::Digest;
 use cs::one_row_compiler::CompiledCircuitArtifact;
 use era_cudart::event::{CudaEvent, CudaEventCreateFlags};
 use era_cudart::result::CudaResult;
-use era_cudart::stream::{CudaStream, CudaStreamWaitEventFlags};
+use era_cudart::stream::CudaStreamWaitEventFlags;
 use fft::{GoodAllocator, LdePrecomputations, Twiddles};
 use field::{Mersenne31Complex, Mersenne31Field};
 use itertools::Itertools;
 use prover::definitions::{ExternalValues, Transcript, OPTIMAL_FOLDING_PROPERTIES};
+use prover::merkle_trees::MerkleTreeCapVarLength;
 use prover::prover_stages::cached_data::ProverCachedData;
 use prover::prover_stages::Proof;
 use prover::transcript::Seed;
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-pub struct ProofJob<'a, C: ProverContext> {
-    ranges: Vec<device_tracing::Range<'a>>,
+pub struct ProofJob<'a> {
     is_finished_event: CudaEvent,
     callbacks: Callbacks<'a>,
-    external_values: ExternalValues,
-    public_inputs: Arc<Mutex<Vec<BF>>>,
-    witness_tree_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    memory_tree_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    setup_tree_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    stage_2_tree_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    stage_2_last_row: Arc<Vec<BF, C::HostAllocator>>,
-    stage_2_offset_for_memory_grand_product_poly: usize,
-    stage_2_offset_for_delegation_argument_poly: Option<usize>,
-    quotient_tree_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    evaluations_at_random_points: Arc<Vec<E4, C::HostAllocator>>,
-    deep_poly_caps: Arc<Vec<Vec<Digest, C::HostAllocator>>>,
-    intermediate_fri_oracle_caps: Vec<Arc<Vec<Vec<Digest, C::HostAllocator>>>>,
-    last_fri_step_plain_leaf_values: Arc<Vec<Vec<E4, C::HostAllocator>>>,
-    final_monomial_form: Arc<Mutex<Vec<E4>>>,
-    pow_output: PowOutput<C>,
-    queries_output: QueriesOutput<'a, C>,
-    circuit_sequence: u16,
-    delegation_type: u16,
+    proof: Box<Option<Proof>>,
+    ranges: Vec<device_tracing::Range<'a>>,
 }
 
-impl<'a, C: ProverContext> ProofJob<'a, C> {
+impl<'a> ProofJob<'a> {
     pub fn is_finished(&self) -> CudaResult<bool> {
         self.is_finished_event.query()
     }
 
     pub fn finish(self) -> CudaResult<(Proof, f32)> {
         let Self {
-            ranges,
             is_finished_event,
             callbacks,
-            external_values,
-            public_inputs,
-            witness_tree_caps,
-            memory_tree_caps,
-            setup_tree_caps,
-            stage_2_tree_caps,
-            stage_2_last_row,
-            stage_2_offset_for_memory_grand_product_poly,
-            stage_2_offset_for_delegation_argument_poly,
-            quotient_tree_caps,
-            evaluations_at_random_points,
-            deep_poly_caps,
-            intermediate_fri_oracle_caps,
-            last_fri_step_plain_leaf_values,
-            final_monomial_form,
-            pow_output,
-            queries_output,
-            circuit_sequence,
-            delegation_type,
+            mut proof,
+            ranges,
         } = self;
         is_finished_event.synchronize()?;
         drop(callbacks);
-
+        let proof = proof.take().unwrap();
         #[cfg(feature = "log_gpu_stages_timings")]
         {
             log::debug!("GPU setup time: {:.3} ms", ranges[0].elapsed()?);
@@ -97,65 +61,15 @@ impl<'a, C: ProverContext> ProofJob<'a, C> {
         }
         let proof_time_ms = ranges[8].elapsed()?;
 
-        let public_inputs = public_inputs.lock().unwrap().clone();
-        let witness_tree_caps = transform_tree_caps(&witness_tree_caps);
-        let memory_tree_caps = transform_tree_caps(&memory_tree_caps);
-        let setup_tree_caps = transform_tree_caps(&setup_tree_caps);
-        let stage_2_tree_caps = transform_tree_caps(&stage_2_tree_caps);
-        let memory_grand_product_accumulator = StageTwoOutput::<C>::get_grand_product_accumulator(
-            stage_2_offset_for_memory_grand_product_poly,
-            &stage_2_last_row,
-        );
-        let delegation_argument_accumulator = StageTwoOutput::<C>::get_sum_over_delegation_poly(
-            stage_2_offset_for_delegation_argument_poly,
-            &stage_2_last_row,
-        );
-        let quotient_tree_caps = transform_tree_caps(&quotient_tree_caps);
-        let evaluations_at_random_points =
-            evaluations_at_random_points.iter().copied().collect_vec();
-        let deep_poly_caps = transform_tree_caps(&deep_poly_caps);
-        let intermediate_fri_oracle_caps = intermediate_fri_oracle_caps
-            .iter()
-            .map(|o| o.as_slice())
-            .filter(|c| !c.is_empty())
-            .map(transform_tree_caps)
-            .collect_vec();
-        let last_fri_step_plain_leaf_values = last_fri_step_plain_leaf_values
-            .iter()
-            .map(|v| v.to_vec())
-            .collect_vec();
-        let final_monomial_form = final_monomial_form.lock().unwrap().clone();
-        let pow_nonce = *pow_output.nonce.lock().unwrap().deref().deref();
-        let queries = queries_output.produce_query_sets();
-        let proof = Proof {
-            external_values,
-            public_inputs,
-            witness_tree_caps,
-            memory_tree_caps,
-            setup_tree_caps,
-            stage_2_tree_caps,
-            memory_grand_product_accumulator,
-            delegation_argument_accumulator,
-            quotient_tree_caps,
-            evaluations_at_random_points,
-            deep_poly_caps,
-            intermediate_fri_oracle_caps,
-            last_fri_step_plain_leaf_values,
-            final_monomial_form,
-            queries,
-            pow_nonce,
-            circuit_sequence,
-            delegation_type,
-        };
         Ok((proof, proof_time_ms))
     }
 }
 
-pub fn prove<'a, C: ProverContext>(
+pub fn prove<'a>(
     circuit: Arc<CompiledCircuitArtifact<BF>>,
     external_values: ExternalValues,
-    setup: &mut SetupPrecomputations<C>,
-    tracing_data_transfer: TracingDataTransfer<'a, C>,
+    setup: &mut SetupPrecomputations,
+    tracing_data_transfer: TracingDataTransfer<'a, impl GoodAllocator>,
     twiddles: &Twiddles<Mersenne31Complex, impl GoodAllocator>,
     lde_precomputations: &LdePrecomputations<impl GoodAllocator>,
     circuit_sequence: usize,
@@ -164,13 +78,10 @@ pub fn prove<'a, C: ProverContext>(
     num_queries: usize,
     pow_bits: u32,
     external_pow_nonce: Option<u64>,
-    context: &C,
-) -> CudaResult<ProofJob<'a, C>>
-where
-    C::HostAllocator: 'a,
-{
+    context: &ProverContext,
+) -> CudaResult<ProofJob<'a>> {
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("initial")?;
+    context.log_gpu_mem_usage("initial");
 
     let trace_len = circuit.trace_len;
     assert!(trace_len.is_power_of_two());
@@ -207,7 +118,7 @@ where
         context,
     )?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_1.allocate_trace_holders")?;
+    context.log_gpu_mem_usage("after stage_1.allocate_trace_holders");
 
     let mut stage_2_output = StageTwoOutput::allocate_trace_evaluations(
         &circuit,
@@ -216,7 +127,7 @@ where
         context,
     )?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_2.allocate_trace_evaluations")?;
+    context.log_gpu_mem_usage("after stage_2.allocate_trace_evaluations");
 
     // witness_generation
     let witness_generation_range = device_tracing::Range::new("witness_generation")?;
@@ -226,24 +137,25 @@ where
         setup,
         tracing_data_transfer,
         circuit_sequence,
+        &mut callbacks,
         context,
     )?;
     witness_generation_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after generate_witness")?;
+    context.log_gpu_mem_usage("after generate_witness");
 
     // stage 1
     let stage_1_range = device_tracing::Range::new("stage_1")?;
     stage_1_range.start(stream)?;
-    stage_1_output.commit_witness(&circuit, context)?;
+    stage_1_output.commit_witness(&circuit, &mut callbacks, context)?;
     stage_1_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_1")?;
+    context.log_gpu_mem_usage("after stage_1");
 
     setup.trace_holder.produce_tree_caps(context)?;
 
     // seed
-    let seed = initialize_seed::<C>(
+    let mut seed = initialize_seed(
         &circuit,
         external_values.clone(),
         circuit_sequence,
@@ -251,29 +163,30 @@ where
         setup,
         &stage_1_output,
         &mut callbacks,
-        stream,
+        context,
     )?;
 
     // stage 2
     let stage_2_range = device_tracing::Range::new("stage_2")?;
     stage_2_range.start(stream)?;
     stage_2_output.generate(
-        seed.clone(),
+        &mut seed,
         &circuit,
         &cached_data_values,
         setup,
         &mut stage_1_output,
+        &mut callbacks,
         context,
     )?;
     stage_2_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_2")?;
+    context.log_gpu_mem_usage("after stage_2");
 
     // stage 3
     let stage_3_range = device_tracing::Range::new("stage_3")?;
     stage_3_range.start(stream)?;
     let stage_3_output = StageThreeOutput::new(
-        seed.clone(),
+        &mut seed,
         &circuit,
         &cached_data_values,
         &lde_precomputations,
@@ -284,17 +197,18 @@ where
         &stage_2_output,
         log_lde_factor,
         log_tree_cap_size,
+        &mut callbacks,
         context,
     )?;
     stage_3_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_3")?;
+    context.log_gpu_mem_usage("after stage_3");
 
     // stage 4
     let stage_4_range = device_tracing::Range::new("stage_4")?;
     stage_4_range.start(stream)?;
     let stage_4_output = StageFourOutput::new(
-        seed.clone(),
+        &mut seed,
         &circuit,
         &cached_data_values,
         &twiddles,
@@ -305,17 +219,18 @@ where
         log_lde_factor,
         log_tree_cap_size,
         &optimal_folding,
+        &mut callbacks,
         context,
     )?;
     stage_4_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_4 ")?;
+    context.log_gpu_mem_usage("after stage_4 ");
 
     // stage 5
     let stage_5_range = device_tracing::Range::new("stage_5")?;
     stage_5_range.start(stream)?;
     let stage_5_output = StageFiveOutput::new(
-        seed.clone(),
+        &mut seed,
         &stage_4_output,
         log_domain_size,
         log_lde_factor,
@@ -323,17 +238,18 @@ where
         num_queries,
         &lde_precomputations,
         &twiddles,
+        &mut callbacks,
         context,
     )?;
     stage_5_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after stage_5 ")?;
+    context.log_gpu_mem_usage("after stage_5 ");
 
     // pow
     let pow_range = device_tracing::Range::new("pow")?;
     pow_range.start(stream)?;
     let pow_output = PowOutput::new(
-        seed.clone(),
+        &mut seed,
         pow_bits,
         external_pow_nonce,
         &mut callbacks,
@@ -341,7 +257,7 @@ where
     )?;
     pow_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after pow ")?;
+    context.log_gpu_mem_usage("after pow ");
 
     // pow
     let queries_range = device_tracing::Range::new("queries")?;
@@ -358,11 +274,28 @@ where
         log_lde_factor,
         num_queries,
         &optimal_folding,
+        &mut callbacks,
         context,
     )?;
     queries_range.end(stream)?;
     #[cfg(feature = "log_gpu_mem_usage")]
-    context.log_mem_pool_stats("after queries")?;
+    context.log_gpu_mem_usage("after queries");
+
+    let proof = create_proof(
+        external_values,
+        circuit_sequence,
+        delegation_processing_type,
+        setup,
+        stage_1_output,
+        stage_2_output,
+        stage_3_output,
+        stage_4_output,
+        stage_5_output,
+        pow_output,
+        queries_output,
+        &mut callbacks,
+        context,
+    )?;
 
     // ensure no transfer spilling back to previously scheduled proofs
     {
@@ -389,70 +322,75 @@ where
 
     let is_finished_event = CudaEvent::create_with_flags(CudaEventCreateFlags::DISABLE_TIMING)?;
     is_finished_event.record(stream)?;
-
-    callbacks.extend(stage_1_output.callbacks.unwrap());
-    callbacks.extend(stage_2_output.callbacks.unwrap());
-    callbacks.extend(stage_3_output.callbacks);
-    callbacks.extend(stage_4_output.callbacks);
-    callbacks.extend(stage_5_output.callbacks);
-
     let proof_job = ProofJob {
-        ranges,
         is_finished_event,
         callbacks,
-        external_values,
-        public_inputs: stage_1_output.public_inputs.unwrap(),
-        witness_tree_caps: stage_1_output.witness_holder.get_tree_caps(),
-        memory_tree_caps: stage_1_output.memory_holder.get_tree_caps(),
-        setup_tree_caps: setup.trace_holder.get_tree_caps(),
-        stage_2_tree_caps: stage_2_output.trace_holder.get_tree_caps(),
-        stage_2_last_row: stage_2_output.last_row.unwrap(),
-        stage_2_offset_for_memory_grand_product_poly: stage_2_output.offset_for_grand_product_poly,
-        stage_2_offset_for_delegation_argument_poly: stage_2_output
-            .offset_for_sum_over_delegation_poly,
-        quotient_tree_caps: stage_3_output.trace_holder.get_tree_caps(),
-        evaluations_at_random_points: stage_4_output.values_at_z,
-        deep_poly_caps: stage_4_output.trace_holder.get_tree_caps(),
-        intermediate_fri_oracle_caps: stage_5_output
-            .fri_oracles
-            .into_iter()
-            .map(|o| o.tree_caps)
-            .collect_vec(),
-        last_fri_step_plain_leaf_values: stage_5_output.last_fri_step_plain_leaf_values,
-        final_monomial_form: stage_5_output.final_monomials,
-        pow_output,
-        queries_output,
-        circuit_sequence: circuit_sequence as u16,
-        delegation_type: delegation_processing_type,
+        ranges,
+        proof,
     };
     Ok(proof_job)
 }
 
-fn initialize_seed<'a, C: ProverContext>(
+fn initialize_seed<'a>(
     circuit: &Arc<CompiledCircuitArtifact<Mersenne31Field>>,
     external_values: ExternalValues,
     circuit_sequence: usize,
     delegation_processing_type: u16,
-    setup: &SetupPrecomputations<C>,
-    stage_1_output: &StageOneOutput<C>,
+    setup: &SetupPrecomputations,
+    stage_1_output: &StageOneOutput,
     callbacks: &mut Callbacks<'a>,
-    stream: &CudaStream,
-) -> CudaResult<Arc<Mutex<Seed>>>
-where
-    C::HostAllocator: 'a,
-{
-    let seed = Arc::new(Mutex::new(Seed(Default::default())));
-    let seed_clone = seed.clone();
-    let setup_tree_caps = setup.trace_holder.get_tree_caps();
-    let witness_tree_caps = stage_1_output.witness_holder.get_tree_caps();
-    let memory_tree_caps = stage_1_output.memory_holder.get_tree_caps();
-    let public_inputs = stage_1_output.get_public_inputs();
+    context: &ProverContext,
+) -> CudaResult<HostAllocation<Seed>> {
+    let mut seed = unsafe { context.alloc_host_uninit::<Seed>() };
+    let seed_accessor = seed.get_mut_accessor();
+    let setup_tree_caps_accessors = setup
+        .trace_holder
+        .tree_caps
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(HostAllocation::get_accessor)
+        .collect_vec();
+    let witness_tree_cap_accessors = stage_1_output
+        .witness_holder
+        .tree_caps
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(HostAllocation::get_accessor)
+        .collect_vec();
+    let memory_tree_cap_accessors = stage_1_output
+        .memory_holder
+        .tree_caps
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(HostAllocation::get_accessor)
+        .collect_vec();
+    let public_inputs_accessor = stage_1_output
+        .public_inputs
+        .as_ref()
+        .unwrap()
+        .get_accessor();
     let circuit_clone = circuit.clone();
-    let seed_fn = move || {
+    let seed_fn = move || unsafe {
+        let setup_tree_caps = setup_tree_caps_accessors
+            .iter()
+            .map(|a| a.get())
+            .collect_vec();
+        let witness_tree_caps = witness_tree_cap_accessors
+            .iter()
+            .map(|a| a.get())
+            .collect_vec();
+        let memory_tree_caps = memory_tree_cap_accessors
+            .iter()
+            .map(|a| a.get())
+            .collect_vec();
+        let public_inputs = public_inputs_accessor.get();
         let mut input = vec![];
         input.push(circuit_sequence as u32);
         input.push(delegation_processing_type as u32);
-        input.extend(public_inputs.lock().unwrap().iter().map(BF::to_reduced_u32));
+        input.extend(public_inputs.iter().map(BF::to_reduced_u32));
         input.extend(flatten_tree_caps(&setup_tree_caps));
         input.extend_from_slice(&external_values.challenges.memory_argument.flatten());
         if let Some(delegation_argument_challenges) =
@@ -469,9 +407,115 @@ where
         }
         input.extend(flatten_tree_caps(&witness_tree_caps));
         input.extend(flatten_tree_caps(&memory_tree_caps));
-        let mut guard = seed_clone.lock().unwrap();
-        *guard = Transcript::commit_initial(&input);
+        seed_accessor.set(Transcript::commit_initial(&input));
     };
-    callbacks.schedule(seed_fn, stream)?;
+    callbacks.schedule(seed_fn, context.get_exec_stream())?;
     Ok(seed)
+}
+
+fn create_proof(
+    external_values: ExternalValues,
+    circuit_sequence: usize,
+    delegation_processing_type: u16,
+    setup: &SetupPrecomputations,
+    stage_1_output: StageOneOutput,
+    stage_2_output: StageTwoOutput,
+    stage_3_output: StageThreeOutput,
+    stage_4_output: StageFourOutput,
+    stage_5_output: StageFiveOutput,
+    pow_output: PowOutput,
+    queries_output: QueriesOutput,
+    callbacks: &mut Callbacks,
+    context: &ProverContext,
+) -> Result<Box<Option<Proof>>, era_cudart_sys::CudaError> {
+    let public_inputs = stage_1_output.public_inputs.unwrap().get_accessor();
+    let witness_tree_caps = stage_1_output.witness_holder.get_tree_caps_accessors();
+    let memory_tree_caps = stage_1_output.memory_holder.get_tree_caps_accessors();
+    let setup_tree_caps = setup.trace_holder.get_tree_caps_accessors();
+    let stage_2_tree_caps = stage_2_output.trace_holder.get_tree_caps_accessors();
+    let stage_2_last_row = stage_2_output.last_row.unwrap().get_accessor();
+    let stage_2_offset_for_memory_grand_product_poly = stage_2_output.offset_for_grand_product_poly;
+    let stage_2_offset_for_delegation_argument_poly =
+        stage_2_output.offset_for_sum_over_delegation_poly;
+    let quotient_tree_caps = stage_3_output.trace_holder.get_tree_caps_accessors();
+    let evaluations_at_random_points = stage_4_output.values_at_z.get_accessor();
+    let deep_poly_caps = stage_4_output.trace_holder.get_tree_caps_accessors();
+    let intermediate_fri_oracle_caps = stage_5_output
+        .fri_oracles
+        .into_iter()
+        .filter(|s| !s.tree_caps.is_empty())
+        .map(|s| s.get_tree_caps_accessors())
+        .collect_vec();
+    let last_fri_step_plain_leaf_values = stage_5_output
+        .last_fri_step_plain_leaf_values
+        .iter()
+        .map(HostAllocation::get_accessor)
+        .collect_vec();
+    let final_monomial_form = stage_5_output.final_monomials.get_accessor();
+    let queries = queries_output.get_accessors();
+    let pow_nonce = pow_output.nonce.get_accessor();
+    let mut proof = Box::new(Option::<Proof>::None);
+    let proof_accessor = UnsafeMutAccessor::new(proof.as_mut());
+    let create_proof_fn = move || unsafe {
+        fn get_tree_caps(accessors: &Vec<UnsafeAccessor<[Digest]>>) -> Vec<MerkleTreeCapVarLength> {
+            let tree_caps = accessors
+                .iter()
+                .map(|accessor| unsafe { accessor.get() })
+                .collect_vec();
+            transform_tree_caps(&tree_caps)
+        }
+        let public_inputs = public_inputs.get().to_vec();
+        let witness_tree_caps = get_tree_caps(&witness_tree_caps);
+        let memory_tree_caps = get_tree_caps(&memory_tree_caps);
+        let setup_tree_caps = get_tree_caps(&setup_tree_caps);
+        let stage_2_tree_caps = get_tree_caps(&stage_2_tree_caps);
+        let stage_2_last_row = stage_2_last_row.get();
+        let memory_grand_product_accumulator = StageTwoOutput::get_grand_product_accumulator(
+            stage_2_offset_for_memory_grand_product_poly,
+            stage_2_last_row,
+        );
+        let delegation_argument_accumulator = StageTwoOutput::get_sum_over_delegation_poly(
+            stage_2_offset_for_delegation_argument_poly,
+            stage_2_last_row,
+        );
+        let quotient_tree_caps = get_tree_caps(&quotient_tree_caps);
+        let evaluations_at_random_points = evaluations_at_random_points.get().to_vec();
+        let deep_poly_caps = get_tree_caps(&deep_poly_caps);
+        let intermediate_fri_oracle_caps = intermediate_fri_oracle_caps
+            .iter()
+            .map(get_tree_caps)
+            .collect_vec();
+        let last_fri_step_plain_leaf_values = last_fri_step_plain_leaf_values
+            .iter()
+            .map(|v| v.get().to_vec())
+            .collect_vec();
+        let final_monomial_form = final_monomial_form.get().to_vec();
+        let queries = queries.produce_query_sets();
+        let pow_nonce = *pow_nonce.get();
+        let circuit_sequence = circuit_sequence as u16;
+        let delegation_type = delegation_processing_type;
+        let proof = Proof {
+            external_values,
+            public_inputs,
+            witness_tree_caps,
+            memory_tree_caps,
+            setup_tree_caps,
+            stage_2_tree_caps,
+            memory_grand_product_accumulator,
+            delegation_argument_accumulator,
+            quotient_tree_caps,
+            evaluations_at_random_points,
+            deep_poly_caps,
+            intermediate_fri_oracle_caps,
+            last_fri_step_plain_leaf_values,
+            final_monomial_form,
+            queries,
+            pow_nonce,
+            circuit_sequence,
+            delegation_type,
+        };
+        proof_accessor.set(Some(proof));
+    };
+    callbacks.schedule(create_proof_fn, context.get_exec_stream())?;
+    Ok(proof)
 }

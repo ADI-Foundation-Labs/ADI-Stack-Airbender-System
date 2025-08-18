@@ -1,10 +1,10 @@
+use super::arg_utils::get_grand_product_col;
 use crate::device_structures::{
     DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMutImpl, MutPtrAndStride,
     PtrAndStride,
 };
 use crate::field::{BaseField, Ext2Field, Ext4Field};
 use crate::ops_complex::BatchInv;
-use crate::prover::arg_utils::get_grand_product_col;
 use crate::utils::WARP_SIZE;
 
 use cs::one_row_compiler::{ColumnAddress, CompiledCircuitArtifact};
@@ -403,7 +403,7 @@ pub fn compute_deep_quotient_on_main_domain(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::context::Context;
+    use crate::device_context::DeviceContext;
     use crate::device_structures::DeviceMatrixMut;
     use crate::ops_complex::bit_reverse_in_place;
 
@@ -659,7 +659,7 @@ pub(crate) mod tests {
     #[test]
     #[serial]
     fn test_stage_4_for_delegation_circuit() {
-        let ctx = Context::create(12).unwrap();
+        let ctx = DeviceContext::create(12).unwrap();
         run_basic_delegation_test_impl(
             Some(Box::new(comparison_hook)),
             Some(Box::new(comparison_hook)),

@@ -29,6 +29,7 @@ era_cudart_sys = "0.154"
 crossbeam-channel = "0.5"
 crossbeam-utils = "0.8"
 nvtx = "1"
+rayon = "1.11"
 transpose = "0.2"
 
 [features]
@@ -42,6 +43,7 @@ prover = { workspace = true, features = ["default", "test"] }
 rand = { workspace = true, default-features = false }
 trace_and_split = { workspace = true }
 trace_holder = { workspace = true }
+env_logger = "0.11"
 era_criterion_cuda = "0.2"
 criterion = "0.5"
 serial_test = "3"

@@ -28,9 +28,9 @@ pub fn u256_ops_with_control_impl_over_unrolled_state<
     tracer: &mut TR,
 ) {
     // read registers first
-    let x10 = machine_state.registers[10];
-    let x11 = machine_state.registers[11];
-    let x12 = machine_state.registers[12];
+    let x10 = machine_state.observable.registers[10];
+    let x11 = machine_state.observable.registers[11];
+    let x12 = machine_state.observable.registers[12];
 
     assert!(x10 % 32 == 0, "input pointer is unaligned");
     assert!(x11 % 32 == 0, "input pointer is unaligned");
@@ -56,7 +56,7 @@ pub fn u256_ops_with_control_impl_over_unrolled_state<
             for (dst, [l, h]) in result
                 .as_limbs_mut()
                 .iter_mut()
-                .zip(words.array_chunks::<2>())
+                .zip(words.as_chunks::<2>().0.iter())
             {
                 *dst = ((h.read_value as u64) << 32) | (l.read_value as u64);
             }
@@ -71,7 +71,7 @@ pub fn u256_ops_with_control_impl_over_unrolled_state<
             for (dst, [l, h]) in result
                 .as_limbs_mut()
                 .iter_mut()
-                .zip(words.array_chunks::<2>())
+                .zip(words.as_chunks::<2>().0.iter())
             {
                 *dst = ((h.read_value as u64) << 32) | (l.read_value as u64);
             }
@@ -145,7 +145,9 @@ pub fn u256_ops_with_control_impl_over_unrolled_state<
     };
 
     for ([l, h], src) in a_accesses
-        .array_chunks_mut::<2>()
+        .as_chunks_mut::<2>()
+        .0
+        .iter_mut()
         .zip(result.as_limbs().iter())
     {
         l.write_value = *src as u32;
@@ -155,7 +157,7 @@ pub fn u256_ops_with_control_impl_over_unrolled_state<
     write_indirect_accesses_noexcept::<_, 8>(x10 as usize, &a_accesses, memory_source);
 
     // update register
-    machine_state.registers[12] = of as u32;
+    machine_state.observable.registers[12] = of as u32;
 
     // make witness structures
     let mut register_accesses = [

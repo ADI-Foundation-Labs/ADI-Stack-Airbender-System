@@ -1,22 +1,23 @@
+use super::callbacks::Callbacks;
+use super::context::{HostAllocation, ProverContext};
+use super::setup::SetupPrecomputations;
+use super::stage_1::StageOneOutput;
+use super::stage_2::StageTwoOutput;
+use super::stage_3::StageThreeOutput;
+use super::stage_4_kernels::{
+    compute_deep_denom_at_z_on_main_domain, compute_deep_quotient_on_main_domain,
+    get_e4_scratch_count_for_deep_quotiening, get_metadata, ChallengesTimesEvals,
+    NonWitnessChallengesAtZOmega,
+};
+use super::trace_holder::{extend_trace, TraceHolder};
 use super::{BF, E2, E4};
+use crate::allocator::tracker::AllocationPlacement;
 use crate::barycentric::{
     batch_barycentric_eval, get_batch_eval_temp_storage_sizes, precompute_lagrange_coeffs,
 };
 use crate::blake2s::build_merkle_tree;
 use crate::device_structures::{DeviceMatrix, DeviceMatrixMut};
 use crate::ops_complex::{bit_reverse_in_place, transpose};
-use crate::prover::callbacks::Callbacks;
-use crate::prover::context::ProverContext;
-use crate::prover::setup::SetupPrecomputations;
-use crate::prover::stage_1::StageOneOutput;
-use crate::prover::stage_2::StageTwoOutput;
-use crate::prover::stage_3::StageThreeOutput;
-use crate::prover::stage_4_kernels::{
-    compute_deep_denom_at_z_on_main_domain, compute_deep_quotient_on_main_domain,
-    get_e4_scratch_count_for_deep_quotiening, get_metadata, ChallengesTimesEvals,
-    NonWitnessChallengesAtZOmega,
-};
-use crate::prover::trace_holder::{extend_trace, flatten_tree_caps, TraceHolder};
 use blake2s_u32::BLAKE2S_DIGEST_SIZE_U32_WORDS;
 use cs::one_row_compiler::CompiledCircuitArtifact;
 use era_cudart::memory::memory_copy_async;
@@ -28,34 +29,31 @@ use prover::definitions::FoldingDescription;
 use prover::prover_stages::cached_data::ProverCachedData;
 use prover::prover_stages::Transcript;
 use prover::transcript::Seed;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 use std::slice;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-pub(crate) struct StageFourOutput<'a, C: ProverContext> {
-    pub(crate) trace_holder: TraceHolder<E4, C>,
-    pub(crate) callbacks: Callbacks<'a>,
-    pub(crate) values_at_z: Arc<Vec<E4, C::HostAllocator>>,
+pub(crate) struct StageFourOutput {
+    pub(crate) trace_holder: TraceHolder<E4>,
+    pub(crate) values_at_z: HostAllocation<[E4]>,
 }
 
-impl<'a, C: ProverContext> StageFourOutput<'a, C> {
+impl StageFourOutput {
     pub fn new(
-        seed: Arc<Mutex<Seed>>,
+        seed: &mut HostAllocation<Seed>,
         circuit: &Arc<CompiledCircuitArtifact<BF>>,
         cached_data: &ProverCachedData,
         twiddles: &Twiddles<E2, impl GoodAllocator>,
-        setup: &SetupPrecomputations<C>,
-        stage_1_output: &StageOneOutput<C>,
-        stage_2_output: &StageTwoOutput<C>,
-        stage_3_output: &StageThreeOutput<C>,
+        setup: &SetupPrecomputations,
+        stage_1_output: &StageOneOutput,
+        stage_2_output: &StageTwoOutput,
+        stage_3_output: &StageThreeOutput,
         log_lde_factor: u32,
         log_tree_cap_size: u32,
         folding_description: &FoldingDescription,
-        context: &C,
-    ) -> CudaResult<Self>
-    where
-        C::HostAllocator: 'a,
-    {
+        callbacks: &mut Callbacks,
+        context: &ProverContext,
+    ) -> CudaResult<Self> {
         const COSET_INDEX: usize = 0;
         let trace_len = circuit.trace_len;
         assert!(trace_len.is_power_of_two());
@@ -70,37 +68,32 @@ impl<'a, C: ProverContext> StageFourOutput<'a, C> {
             false,
             context,
         )?;
-        let mut callbacks = Callbacks::new();
+        let seed_accessor = seed.get_mut_accessor();
         let lde_factor = 1 << log_lde_factor;
         let num_evals_at_z = circuit.num_openings_at_z();
         let num_evals_at_z_omega = circuit.num_openings_at_z_omega();
         let num_evals = num_evals_at_z + num_evals_at_z_omega;
         let mut vectorized_ldes = vec![];
         for _ in 0..lde_factor {
-            vectorized_ldes.push(context.alloc(4 * trace_len)?);
+            vectorized_ldes.push(context.alloc(4 * trace_len, AllocationPlacement::BestFit)?);
         }
-        let mut values_at_z = Vec::with_capacity_in(num_evals, C::HostAllocator::default());
-        unsafe { values_at_z.set_len(num_evals) };
         let stream = context.get_exec_stream();
-        let h_z = Arc::new(Mutex::new(Box::new_in(
-            E4::ZERO,
-            C::HostAllocator::default(),
-        )));
-        let seed_clone = seed.clone();
-        let h_z_clone = h_z.clone();
-        let get_z = move || {
+        let mut values_at_z = unsafe { context.alloc_host_uninit_slice(num_evals) };
+        let values_at_z_accessor = values_at_z.get_mut_accessor();
+        let mut h_z = unsafe { context.alloc_host_uninit::<E4>() };
+        let h_z_accessor = h_z.get_mut_accessor();
+        let get_z = move || unsafe {
             let mut transcript_challenges =
                 [0u32; (1usize * 4).next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)];
-            Transcript::draw_randomness(
-                seed_clone.lock().unwrap().deref_mut(),
-                &mut transcript_challenges,
-            );
+            Transcript::draw_randomness(seed_accessor.get_mut(), &mut transcript_challenges);
             let coeffs = transcript_challenges
-                .array_chunks::<4>()
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .next()
                 .unwrap()
                 .map(BF::from_nonreduced_u32);
-            *h_z_clone.lock().unwrap().deref_mut().deref_mut() = E4::from_coeffs_in_base(&coeffs);
+            h_z_accessor.set(E4::from_coeffs_in_base(&coeffs));
         };
         callbacks.schedule(get_z, stream)?;
         let coset = E2::ONE;
@@ -109,20 +102,21 @@ impl<'a, C: ProverContext> StageFourOutput<'a, C> {
         let num_evals_at_z_omega = circuit.num_openings_at_z_omega();
         let num_evals = num_evals_at_z + num_evals_at_z_omega;
         let row_chunk_size = 2048; // tunable for performance, 2048 is decent
-        let mut d_alloc_z = context.alloc(1)?;
+        let mut d_alloc_z = context.alloc(1, AllocationPlacement::BestFit)?;
         memory_copy_async(
             &mut d_alloc_z,
-            slice::from_ref(h_z.lock().unwrap().deref().deref()),
+            slice::from_ref(unsafe { h_z_accessor.get() }),
             &context.get_exec_stream(),
         )?;
-        let mut d_alloc_evals = context.alloc(num_evals)?;
+        let mut d_alloc_evals = context.alloc(num_evals, AllocationPlacement::BestFit)?;
         let (partial_reduce_temp_elems, final_cub_reduce_temp_bytes) =
             get_batch_eval_temp_storage_sizes(&circuit, trace_len as u32, row_chunk_size)?;
-        let mut d_alloc_temp_storage_partial_reduce = context.alloc(partial_reduce_temp_elems)?;
+        let mut d_alloc_temp_storage_partial_reduce =
+            context.alloc(partial_reduce_temp_elems, AllocationPlacement::BestFit)?;
         let mut d_alloc_temp_storage_final_cub_reduce =
-            context.alloc(final_cub_reduce_temp_bytes)?;
-        let mut d_common_factor_storage = context.alloc(1)?;
-        let mut d_lagrange_coeffs = context.alloc(trace_len)?;
+            context.alloc(final_cub_reduce_temp_bytes, AllocationPlacement::BestFit)?;
+        let mut d_common_factor_storage = context.alloc(1, AllocationPlacement::BestFit)?;
+        let mut d_lagrange_coeffs = context.alloc(trace_len, AllocationPlacement::BestFit)?;
         let d_setup_cols = DeviceMatrix::new(
             setup.trace_holder.get_coset_evaluations(COSET_INDEX),
             trace_len,
@@ -177,33 +171,37 @@ impl<'a, C: ProverContext> StageFourOutput<'a, C> {
             log_domain_size,
             stream,
         )?;
-        memory_copy_async(&mut values_at_z, d_alloc_evals.deref(), &stream)?;
-        let seed_clone = seed.clone();
-        let values_at_z = Arc::new(values_at_z);
-        let values_at_z_clone = values_at_z.clone();
-        let alpha = Arc::new(Mutex::new(E4::ZERO));
-        let alpha_clone = alpha.clone();
-        let get_alpha = move || {
-            let transcript_input = values_at_z_clone
+        memory_copy_async(
+            unsafe { values_at_z_accessor.get_mut() },
+            &d_alloc_evals,
+            &stream,
+        )?;
+        let mut alpha = unsafe { context.alloc_host_uninit::<E4>() };
+        let alpha_accessor = alpha.get_mut_accessor();
+        let get_alpha = move || unsafe {
+            let transcript_input = values_at_z_accessor
+                .get()
                 .iter()
                 .map(|el| el.into_coeffs_in_base())
                 .flatten()
                 .map(|el: BF| el.to_reduced_u32())
                 .collect_vec();
-            let mut seed = seed_clone.lock().unwrap();
-            Transcript::commit_with_seed(&mut seed, &transcript_input);
+            let seed = seed_accessor.get_mut();
+            Transcript::commit_with_seed(seed, &transcript_input);
             let mut transcript_challenges =
                 [0u32; (1usize * 4).next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)];
-            Transcript::draw_randomness(&mut seed, &mut transcript_challenges);
+            Transcript::draw_randomness(seed, &mut transcript_challenges);
             let alpha_coeffs = transcript_challenges
-                .array_chunks::<4>()
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .next()
                 .unwrap()
                 .map(BF::from_nonreduced_u32);
-            *alpha_clone.lock().unwrap() = E4::from_coeffs_in_base(&alpha_coeffs);
+            alpha_accessor.set(E4::from_coeffs_in_base(&alpha_coeffs));
         };
         callbacks.schedule(get_alpha, stream)?;
-        let mut d_denom_at_z = context.alloc(trace_len)?;
+        let mut d_denom_at_z = context.alloc(trace_len, AllocationPlacement::BestFit)?;
         compute_deep_denom_at_z_on_main_domain(
             &mut d_denom_at_z,
             &d_alloc_z[0],
@@ -212,60 +210,48 @@ impl<'a, C: ProverContext> StageFourOutput<'a, C> {
             &stream,
         )?;
         let e4_scratch_elems = get_e4_scratch_count_for_deep_quotiening();
-        let mut h_e4_scratch = Vec::with_capacity_in(e4_scratch_elems, C::HostAllocator::default());
-        unsafe { h_e4_scratch.set_len(e4_scratch_elems) };
-        let h_e4_scratch = Arc::new(Mutex::new(h_e4_scratch));
-        let h_challenges_times_evals = Arc::new(Mutex::new(Box::new_in(
-            ChallengesTimesEvals::default(),
-            C::HostAllocator::default(),
-        )));
-        let h_non_witness_challenges_at_z_omega = Arc::new(Mutex::new(Box::new_in(
-            NonWitnessChallengesAtZOmega::default(),
-            C::HostAllocator::default(),
-        )));
-        let values_at_z_clone = values_at_z.clone();
-        let alpha_clone = alpha.clone();
-        let h_e4_scratch_clone = h_e4_scratch.clone();
-        let h_challenges_times_evals_clone = h_challenges_times_evals.clone();
-        let h_non_witness_challenges_at_z_omega_clone = h_non_witness_challenges_at_z_omega.clone();
+        let mut h_e4_scratch = unsafe { context.alloc_host_uninit_slice(e4_scratch_elems) };
+        let h_e4_scratch_accessor = h_e4_scratch.get_mut_accessor();
+        let mut h_challenges_times_evals =
+            unsafe { context.alloc_host_uninit::<ChallengesTimesEvals>() };
+        let h_challenges_times_evals_accessor = h_challenges_times_evals.get_mut_accessor();
+        let mut h_non_witness_challenges_at_z_omega =
+            unsafe { context.alloc_host_uninit::<NonWitnessChallengesAtZOmega>() };
+        let h_non_witness_challenges_at_z_omega_accessor =
+            h_non_witness_challenges_at_z_omega.get_mut_accessor();
         let cached_data_clone = cached_data.clone();
         let twiddles_omega_inv = twiddles.omega_inv;
         let circuit_clone = circuit.clone();
-        let get_challenges = move || {
+        let get_challenges = move || unsafe {
             let _ = get_metadata(
-                &values_at_z_clone,
-                *alpha_clone.lock().unwrap().deref(),
+                values_at_z_accessor.get(),
+                *alpha_accessor.get(),
                 twiddles_omega_inv,
                 &cached_data_clone,
                 &circuit_clone,
-                &mut h_e4_scratch_clone.lock().unwrap().deref_mut(),
-                &mut h_challenges_times_evals_clone.lock().unwrap(),
-                &mut h_non_witness_challenges_at_z_omega_clone.lock().unwrap(),
+                h_e4_scratch_accessor.get_mut(),
+                h_challenges_times_evals_accessor.get_mut(),
+                h_non_witness_challenges_at_z_omega_accessor.get_mut(),
             );
         };
         callbacks.schedule(get_challenges, stream)?;
-        let mut d_e4_scratch = context.alloc(e4_scratch_elems)?;
-        let mut d_challenges_times_evals = context.alloc(1)?;
-        let mut d_non_witness_challenges_at_z_omega = context.alloc(1)?;
+        let mut d_e4_scratch = context.alloc(e4_scratch_elems, AllocationPlacement::BestFit)?;
+        let mut d_challenges_times_evals = context.alloc(1, AllocationPlacement::BestFit)?;
+        let mut d_non_witness_challenges_at_z_omega =
+            context.alloc(1, AllocationPlacement::BestFit)?;
         memory_copy_async(
             &mut d_e4_scratch,
-            h_e4_scratch.lock().unwrap().deref(),
+            unsafe { h_e4_scratch_accessor.get() },
             stream,
         )?;
         memory_copy_async(
             &mut d_challenges_times_evals,
-            slice::from_ref(h_challenges_times_evals.lock().unwrap().deref().deref()),
+            slice::from_ref(unsafe { h_challenges_times_evals_accessor.get() }),
             stream,
         )?;
         memory_copy_async(
             &mut d_non_witness_challenges_at_z_omega,
-            slice::from_ref(
-                h_non_witness_challenges_at_z_omega
-                    .lock()
-                    .unwrap()
-                    .deref()
-                    .deref(),
-            ),
+            slice::from_ref(unsafe { h_non_witness_challenges_at_z_omega_accessor.get() }),
             stream,
         )?;
         let mut d_quotient = DeviceMatrixMut::new(&mut vectorized_ldes[COSET_INDEX], trace_len);
@@ -331,15 +317,10 @@ impl<'a, C: ProverContext> StageFourOutput<'a, C> {
             )?;
         }
         trace_holder.produce_tree_caps(context)?;
-        let tree_caps = trace_holder.get_tree_caps();
-        let update_seed_fn = move || {
-            let input = flatten_tree_caps(&tree_caps).collect_vec();
-            Transcript::commit_with_seed(&mut seed.lock().unwrap(), &input);
-        };
+        let update_seed_fn = trace_holder.get_update_seed_fn(seed);
         callbacks.schedule(update_seed_fn, stream)?;
         let result = Self {
             trace_holder,
-            callbacks,
             values_at_z,
         };
         Ok(result)

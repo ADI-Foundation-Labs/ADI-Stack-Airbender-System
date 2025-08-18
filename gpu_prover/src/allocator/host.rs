@@ -1,4 +1,5 @@
 use crate::allocator::allocation_data::StaticAllocationData;
+use crate::allocator::tracker::AllocationPlacement;
 use crate::allocator::{
     ConcurrentInnerStaticAllocatorWrapper, InnerStaticAllocatorWrapper,
     NonConcurrentInnerStaticAllocatorWrapper, StaticAllocation, StaticAllocationBackend,
@@ -18,7 +19,7 @@ pub static STATIC_HOST_ALLOCATOR: OnceLock<ConcurrentStaticHostAllocator> = Once
 
 impl StaticAllocationBackend for HostAllocation<u8> {
     fn as_non_null(&mut self) -> NonNull<u8> {
-        unsafe { NonNull::new_unchecked(self.deref_mut().as_mut_ptr()) }
+        unsafe { NonNull::new_unchecked(self.as_mut_ptr()) }
     }
 
     fn len(&self) -> usize {
@@ -84,12 +85,18 @@ impl<T, W: InnerStaticHostAllocatorWrapper> DerefMut
     }
 }
 
-unsafe impl Allocator for ConcurrentStaticHostAllocator {
+unsafe impl<W: InnerStaticHostAllocatorWrapper> Allocator for StaticHostAllocator<W> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let len = layout.size();
-        if let Ok(data) = self.inner.lock().unwrap().alloc(len) {
+        if let Ok(data) = self
+            .inner
+            .execute(|inner| inner.alloc(len, AllocationPlacement::BestFit))
+        {
             let ptr = data.ptr;
             assert!(ptr.is_aligned_to(layout.align()));
+            assert_eq!(data.len, len);
+            let len = data.alloc_len;
+            assert_eq!(data.len.next_multiple_of(1 << self.log_chunk_size), len);
             Ok(NonNull::slice_from_raw_parts(ptr, len))
         } else {
             error!("allocation of {len} bytes in ConcurrentStaticHostAllocator failed");
@@ -98,9 +105,10 @@ unsafe impl Allocator for ConcurrentStaticHostAllocator {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        let len = layout.size().next_multiple_of(1 << self.log_chunk_size);
-        let data = StaticAllocationData::new(ptr, len);
-        self.inner.lock().unwrap().free(data);
+        let len = layout.size();
+        let alloc_len = len.next_multiple_of(1 << self.log_chunk_size);
+        let data = StaticAllocationData::new(ptr, len, alloc_len);
+        self.inner.execute(|inner| inner.free(data));
     }
 }
 
