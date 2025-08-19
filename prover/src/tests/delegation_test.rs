@@ -47,7 +47,6 @@ pub fn run_basic_delegation_test_impl(
     );
     let csr_table = create_csr_table_for_delegation(
         true,
-        // &[BLAKE2_ROUND_FUNCTION_ACCESS_ID],
         &[BLAKE2_ROUND_FUNCTION_WITH_EXTENDED_CONTROL_ACCESS_ID],
         TableType::SpecialCSRProperties.to_table_id(),
     );
@@ -76,9 +75,7 @@ pub fn run_basic_delegation_test_impl(
     let for_gpu_comparison = maybe_delegator_gpu_comparison_hook.is_some()
         || maybe_delegated_gpu_comparison_hook.is_some();
 
-    if !for_gpu_comparison {
-        serialize_to_file(&compiled_machine, "full_machine_layout.json");
-    }
+    serialize_to_file(&compiled_machine, "full_machine_layout.json");
 
     // compile all delegation circuit
 
@@ -99,9 +96,7 @@ pub fn run_basic_delegation_test_impl(
             delegation_domain_size.trailing_zeros() as usize,
         );
 
-        if !for_gpu_comparison {
-            serialize_to_file(&circuit, "blake2s_delegation_circuit_layout.json");
-        }
+        serialize_to_file(&circuit, "blake2s_delegation_circuit_layout.json");
 
         let delegation_type = BLAKE2_ROUND_FUNCTION_WITH_EXTENDED_CONTROL_ACCESS_ID;
         let description = DelegationProcessorDescription {

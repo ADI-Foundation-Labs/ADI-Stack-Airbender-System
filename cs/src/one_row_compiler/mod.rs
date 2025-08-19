@@ -847,6 +847,62 @@ impl quote::ToTokens for BoundaryConstraintLocation {
     }
 }
 
+impl quote::ToTokens for MachineStatePermutationVariables {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let MachineStatePermutationVariables {
+            pc,
+            timestamp,
+        } = self;
+        let stream = quote! {
+            MachineStatePermutationVariables {
+                pc: #pc,
+                timestamp: #timestamp,
+            }
+        };
+
+        tokens.extend(stream);
+    }
+}
+
+impl quote::ToTokens for IntermediateStatePermutationVariables {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let IntermediateStatePermutationVariables {
+            pc,
+            timestamp,
+            execute,
+            rs1_index,
+            rs2_index,
+            rd_index,
+            decoder_witness_is_in_memory,
+            rd_is_zero,
+            imm,
+            funct3,
+            funct7,
+            circuit_family,
+            circuit_family_extra_mask,
+        } = self;
+        let stream = quote! {
+            IntermediateStatePermutationVariables {
+                pc: #pc,
+                timestamp: #timestamp,
+                execute: #execute,
+                rs1_index: #rs1_index,
+                rs2_index: #rs2_index,
+                rd_index: #rd_index,
+                decoder_witness_is_in_memory: #decoder_witness_is_in_memory,
+                rd_is_zero: #rd_is_zero,
+                imm: #imm,
+                funct3: #funct3,
+                funct7: #funct7,
+                circuit_family: #circuit_family,
+                circuit_family_extra_mask: #circuit_family_extra_mask,
+            }
+        };
+
+        tokens.extend(stream);
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CompiledCircuitArtifact<F: PrimeField> {
     pub witness_layout: WitnessSubtree<F>,
