@@ -1,3 +1,4 @@
+#[allow(unused)]
 pub const DEBUG_INFO: &[(u16, u16, u16, [usize; 6], [u64; 30], [u64; 30])] = &[
     // PRECOMPILE 0
     (

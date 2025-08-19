@@ -1363,6 +1363,7 @@ mod test {
 }
 
 const DEBUG: bool = false;
+#[allow(unused)]
 unsafe fn update_select(select: usize) {
     DEBUG_CONTROL = {
         let precompile: u16 = DEBUG_INFO[select].0;
