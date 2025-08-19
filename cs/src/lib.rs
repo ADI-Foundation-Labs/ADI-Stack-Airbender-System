@@ -6,6 +6,7 @@
 #![feature(ptr_as_ref_unchecked)]
 #![feature(option_zip)]
 #![feature(assert_matches)]
+#![feature(slice_as_chunks)] // NEED THIS for interop with zksync-os which is on an older nightly
 
 pub mod definitions;
 
