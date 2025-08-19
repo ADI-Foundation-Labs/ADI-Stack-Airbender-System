@@ -8,6 +8,7 @@
 #![feature(slice_from_ptr_range)]
 #![feature(vec_push_within_capacity)]
 #![feature(maybe_uninit_slice)]
+#![feature(slice_as_chunks)] // NEED THIS for interop with zksync-os which is on an older nightly
 
 #[cfg(feature = "debug_satisfiable")]
 pub const DEBUG_QUOTIENT: bool = true;
