@@ -38,7 +38,7 @@ pub enum MainCircuitType {
     FinalReducedRiscVMachine,
     MachineWithoutSignedMulDiv,
     ReducedRiscVMachine,
-    ReducedLog23RiscVMachine,
+    ReducedRiscVLog23Machine,
     RiscVCycles,
 }
 

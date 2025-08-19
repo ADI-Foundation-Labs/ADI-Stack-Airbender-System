@@ -655,14 +655,12 @@ fn run_binary(
             result.state.registers
         }
         Machine::ReducedLog23 => {
-            let (_, final_state) =
-                run_simple_with_entry_point_and_non_determimism_source_for_config::<
-                    _,
-                    IWithoutByteAccessIsaConfigWithDelegation,
-                >(config, non_determinism_source);
+            let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
+                _,
+                IWithoutByteAccessIsaConfigWithDelegation,
+            >(config, non_determinism_source);
 
-            #[allow(deprecated)]
-            final_state.registers
+            result.state.registers
         }
         Machine::ReducedFinal => {
             let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<

@@ -93,7 +93,7 @@ pub fn gpu_prove_image_execution_for_machine_with_gpu_tracers<
         }
         id if id == std::any::TypeId::of::<IWithoutByteAccessIsaConfigWithDelegation>() => {
             if trace_len == 1 << 23 {
-                CircuitType::Main(MainCircuitType::ReducedLog23RiscVMachine)
+                CircuitType::Main(MainCircuitType::ReducedRiscVLog23Machine)
             } else {
                 CircuitType::Main(MainCircuitType::ReducedRiscVMachine)
             }

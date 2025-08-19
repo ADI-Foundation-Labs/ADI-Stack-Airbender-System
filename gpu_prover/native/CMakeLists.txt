@@ -45,6 +45,7 @@ add_library(gpu_prover_native STATIC
         witness/circuits/final_reduced_risc_v_machine.cu
         witness/circuits/machine_without_signed_mul_div.cu
         witness/circuits/reduced_risc_v_machine.cu
+        witness/circuits/reduced_risc_v_log_23_machine.cu
         witness/circuits/risc_v_cycles.cu
         witness/circuits/template_delegation.cuh
         witness/circuits/template_main.cuh

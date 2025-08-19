@@ -192,7 +192,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             free_allocator_sender.send(allocator).unwrap();
         }
         info!("PROVER initializing global host allocator with 4 x 512 MB");
-        ProverContext::initialize_global_host_allocator(4, 1 << 7, 22).unwrap();
+        ProverContext::initialize_global_host_allocator(16, 1 << 7, 23).unwrap();
         info!("PROVER global host allocator initialized");
         let worker = Worker::new();
         info!(
@@ -982,7 +982,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             MainCircuitType::FinalReducedRiscVMachine => false,
             MainCircuitType::MachineWithoutSignedMulDiv => true,
             MainCircuitType::ReducedRiscVMachine => true,
-            MainCircuitType::ReducedLog23RiscVMachine => true,
+            MainCircuitType::ReducedRiscVLog23Machine => true,
             MainCircuitType::RiscVCycles => true,
         };
         let external_challenges = ExternalChallenges::draw_from_transcript_seed(
@@ -1043,7 +1043,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             MainCircuitType::ReducedRiscVMachine => {
                 setups::get_reduced_riscv_circuit_setup(&bytecode, worker).into()
             }
-            MainCircuitType::ReducedLog23RiscVMachine => {
+            MainCircuitType::ReducedRiscVLog23Machine => {
                 setups::get_reduced_riscv_log_23_circuit_setup(&bytecode, worker).into()
             }
             MainCircuitType::RiscVCycles => {
@@ -1065,7 +1065,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             MainCircuitType::ReducedRiscVMachine => {
                 setups::delegation_factories_for_machine::<IWithoutByteAccessIsaConfigWithDelegation, A>()
             }
-            MainCircuitType::ReducedLog23RiscVMachine => {
+            MainCircuitType::ReducedRiscVLog23Machine => {
                 setups::delegation_factories_for_machine::<IWithoutByteAccessIsaConfigWithDelegation, A>()
             }
             MainCircuitType::RiscVCycles => {
@@ -1134,7 +1134,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 );
                 self.worker.pool.spawn(func);
             }
-            MainCircuitType::ReducedLog23RiscVMachine => {
+            MainCircuitType::ReducedRiscVLog23Machine => {
                 let func = get_cpu_worker_func::<IWithoutByteAccessIsaConfigWithDelegation, _>(
                     wait_group,
                     batch_id,
@@ -1177,7 +1177,7 @@ pub fn get_num_cycles(circuit_type: MainCircuitType) -> usize {
         MainCircuitType::ReducedRiscVMachine => {
             setups::reduced_risc_v_machine::NUM_CYCLES
         }
-        MainCircuitType::ReducedLog23RiscVMachine => {
+        MainCircuitType::ReducedRiscVLog23Machine => {
             setups::reduced_risc_v_log_23_machine::NUM_CYCLES
         }
         MainCircuitType::RiscVCycles => setups::risc_v_cycles::NUM_CYCLES,
@@ -1195,7 +1195,7 @@ pub fn get_domain_size(circuit_type: MainCircuitType) -> usize {
         MainCircuitType::ReducedRiscVMachine => {
             setups::reduced_risc_v_machine::DOMAIN_SIZE
         }
-        MainCircuitType::ReducedLog23RiscVMachine => {
+        MainCircuitType::ReducedRiscVLog23Machine => {
             setups::reduced_risc_v_log_23_machine::DOMAIN_SIZE
         }
         MainCircuitType::RiscVCycles => setups::risc_v_cycles::DOMAIN_SIZE,

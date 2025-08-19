@@ -472,7 +472,7 @@ impl GpuSharedState {
         };
         let recursion_log_23_binary = ExecutableBinary {
             key: Self::RECURSION_LOG_23_BINARY_KEY,
-            circuit_type: MainCircuitType::ReducedLog23RiscVMachine,
+            circuit_type: MainCircuitType::ReducedRiscVLog23Machine,
             bytecode: get_padded_binary(RECURSION_LAYER_VERIFIER),
         };
         let prover = ExecutionProver::new(1, vec![main_binary, recursion_binary, recursion_log_23_binary]);
@@ -637,7 +637,7 @@ pub fn create_proofs_internal(
                         let (final_register_values, basic_proofs, delegation_proofs) =
                             gpu_shared_state.prover.commit_memory_and_prove(
                                 0,
-                                &GpuSharedState::RECURSION_BINARY_KEY,
+                                &GpuSharedState::RECURSION_LOG_23_BINARY_KEY,
                                 num_instances,
                                 non_determinism_source,
                             );
