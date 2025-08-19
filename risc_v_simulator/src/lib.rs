@@ -3,6 +3,7 @@
 #![feature(generic_const_exprs)]
 #![feature(iter_array_chunks)]
 #![feature(let_chains)]
+#![feature(slice_as_chunks)] // NEED THIS for interop with zksync-os which is on an older nightly
 
 pub mod abstractions;
 pub mod cycle;
