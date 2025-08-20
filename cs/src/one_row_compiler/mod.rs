@@ -849,10 +849,7 @@ impl quote::ToTokens for BoundaryConstraintLocation {
 
 impl quote::ToTokens for MachineStatePermutationVariables {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let MachineStatePermutationVariables {
-            pc,
-            timestamp,
-        } = self;
+        let MachineStatePermutationVariables { pc, timestamp } = self;
         let stream = quote! {
             MachineStatePermutationVariables {
                 pc: #pc,
