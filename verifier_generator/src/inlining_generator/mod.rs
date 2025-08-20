@@ -357,13 +357,13 @@ pub fn generate_inlined(compiled_circuit: CompiledCircuitArtifact<Mersenne31Fiel
 
     // Memory and machines state related accumulators
     {
-        let exprs = transform_grand_product_accumulators(
+        transform_grand_product_accumulators(
             &memory_layout,
             &stage_2_layout,
             &setup_layout,
             &idents,
+            &mut every_row_except_last_stream,
         );
-        accumulate_contributions(&mut every_row_except_last_stream, None, exprs, &idents);
     }
 
     let divisor_idx = DIVISOR_EVERYWHERE_EXCEPT_LAST_ROW_INDEX;
