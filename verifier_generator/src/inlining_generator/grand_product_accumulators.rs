@@ -532,9 +532,10 @@ pub(crate) fn transform_grand_product_accumulators(
     {
         let previous_offset = previous_acc_value_offset.expect("some value to accumulate");
         let previous_accumulator_expr = read_stage_2_value_expr(previous_offset, idents, false);
-        let offset = stage_2_layout.intermediate_poly_for_grand_product.start();
-        let accumulator_expr = read_stage_2_value_expr(offset, idents, false);
-        let accumulator_next_expr = read_stage_2_value_expr(offset, idents, true);
+        let idx = stage_2_layout
+            .get_intermediate_polys_for_grand_product_accumulation_absolute_poly_idx_for_verifier();
+        let accumulator_expr = read_stage_2_value_expr(idx, idents, false);
+        let accumulator_next_expr = read_stage_2_value_expr(idx, idents, true);
 
         let t = quote! {
             let #individual_term_ident = {

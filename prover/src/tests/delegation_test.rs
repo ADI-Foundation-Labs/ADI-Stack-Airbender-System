@@ -32,7 +32,8 @@ pub fn run_basic_delegation_test_impl(
 
     // load binary
 
-    let binary = std::fs::read("./app.bin").unwrap();
+    // let binary = std::fs::read("./app.bin").unwrap();
+    let binary = std::fs::read("../examples/hashed_fibonacci/app.bin").unwrap();
     assert!(binary.len() % 4 == 0);
     let binary: Vec<_> = binary
         .array_chunks::<4>()
@@ -129,6 +130,7 @@ pub fn run_basic_delegation_test_impl(
             trace_len,
             csr_processor,
             Some(LookupWrapper::Dimensional3(csr_table)),
+            &vec![15, 1], // 1000 steps of fibonacci, and 1 round of hashing
             &worker,
         );
 

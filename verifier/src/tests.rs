@@ -72,27 +72,39 @@ fn test_transcript() {
     let mut oracle_data = vec![];
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        compiled_circuit
+        &compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns
-            .is_some(),
+            .shuffle_ram_inits_and_teardowns,
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
     }
 
-    // let it = [0u32; 8].into_iter();
-    let it = oracle_data.into_iter();
+    // Spawn a new thread as it's large stack in debug builds
+    let result = std::thread::Builder::new()
+        .name("verifier thread".to_string())
+        .stack_size(1 << 27)
+        .spawn(move || {
+            let it = oracle_data.into_iter();
 
-    set_iterator(it);
+            set_iterator(it);
 
-    #[allow(invalid_value)]
-    unsafe {
-        verify_with_configuration::<ThreadLocalBasedSource, DefaultLeafInclusionVerifier>(
-            &mut MaybeUninit::uninit().assume_init(),
-            &mut ProofPublicInputs::uninit(),
-        )
-    };
+            #[allow(invalid_value)]
+            unsafe {
+                verify_with_configuration::<ThreadLocalBasedSource, DefaultLeafInclusionVerifier>(
+                    &mut MaybeUninit::uninit().assume_init(),
+                    &mut ProofPublicInputs::uninit(),
+                )
+            };
+        })
+        .map(|t| t.join());
+
+    match result {
+        Ok(..) => {}
+        Err(err) => {
+            panic!("Verifier thread failes with {}", err);
+        }
+    }
 }
 
 use risc_v_simulator::{
@@ -128,10 +140,9 @@ fn test_full_machine_verifier_out_of_simulator() {
 
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        compiled_circuit
+        &compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns
-            .is_some(),
+            .shuffle_ram_inits_and_teardowns,
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
@@ -173,10 +184,9 @@ fn test_reduced_machine_verifier_out_of_simulator() {
 
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        compiled_circuit
+        &compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns
-            .is_some(),
+            .shuffle_ram_inits_and_teardowns,
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
@@ -223,10 +233,9 @@ fn test_verifier_in_simulator() {
     {
         oracle_data.extend(flatten_proof_for_skeleton(
             &proof,
-            compiled_circuit
+            &compiled_circuit
                 .memory_layout
-                .shuffle_ram_inits_and_teardowns
-                .is_some(),
+                .shuffle_ram_inits_and_teardowns,
         ));
         for query in proof.queries.iter() {
             oracle_data.extend(flatten_query(query));

@@ -5,11 +5,11 @@ use quote::quote;
 use syn::Ident;
 
 mod everywhere_except_last;
-mod memory_accumulators;
+mod grand_product_accumulators;
 mod utils;
 
 use self::everywhere_except_last::*;
-use self::memory_accumulators::*;
+use self::grand_product_accumulators::*;
 use self::utils::*;
 
 mod everywhere_except_last_two;
