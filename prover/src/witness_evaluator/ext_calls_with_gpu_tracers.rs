@@ -33,6 +33,7 @@ pub fn dev_run_all_and_make_witness_ext_with_gpu_tracers<
     trace_len: usize,
     csr_processor: CSR,
     csr_table: Option<LookupWrapper<Mersenne31Field>>,
+    non_determinism_replies: &[u32],
     worker: &Worker,
 ) -> (
     Vec<WitnessEvaluationData<DEFAULT_TRACE_PADDING_MULTIPLE, Global>>,
@@ -121,6 +122,7 @@ where
             &mut memory,
             1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS),
             factories,
+            non_determinism_replies,
         );
 
     assert!(final_pc % 4 == 0);
@@ -359,6 +361,7 @@ pub fn dev_run_for_num_cycles_under_convention_ext_with_gpu_tracers<
     memory: &mut VectorMemoryImplWithRom,
     rom_address_space_bound: usize,
     delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness>>,
+    non_determinism_replies: &[u32],
 ) -> (
     u32,
     Vec<CycleData<C>>,
@@ -389,7 +392,7 @@ pub fn dev_run_for_num_cycles_under_convention_ext_with_gpu_tracers<
     let num_cycles_in_chunk = trace_size - 1;
     // important - in out memory implementation first access in every chunk is timestamped as (trace_size * circuit_idx) + 4,
     // so we take care of it
-    let mut non_determinism = QuasiUARTSource::default();
+    let mut non_determinism = QuasiUARTSource::new_with_reads(non_determinism_replies.to_vec());
 
     let mut num_traces_to_use = num_cycles / num_cycles_in_chunk;
     if num_cycles % num_cycles_in_chunk != 0 {

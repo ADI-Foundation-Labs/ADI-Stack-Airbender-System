@@ -1766,6 +1766,96 @@ pub(crate) fn transform_delegation_requests_processing(
     streams
 }
 
+pub(crate) fn transform_bytecode_decoding_via_lookup(
+    memory_layout: &MemorySubtree,
+    stage_2_layout: &LookupAndMemoryArgumentLayout,
+    idents: &Idents,
+) -> Vec<TokenStream> {
+    let mut streams = vec![];
+
+    let Idents {
+        individual_term_ident,
+        delegation_argument_linearization_challenges_ident,
+        delegation_argument_gamma_ident,
+        delegation_type_ident,
+        ..
+    } = idents;
+
+    let machine_state_layout = memory_layout.machine_state_layout.expect("must exists");
+
+    let intermediate_state_layout = memory_layout
+        .intermediate_state_layout
+        .expect("must exists");
+
+    {
+        let acc = stage_2_layout
+            .get_aux_poly_decoder_absolute_poly_idx_for_verifier()
+            .expect("must exist");
+        let accumulator_expr = read_stage_2_value_expr(acc, idents, false);
+
+        todo!();
+
+        // let multiplicity_expr = read_value_expr(
+        //     ColumnAddress::MemorySubtree(delegation_processor_layout.multiplicity.start()),
+        //     idents,
+        //     false,
+        // );
+
+        // // delegation type is a verifier-provided constant
+
+        // let src_1_expr = read_value_expr(
+        //     ColumnAddress::MemorySubtree(delegation_processor_layout.abi_mem_offset_high.start()),
+        //     idents,
+        //     false,
+        // );
+        // let src_2_expr = read_value_expr(
+        //     ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start()),
+        //     idents,
+        //     false,
+        // );
+        // let src_3_expr = read_value_expr(
+        //     ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start() + 1),
+        //     idents,
+        //     false,
+        // );
+
+        // let t = quote! {
+        //     let #individual_term_ident = {
+        //         let m = #multiplicity_expr;
+
+        //         let mut denom = #delegation_argument_linearization_challenges_ident[2];
+        //         let timestamp_high = #src_3_expr;
+        //         denom.mul_assign(&timestamp_high);
+
+        //         let timestamp_low = #src_2_expr;
+        //         let mut t = #delegation_argument_linearization_challenges_ident[1];
+        //         t.mul_assign(&timestamp_low);
+        //         denom.add_assign(&t);
+
+        //         let mem_abi_offset = #src_1_expr;
+        //         let mut t = #delegation_argument_linearization_challenges_ident[0];
+        //         t.mul_assign(&mem_abi_offset);
+        //         denom.add_assign(&t);
+
+        //         let t = #delegation_type_ident;
+        //         denom.add_assign_base(&t);
+
+        //         denom.add_assign(&#delegation_argument_gamma_ident);
+
+        //         let mut #individual_term_ident = denom;
+        //         #individual_term_ident.mul_assign(& #accumulator_expr);
+        //         #individual_term_ident.sub_assign(&m);
+
+        //         #individual_term_ident
+        //     };
+        // };
+
+        // streams.push(t);
+    }
+
+    streams
+}
+
 pub(crate) fn transform_shuffle_ram_lazy_init_padding(
     shuffle_ram_inits_and_teardowns: &[ShuffleRamInitAndTeardownLayout],
     lazy_init_address_aux_vars: &[ShuffleRamAuxComparisonSet],
