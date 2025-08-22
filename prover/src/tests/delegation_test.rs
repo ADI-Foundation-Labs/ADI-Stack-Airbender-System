@@ -24,11 +24,11 @@ pub fn run_basic_delegation_test_impl(
     let lde_factor = 2;
     let tree_cap_size = 32;
 
-    let worker = Worker::new_with_num_threads(1);
+    // let worker = Worker::new_with_num_threads(1);
     // let worker = Worker::new_with_num_threads(2);
     // let worker = Worker::new_with_num_threads(4);
     // let worker = Worker::new_with_num_threads(8);
-    // let worker = Worker::new_with_num_threads(12);
+    let worker = Worker::new_with_num_threads(16);
 
     // load binary
 

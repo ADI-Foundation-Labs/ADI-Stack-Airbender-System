@@ -9,6 +9,7 @@ const SECOND_WORD_BITS: usize = 4;
 
 use risc_v_simulator::delegations::keccak_special5::KECCAK_SPECIAL5_ACCESS_ID;
 
+// use --features debug_satisfiable ?
 pub fn run_keccak_test_impl(
     maybe_delegator_gpu_comparison_hook: Option<Box<dyn Fn(&GpuComparisonArgs)>>,
     maybe_delegated_gpu_comparison_hook: Option<Box<dyn Fn(&GpuComparisonArgs)>>,
@@ -24,16 +25,17 @@ pub fn run_keccak_test_impl(
     let lde_factor = 2;
     let tree_cap_size = 32;
 
-    let worker = Worker::new_with_num_threads(1);
+    // let worker = Worker::new_with_num_threads(1);
     // let worker = Worker::new_with_num_threads(2);
     // let worker = Worker::new_with_num_threads(4);
     // let worker = Worker::new_with_num_threads(8);
-    // let worker = Worker::new_with_num_threads(12);
+    let worker = Worker::new_with_num_threads(16);
 
     // load binary
     // let binary = KECCAK_F1600_BIN; // old bin just does one f1600 iteration w/out checks
     let binary = {
-        let bytes = APP_KECCAK_SIMPLE_BIN;
+        let bytes = APP_KECCAK_SIMPLE_BIN; // single keccak_f1600 testcase
+        // let bytes = APP_KECCAK_BENCH_BIN; // 2k iterations of keccak_f1600 on same state (no checks)
         let (chunks, []) = bytes.as_chunks::<4>() else { unreachable!() };
         chunks.into_iter().map(|&x| u32::from_le_bytes(x)).collect::<Vec<u32>>()
     };
@@ -479,6 +481,7 @@ pub fn run_keccak_test_impl(
     assert_eq!(sum_over_delegation_poly, Mersenne31Quartic::ZERO);
 }
 
+// use --features debug_satisfiable ?
 #[test]
 fn run_keccak_test() {
     run_keccak_test_impl(None, None);
@@ -489,6 +492,9 @@ const APP_KECCAK_SIMPLE_BIN: &[u8] = include_bytes!("../../app_keccak_simple.bin
 
 #[allow(unused)]
 const APP_KECCAK_BAD_BIN: &[u8] = include_bytes!("../../app_keccak_bad.bin"); // SHOULD FAIL
+
+#[allow(unused)]
+const APP_KECCAK_BENCH_BIN: &[u8] = include_bytes!("../../app_keccak_bench.bin");
 
 // expects state ptr to be in x10
 #[allow(unused)]
@@ -625,184 +631,3 @@ const KECCAK_F1600_BIN: &[u32] = &[
     
     0x0000006f // fin: infinite loop to avoid padding with tons of noop
 ];
-
-
-
-// commented out until we get new inputs
-
-// #[test]
-// fn test_blake2_single_round() {
-//     use crate::cs::delegation::blake2_single_round::define_blake2_single_round_delegation_circuit;
-//     let oracle_input = deserialize_from_file::<Vec<DelegationTraceRecord>>(
-//         "blake2_single_round_delegation_oracle",
-//     );
-//     for round in 0..oracle_input.len() {
-//         let mut expected_outputs = vec![];
-//         for (i, el) in oracle_input[round].accesses[..16].iter().enumerate() {
-//             println!(
-//                 "Output element {} from witness = 0x{:08x}",
-//                 i, el.write_value
-//             );
-//             expected_outputs.push(el.write_value);
-//         }
-
-//         let oracle = DelegationCycleOracle {
-//             cycles_data: &oracle_input[round..],
-//         };
-//         let oracle: DelegationCycleOracle<'static> = unsafe { core::mem::transmute(oracle) };
-//         let mut cs = BasicAssembly::<Mersenne31Field>::new_with_oracle(oracle);
-//         let output_vars = define_blake2_single_round_delegation_circuit(&mut cs);
-
-//         let mut produced_outputs = vec![];
-
-//         use cs::types::Num;
-//         use cs::types::Register;
-
-//         for (_, input) in output_vars.iter().enumerate() {
-//             let register = Register(input.map(|el| Num::Var(el)));
-//             let value = register.get_value_unsigned(&cs).unwrap();
-//             produced_outputs.push(value);
-//         }
-
-//         assert_eq!(
-//             expected_outputs, produced_outputs,
-//             "diverged for round {}",
-//             round
-//         );
-//     }
-// }
-
-// #[test]
-// fn test_extended_blake2_single_round() {
-//     use crate::cs::delegation::blake2_round_with_extended_control::define_blake2_with_extended_control_delegation_circuit;
-//     // let oracle_input =
-//     //     deserialize_from_file::<Vec<DelegationTraceRecord>>("blake2_extended_delegation_oracle");
-//     let oracle_input = fast_deserialize_from_file::<Vec<DelegationTraceRecord>>(
-//         "delegation_circuit_1991_0_oracle_witness.bin",
-//     );
-
-//     println!("Will check {} different inputs", oracle_input.len());
-//     for round in 0..oracle_input.len() {
-//         println!("Will execute request number {}", round);
-//         let mut expected_state = vec![];
-//         for (i, el) in oracle_input[round].accesses[..8].iter().enumerate() {
-//             println!(
-//                 "Output state element {} from witness = 0x{:08x}",
-//                 i, el.write_value
-//             );
-//             expected_state.push(el.write_value);
-//         }
-
-//         let mut expected_extended_state = vec![];
-//         for (i, el) in oracle_input[round].accesses[8..24].iter().enumerate() {
-//             println!(
-//                 "Output extended state element {} from witness = 0x{:08x}",
-//                 i, el.write_value
-//             );
-//             expected_extended_state.push(el.write_value);
-//         }
-
-//         let oracle = DelegationCycleOracle {
-//             cycles_data: &oracle_input[round..],
-//         };
-//         let oracle: DelegationCycleOracle<'static> = unsafe { core::mem::transmute(oracle) };
-//         let mut cs = BasicAssembly::<Mersenne31Field>::new_with_oracle(oracle);
-//         let (output_state_vars, output_extended_state_vars) =
-//             define_blake2_with_extended_control_delegation_circuit(&mut cs);
-
-//         let mut produced_state_outputs = vec![];
-//         let mut produced_extended_state_outputs = vec![];
-
-//         use cs::types::Num;
-//         use cs::types::Register;
-
-//         for (_, input) in output_state_vars.iter().enumerate() {
-//             let register = Register(input.map(|el| Num::Var(el)));
-//             let value = register.get_value_unsigned(&cs).unwrap();
-//             produced_state_outputs.push(value);
-//         }
-
-//         for (_, input) in output_extended_state_vars.iter().enumerate() {
-//             let register = Register(input.map(|el| Num::Var(el)));
-//             let value = register.get_value_unsigned(&cs).unwrap();
-//             produced_extended_state_outputs.push(value);
-//         }
-
-//         assert_eq!(
-//             expected_extended_state, produced_extended_state_outputs,
-//             "extended state diverged for round {}",
-//             round
-//         );
-
-//         assert_eq!(
-//             expected_state, produced_state_outputs,
-//             "state diverged for round {}",
-//             round
-//         );
-//     }
-// }
-
-// #[test]
-// fn test_bigint_with_control_call() {
-//     use crate::cs::delegation::bigint_with_control::*;
-//     let oracle_input = deserialize_from_file::<Vec<DelegationTraceRecord>>(
-//         "delegation_circuit_1994_0_oracle_witness",
-//     );
-
-//     // serialize_to_file(&oracle_input[..10].to_vec(), "delegation_circuit_1994_0_oracle_witness_short");
-
-//     // let oracle_input = deserialize_from_file::<Vec<DelegationTraceRecord>>(
-//     //     "delegation_circuit_1994_0_oracle_witness_short",
-//     // );
-
-//     println!("Will check {} different inputs", oracle_input.len());
-//     for round in 0..oracle_input.len() {
-//         println!("Round = {}", round);
-//         // for (_i, el) in oracle_input[round].accesses[..8].iter().enumerate() {
-//         //     println!("a[{}] = 0x{:08x}", _i, el.read_value);
-//         // }
-//         // for (_i, el) in oracle_input[round].accesses[8..16].iter().enumerate() {
-//         //     println!("b[{}] = 0x{:08x}", _i, el.read_value);
-//         // }
-//         let mut expected_state = vec![];
-//         for (_i, el) in oracle_input[round].accesses[..8].iter().enumerate() {
-//             // println!("result[{}] = 0x{:08x}", _i, el.write_value);
-//             expected_state.push(el.write_value);
-//         }
-//         // println!("Op bitmask = 0b{:032b}", oracle_input[round].register_and_indirect_accesses[2].read_value);
-
-//         let expected_x12 = oracle_input[round].register_and_indirect_accesses[2].written_value;
-
-//         let oracle = DelegationCycleOracle {
-//             cycles_data: &oracle_input[round..],
-//         };
-//         let oracle: DelegationCycleOracle<'static> = unsafe { core::mem::transmute(oracle) };
-//         let mut cs = BasicAssembly::<Mersenne31Field>::new_with_oracle(oracle);
-//         let (output_state_vars, output_extended_state_vars) =
-//             define_u256_ops_extended_control_delegation_circuit(&mut cs);
-
-//         assert!(cs.is_satisfied());
-
-//         let mut produced_state_outputs = vec![];
-
-//         use cs::types::Num;
-//         use cs::types::Register;
-
-//         for (_, input) in output_state_vars.iter().enumerate() {
-//             let register = Register(input.map(|el| Num::Var(el)));
-//             let value = register.get_value_unsigned(&cs).unwrap();
-//             produced_state_outputs.push(value);
-//         }
-
-//         let register = Register(output_extended_state_vars.map(|el| Num::Var(el)));
-//         let result_x12 = register.get_value_unsigned(&cs).unwrap();
-
-//         assert_eq!(expected_x12, result_x12, "x12 diverged for round {}", round);
-
-//         assert_eq!(
-//             expected_state, produced_state_outputs,
-//             "state diverged for round {}",
-//             round
-//         );
-//     }
-// }

@@ -1434,7 +1434,7 @@ pub fn prover_stage_3<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                     assert_eq!(
                                         term_contribution,
                                         Mersenne31Quartic::ZERO,
-                                        "unsatisfied at width 3 lookup set {} with table type {:?} at row {} with tuple {:?} and ID = {}",
+                                        "unsatisfied at width 3 lookup set {} with table type {:?} at row {} with tuple {:?} and ID = {} (process_delegations = {process_delegations}, delegation_type = {delegation_type})",
                                         i,
                                         lookup_set.table_index,
                                         absolute_row_idx,

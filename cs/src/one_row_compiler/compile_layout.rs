@@ -1128,14 +1128,17 @@ impl<F: PrimeField> OneRowCompiler<F> {
             let table_index = match table {
                 LookupQueryTableType::Constant(constant) => TableIndex::Constant(constant),
                 LookupQueryTableType::Variable(variable) => {
-                    // let column = layout_witness_subtree_variable(
-                    //     &mut witness_tree_offset,
-                    //     variable,
-                    //     &mut all_variables_to_place,
-                    //     &mut layout,
-                    // );
-                    let column: ColumnSet<1> = ColumnSet::layout_at(&mut witness_tree_offset, 1);
-                    let place = ColumnAddress::WitnessSubtree(column.start);
+                    let place = if let Some(&place) = layout.get(&variable) {
+                        place
+                    } else {
+                        let column = layout_witness_subtree_variable(
+                            &mut witness_tree_offset,
+                            variable,
+                            &mut all_variables_to_place,
+                            &mut layout,
+                        );
+                        ColumnAddress::WitnessSubtree(column.start)
+                    };
                     TableIndex::Variable(place)
                 }
             };
