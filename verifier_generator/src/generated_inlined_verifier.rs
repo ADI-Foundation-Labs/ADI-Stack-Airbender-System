@@ -9154,7 +9154,7 @@ pub unsafe fn evaluate_quotient(
             accumulated_contribution.mul_assign(&quotient_alpha);
             let contribution = {
                 let individual_term = {
-                    let mut individual_term = *(stage_2.get_unchecked(50usize));
+                    let mut individual_term = *(stage_2.get_unchecked(51usize));
                     individual_term.sub_assign_base(&Mersenne31Field::ONE);
                     individual_term
                 };
@@ -9274,7 +9274,7 @@ pub unsafe fn evaluate_quotient(
     let last_row_contribution = {
         let mut accumulated_contribution = {
             let individual_term = {
-                let mut individual_term = *(stage_2.get_unchecked(50usize));
+                let mut individual_term = *(stage_2.get_unchecked(51usize));
                 let t = aux_proof_values.memory_grand_product_accumulator_final_value;
                 individual_term.sub_assign(&t);
                 individual_term

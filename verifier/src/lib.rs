@@ -83,9 +83,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
     >,
     proof_input_dst: &mut ProofPublicInputs<NUM_STATE_ELEMENTS>,
 ) {
-    // #[cfg(test)]
-    // panic!();
-
     Mersenne31Quartic::init_ext4_fma_ops();
 
     let mut leaf_inclusion_verifier = V::new();

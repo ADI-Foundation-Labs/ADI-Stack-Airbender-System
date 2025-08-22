@@ -158,13 +158,8 @@ pub(crate) fn transform_first_or_last_rows(
 
         // 1 constraint for memory accumulator initial value == 1
         {
-            let num_memory_accumulators = stage_2_layout
-                .intermediate_polys_for_memory_argument
-                .num_elements();
             let offset = stage_2_layout
-                .get_intermediate_polys_for_memory_argument_absolute_poly_idx_for_verifier(
-                    num_memory_accumulators - 1,
-                );
+                .get_intermediate_polys_for_grand_product_accumulation_absolute_poly_idx_for_verifier();
             let value_expr = read_stage_2_value_expr(offset, idents, false);
 
             let t = quote! {
@@ -209,13 +204,8 @@ pub(crate) fn transform_first_or_last_rows(
     let last_row = {
         let mut last_row_streams = TokenStream::new();
 
-        let num_memory_accumulators = stage_2_layout
-            .intermediate_polys_for_memory_argument
-            .num_elements();
         let offset = stage_2_layout
-            .get_intermediate_polys_for_memory_argument_absolute_poly_idx_for_verifier(
-                num_memory_accumulators - 1,
-            );
+            .get_intermediate_polys_for_grand_product_accumulation_absolute_poly_idx_for_verifier();
         let value_expr = read_stage_2_value_expr(offset, idents, false);
 
         let t = quote! {

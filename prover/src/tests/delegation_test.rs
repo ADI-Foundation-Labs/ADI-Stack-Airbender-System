@@ -362,6 +362,8 @@ pub fn run_basic_delegation_test_impl(
     dbg!(&prover_data.stage_2_result.sum_over_delegation_poly);
     dbg!(register_contribution_in_memory_argument);
 
+    panic!("tmp");
+
     let mut memory_accumulator = prover_data.stage_2_result.grand_product_accumulator;
     memory_accumulator.mul_assign(&register_contribution_in_memory_argument);
 

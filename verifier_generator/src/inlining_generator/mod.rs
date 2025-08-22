@@ -647,60 +647,6 @@ pub fn generate_inlined(compiled_circuit: CompiledCircuitArtifact<Mersenne31Fiel
             last_row_and_zero_contribution
         }
 
-        // #[allow(unused_braces, unused_mut, unused_variables)]
-        // pub unsafe fn evaluate_quotient(
-        //     #random_point_ident: Mersenne31Quartic,
-        //     #witness_values_ident: &[Mersenne31Quartic],
-        //     #memory_values_ident: &[Mersenne31Quartic],
-        //     #setup_values_ident: &[Mersenne31Quartic],
-        //     #stage_2_values_ident: &[Mersenne31Quartic],
-        //     #witness_values_next_row_ident: &[Mersenne31Quartic],
-        //     #memory_values_next_row_ident: &[Mersenne31Quartic],
-        //     #stage_2_values_next_row_ident: &[Mersenne31Quartic],
-        //     #quotient_alpha_ident: Mersenne31Quartic,
-        //     #quotient_beta_ident: Mersenne31Quartic,
-        //     #divisors_ident: &[Mersenne31Quartic; #num_different_divisors],
-        //     #lookup_argument_linearization_challenges_ident: [Mersenne31Quartic; NUM_LOOKUP_ARGUMENT_LINEARIZATION_CHALLENGES],
-        //     #lookup_argument_gamma_ident: Mersenne31Quartic,
-        //     #lookup_argument_two_gamma_ident: Mersenne31Quartic,
-        //     #memory_argument_linearization_challenges_ident: [Mersenne31Quartic; NUM_MEM_ARGUMENT_LINEARIZATION_CHALLENGES],
-        //     #memory_argument_gamma_ident: Mersenne31Quartic,
-        //     #delegation_argument_linearization_challenges_ident: [Mersenne31Quartic; NUM_DELEGATION_ARGUMENT_LINEARIZATION_CHALLENGES],
-        //     #delegation_argument_gamma_ident: Mersenne31Quartic,
-        //     #public_inputs_ident: &[Mersenne31Field; #num_public_inputs],
-        //     #aux_proof_values_ident: &ProofAuxValues,
-        //     #aux_boundary_values_ident: &[AuxArgumentsBoundaryValues; #num_aux_boundary_values],
-        //     #memory_timestamp_high_from_sequence_idx_ident: Mersenne31Field,
-        //     #delegation_type_ident: Mersenne31Field,
-        //     #delegation_argument_interpolant_linear_coeff_ident: Mersenne31Quartic,
-        // ) -> Mersenne31Quartic {
-        //     #every_row_except_last
-
-        //     #every_row_except_two_last
-
-        //     #first_row
-
-        //     #one_before_last_row
-
-        //     #last_row
-
-        //     #last_row_and_zero
-
-        //     let mut quotient = every_row_except_last_contribution;
-        //     quotient.mul_assign(&#quotient_beta_ident);
-        //     quotient.add_assign(&every_row_except_two_last_contribution);
-        //     quotient.mul_assign(&#quotient_beta_ident);
-        //     quotient.add_assign(&first_row_contribution);
-        //     quotient.mul_assign(&#quotient_beta_ident);
-        //     quotient.add_assign(&one_before_last_row_contribution);
-        //     quotient.mul_assign(&#quotient_beta_ident);
-        //     quotient.add_assign(&last_row_contribution);
-        //     quotient.mul_assign(&#quotient_beta_ident);
-        //     quotient.add_assign(&last_row_and_zero_contribution);
-
-        //     quotient
-        // }
-
         #[allow(unused_braces, unused_mut, unused_variables)]
         pub unsafe fn evaluate_quotient(
             #random_point_ident: Mersenne31Quartic,
