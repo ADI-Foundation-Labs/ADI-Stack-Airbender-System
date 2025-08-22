@@ -1,5 +1,4 @@
 #![cfg_attr(not(any(test, feature = "replace_csr")), no_std)]
-#![feature(array_chunks)]
 #![feature(ptr_as_ref_unchecked)]
 #![feature(allocator_api)]
 #![feature(slice_from_ptr_range)]
