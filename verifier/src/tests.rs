@@ -22,51 +22,17 @@ fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
 #[ignore = "explicit panic in verifier"]
 #[test]
 fn test_transcript() {
-    use crate::layout_import::VERIFIER_COMPILED_LAYOUT;
-
     // create an oracle to feed into verifier and look at the transcript values
 
-    // let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/proof");
     let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/delegation_proof");
     // let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/blake2s_delegator_proof");
 
-    // let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
-    //     deserialize_from_file("../../zksync-airbender/prover/layout");
     let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
         deserialize_from_file("../../zksync-airbender/prover/full_machine_layout.json");
     // let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
     // deserialize_from_file("../../zksync-airbender/prover/blake2s_delegator_layout");
 
     // now form flattened iterator
-
-    dbg!(LAST_FRI_STEP_EXPOSE_LEAFS);
-    dbg!(LAST_FRI_STEP_LEAFS_TOTAL_SIZE_PER_COSET);
-
-    dbg!(NUM_FRI_STEPS);
-    dbg!(TREE_CAP_SIZE);
-    dbg!(SKELETON_PADDING);
-    dbg!(LEAF_SIZE_WITNESS_TREE);
-    dbg!(LEAF_SIZE_MEMORY_TREE);
-    dbg!(LEAF_SIZE_SETUP);
-    dbg!(LEAF_SIZE_STAGE_2);
-    dbg!(TREE_CAP_SIZE);
-    dbg!(NUM_OPENINGS_AT_Z);
-    dbg!(NUM_OPENINGS_AT_Z_OMEGA);
-    dbg!(NUM_QUOTIENT_TERMS);
-    dbg!(WITNESS_NEXT_ROW_OPENING_INDEXES);
-    dbg!(MEMORY_NEXT_ROW_OPENING_INDEXES);
-    dbg!(VERIFIER_COMPILED_LAYOUT
-        .stage_2_layout
-        .num_base_field_polys());
-    dbg!(VERIFIER_COMPILED_LAYOUT
-        .stage_2_layout
-        .num_ext4_field_polys());
-    dbg!(VERIFIER_COMPILED_LAYOUT
-        .stage_2_layout
-        .intermediate_polys_for_memory_argument
-        .num_elements());
-    dbg!(VERIFIER_COMPILED_LAYOUT.num_quotient_terms());
-
     use verifier_common::proof_flattener::*;
 
     let mut oracle_data = vec![];
