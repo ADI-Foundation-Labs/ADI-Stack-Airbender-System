@@ -812,9 +812,9 @@
     },
     "scratch_space_columns_range": {
       "start": 105,
-      "num_elements": 63
+      "num_elements": 59
     },
-    "total_width": 168
+    "total_width": 164
   },
   "memory_layout": {
     "shuffle_ram_inits_and_teardowns": {
@@ -5519,7 +5519,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 151
+            "WitnessSubtree": 92
           }
         ]
       ],
@@ -5811,7 +5811,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 152
+            "WitnessSubtree": 96
           }
         ]
       ],
@@ -6098,6 +6098,12 @@
           }
         ],
         [
+          2147483646,
+          {
+            "WitnessSubtree": 100
+          }
+        ],
+        [
           24,
           {
             "WitnessSubtree": 133
@@ -6107,12 +6113,6 @@
           39,
           {
             "WitnessSubtree": 134
-          }
-        ],
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 153
           }
         ]
       ],
@@ -6327,15 +6327,15 @@
           }
         ],
         [
-          39,
+          2147483646,
           {
-            "WitnessSubtree": 133
+            "WitnessSubtree": 104
           }
         ],
         [
-          2147483646,
+          39,
           {
-            "WitnessSubtree": 154
+            "WitnessSubtree": 133
           }
         ]
       ],
@@ -6505,7 +6505,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 155
+            "WitnessSubtree": 151
           }
         ]
       ],
@@ -6527,7 +6527,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 156
+            "WitnessSubtree": 152
           }
         ]
       ],
@@ -6558,7 +6558,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 157
+            "WitnessSubtree": 153
           }
         ]
       ],
@@ -6589,7 +6589,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 158
+            "WitnessSubtree": 154
           }
         ]
       ],
@@ -6611,7 +6611,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 159
+            "WitnessSubtree": 155
           }
         ]
       ],
@@ -6633,7 +6633,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 160
+            "WitnessSubtree": 156
           }
         ]
       ],
@@ -6685,13 +6685,13 @@
         [
           1,
           {
-            "WitnessSubtree": 155
+            "WitnessSubtree": 151
           }
         ],
         [
           2147483646,
           {
-            "WitnessSubtree": 157
+            "WitnessSubtree": 153
           }
         ]
       ],
@@ -6797,13 +6797,13 @@
         [
           1,
           {
-            "WitnessSubtree": 156
+            "WitnessSubtree": 152
           }
         ],
         [
           2147483646,
           {
-            "WitnessSubtree": 158
+            "WitnessSubtree": 154
           }
         ]
       ],
@@ -6903,7 +6903,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 159
+            "WitnessSubtree": 155
           }
         ]
       ],
@@ -6973,7 +6973,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 160
+            "WitnessSubtree": 156
           }
         ]
       ],
@@ -7121,7 +7121,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 161
+            "WitnessSubtree": 157
           }
         ]
       ],
@@ -7284,7 +7284,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 162
+            "WitnessSubtree": 158
           }
         ]
       ],
@@ -7340,7 +7340,7 @@
             "WitnessSubtree": 28
           },
           {
-            "WitnessSubtree": 163
+            "WitnessSubtree": 159
           }
         ],
         [
@@ -7349,7 +7349,7 @@
             "WitnessSubtree": 76
           },
           {
-            "WitnessSubtree": 163
+            "WitnessSubtree": 159
           }
         ],
         [
@@ -7358,7 +7358,7 @@
             "WitnessSubtree": 81
           },
           {
-            "WitnessSubtree": 163
+            "WitnessSubtree": 159
           }
         ],
         [
@@ -7367,7 +7367,7 @@
             "WitnessSubtree": 82
           },
           {
-            "WitnessSubtree": 163
+            "WitnessSubtree": 159
           }
         ]
       ],
@@ -7389,7 +7389,7 @@
             "WitnessSubtree": 67
           },
           {
-            "WitnessSubtree": 161
+            "WitnessSubtree": 157
           }
         ]
       ],
@@ -7397,13 +7397,13 @@
         [
           1,
           {
-            "WitnessSubtree": 161
+            "WitnessSubtree": 157
           }
         ],
         [
           2147483646,
           {
-            "WitnessSubtree": 164
+            "WitnessSubtree": 160
           }
         ]
       ],
@@ -7417,7 +7417,7 @@
             "WitnessSubtree": 67
           },
           {
-            "WitnessSubtree": 162
+            "WitnessSubtree": 158
           }
         ]
       ],
@@ -7425,13 +7425,13 @@
         [
           1,
           {
-            "WitnessSubtree": 162
+            "WitnessSubtree": 158
           }
         ],
         [
           2147483646,
           {
-            "WitnessSubtree": 165
+            "WitnessSubtree": 161
           }
         ]
       ],
@@ -7703,7 +7703,7 @@
             "WitnessSubtree": 31
           },
           {
-            "WitnessSubtree": 164
+            "WitnessSubtree": 160
           }
         ],
         [
@@ -7721,7 +7721,7 @@
             "WitnessSubtree": 32
           },
           {
-            "WitnessSubtree": 164
+            "WitnessSubtree": 160
           }
         ],
         [
@@ -7739,7 +7739,7 @@
             "WitnessSubtree": 35
           },
           {
-            "WitnessSubtree": 164
+            "WitnessSubtree": 160
           }
         ],
         [
@@ -7757,7 +7757,7 @@
             "WitnessSubtree": 36
           },
           {
-            "WitnessSubtree": 164
+            "WitnessSubtree": 160
           }
         ],
         [
@@ -7781,7 +7781,7 @@
             "WitnessSubtree": 31
           },
           {
-            "WitnessSubtree": 165
+            "WitnessSubtree": 161
           }
         ],
         [
@@ -7799,7 +7799,7 @@
             "WitnessSubtree": 32
           },
           {
-            "WitnessSubtree": 165
+            "WitnessSubtree": 161
           }
         ],
         [
@@ -7817,7 +7817,7 @@
             "WitnessSubtree": 35
           },
           {
-            "WitnessSubtree": 165
+            "WitnessSubtree": 161
           }
         ],
         [
@@ -7835,7 +7835,7 @@
             "WitnessSubtree": 36
           },
           {
-            "WitnessSubtree": 165
+            "WitnessSubtree": 161
           }
         ],
         [
@@ -8005,7 +8005,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 166
+            "WitnessSubtree": 162
           }
         ]
       ],
@@ -8399,7 +8399,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 167
+            "WitnessSubtree": 163
           }
         ]
       ],
@@ -8490,7 +8490,7 @@
   "state_linkage_constraints": [
     [
       {
-        "WitnessSubtree": 166
+        "WitnessSubtree": 162
       },
       {
         "WitnessSubtree": 16
@@ -8498,7 +8498,7 @@
     ],
     [
       {
-        "WitnessSubtree": 167
+        "WitnessSubtree": 163
       },
       {
         "WitnessSubtree": 73
@@ -8521,13 +8521,13 @@
     [
       "OneBeforeLastRow",
       {
-        "WitnessSubtree": 166
+        "WitnessSubtree": 162
       }
     ],
     [
       "OneBeforeLastRow",
       {
-        "WitnessSubtree": 167
+        "WitnessSubtree": 163
       }
     ]
   ],
@@ -8905,7 +8905,7 @@
       "WitnessSubtree": 91
     },
     "124": {
-      "WitnessSubtree": 151
+      "WitnessSubtree": 92
     },
     "125": {
       "WitnessSubtree": 93
@@ -8917,7 +8917,7 @@
       "WitnessSubtree": 95
     },
     "128": {
-      "WitnessSubtree": 152
+      "WitnessSubtree": 96
     },
     "129": {
       "WitnessSubtree": 97
@@ -8929,7 +8929,7 @@
       "WitnessSubtree": 99
     },
     "132": {
-      "WitnessSubtree": 153
+      "WitnessSubtree": 100
     },
     "133": {
       "WitnessSubtree": 101
@@ -8941,7 +8941,7 @@
       "WitnessSubtree": 103
     },
     "136": {
-      "WitnessSubtree": 154
+      "WitnessSubtree": 104
     },
     "137": {
       "OptimizedOut": 1
@@ -8962,25 +8962,25 @@
       "OptimizedOut": 6
     },
     "143": {
-      "WitnessSubtree": 155
+      "WitnessSubtree": 151
     },
     "144": {
-      "WitnessSubtree": 156
+      "WitnessSubtree": 152
     },
     "145": {
       "OptimizedOut": 7
     },
     "146": {
-      "WitnessSubtree": 157
+      "WitnessSubtree": 153
     },
     "147": {
-      "WitnessSubtree": 158
+      "WitnessSubtree": 154
     },
     "148": {
-      "WitnessSubtree": 159
+      "WitnessSubtree": 155
     },
     "149": {
-      "WitnessSubtree": 160
+      "WitnessSubtree": 156
     },
     "150": {
       "WitnessSubtree": 4
@@ -9046,31 +9046,31 @@
       "WitnessSubtree": 15
     },
     "171": {
-      "WitnessSubtree": 161
+      "WitnessSubtree": 157
     },
     "172": {
-      "WitnessSubtree": 162
+      "WitnessSubtree": 158
     },
     "173": {
       "OptimizedOut": 8
     },
     "174": {
-      "WitnessSubtree": 163
+      "WitnessSubtree": 159
     },
     "175": {
       "WitnessSubtree": 67
     },
     "176": {
-      "WitnessSubtree": 164
+      "WitnessSubtree": 160
     },
     "177": {
-      "WitnessSubtree": 165
+      "WitnessSubtree": 161
     },
     "178": {
-      "WitnessSubtree": 166
+      "WitnessSubtree": 162
     },
     "179": {
-      "WitnessSubtree": 167
+      "WitnessSubtree": 163
     },
     "180": {
       "WitnessSubtree": 26
