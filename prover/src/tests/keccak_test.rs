@@ -25,11 +25,11 @@ pub fn run_keccak_test_impl(
     let lde_factor = 2;
     let tree_cap_size = 32;
 
-    // let worker = Worker::new_with_num_threads(1);
+    let worker = Worker::new_with_num_threads(1);
     // let worker = Worker::new_with_num_threads(2);
     // let worker = Worker::new_with_num_threads(4);
     // let worker = Worker::new_with_num_threads(8);
-    let worker = Worker::new_with_num_threads(16);
+    // let worker = Worker::new_with_num_threads(16);
 
     // load binary
     // let binary = KECCAK_F1600_BIN; // old bin just does one f1600 iteration w/out checks
