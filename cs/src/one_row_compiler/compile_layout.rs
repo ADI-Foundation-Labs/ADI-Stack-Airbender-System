@@ -1024,6 +1024,13 @@ impl<F: PrimeField> OneRowCompiler<F> {
             })
             .collect();
 
+        assert!(range_check_16_columns.num_elements() % 2 == 0);
+        let mut range_check_16_lookup_expressions = range_check_16_lookup_expressions;
+        if range_check_16_lookup_expressions.len() % 2 != 0 {
+            let last = range_check_16_lookup_expressions.last().unwrap().clone();
+            range_check_16_lookup_expressions.push(last);
+        }
+
         let witness_layout = WitnessSubtree {
             multiplicities_columns_for_range_check_16,
             multiplicities_columns_for_timestamp_range_check,
