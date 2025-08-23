@@ -434,13 +434,15 @@ impl<F: PrimeField> OneRowCompiler<F> {
                     );
 
                     // layout variable part column
-                    let variable_part = if let Some((offset, var)) = access.variable_dependent() {
+                    let variable_part = if let Some((offset, var, indirect_access_var_idx)) =
+                        access.variable_dependent()
+                    {
                         if let Some(place) = layout.get(&var) {
                             let ColumnAddress::MemorySubtree(column) = *place else {
                                 panic!("Variable offset was placed not in memory columns");
                             };
 
-                            Some((offset, ColumnSet::new(column, 1)))
+                            Some((offset, ColumnSet::new(column, 1), indirect_access_var_idx))
                         } else {
                             let variable_column = layout_memory_subtree_variable(
                                 &mut memory_tree_offset,
@@ -449,7 +451,7 @@ impl<F: PrimeField> OneRowCompiler<F> {
                                 &mut layout,
                             );
 
-                            Some((offset, variable_column))
+                            Some((offset, variable_column, indirect_access_var_idx))
                         }
                     } else {
                         None

@@ -2,6 +2,7 @@ use cs::definitions::TimestampData;
 use fft::GoodAllocator;
 use risc_v_simulator::abstractions::tracer::{
     RegisterOrIndirectReadData, RegisterOrIndirectReadWriteData,
+    RegisterOrIndirectVariableOffsetData,
 };
 use std::alloc::Global;
 
@@ -15,13 +16,15 @@ pub struct IndirectAccessLocation {
 #[serde(bound = "\
         Vec<TimestampData, A>: serde::Serialize + serde::de::DeserializeOwned, \
         Vec<RegisterOrIndirectReadData, A>: serde::Serialize + serde::de::DeserializeOwned, \
-        Vec<RegisterOrIndirectReadWriteData, A>: serde::Serialize + serde::de::DeserializeOwned\
+        Vec<RegisterOrIndirectReadWriteData, A>: serde::Serialize + serde::de::DeserializeOwned, \
+        Vec<RegisterOrIndirectVariableOffsetData, A>: serde::Serialize + serde::de::DeserializeOwned\
         ")]
 pub struct DelegationWitness<A: GoodAllocator = Global> {
     pub num_requests: usize,
     pub num_register_accesses_per_delegation: usize,
     pub num_indirect_reads_per_delegation: usize,
     pub num_indirect_writes_per_delegation: usize,
+    pub num_indirect_access_variable_offsets_per_delegation: usize,
     pub base_register_index: u32,
     pub delegation_type: u16,
     pub indirect_accesses_properties: Vec<Vec<IndirectAccessLocation>>,
@@ -31,6 +34,7 @@ pub struct DelegationWitness<A: GoodAllocator = Global> {
     pub register_accesses: Vec<RegisterOrIndirectReadWriteData, A>,
     pub indirect_reads: Vec<RegisterOrIndirectReadData, A>,
     pub indirect_writes: Vec<RegisterOrIndirectReadWriteData, A>,
+    pub indirect_offset_variables: Vec<RegisterOrIndirectVariableOffsetData, A>,
 }
 
 impl<A: GoodAllocator> DelegationWitness<A> {
@@ -130,6 +134,7 @@ pub fn blake2_with_control_factory_fn<A: GoodAllocator>(
         num_register_accesses_per_delegation: 4,
         num_indirect_reads_per_delegation: 16,
         num_indirect_writes_per_delegation: 24,
+        num_indirect_access_variable_offsets_per_delegation: 0,
         base_register_index: 10,
         delegation_type,
         indirect_accesses_properties: vec![
@@ -141,7 +146,8 @@ pub fn blake2_with_control_factory_fn<A: GoodAllocator>(
 
         register_accesses: Vec::with_capacity_in(capacity * 4, allocator.clone()),
         indirect_reads: Vec::with_capacity_in(capacity * 16, allocator.clone()),
-        indirect_writes: Vec::with_capacity_in(capacity * 24, allocator),
+        indirect_writes: Vec::with_capacity_in(capacity * 24, allocator.clone()),
+        indirect_offset_variables: Vec::with_capacity_in(capacity * 0, allocator.clone()),
     }
 }
 
@@ -176,6 +182,7 @@ pub fn bigint_with_control_factory_fn<A: GoodAllocator>(
         num_register_accesses_per_delegation: 3,
         num_indirect_reads_per_delegation: 8,
         num_indirect_writes_per_delegation: 8,
+        num_indirect_access_variable_offsets_per_delegation: 0,
         base_register_index: 10,
         delegation_type,
         indirect_accesses_properties: vec![
@@ -188,5 +195,46 @@ pub fn bigint_with_control_factory_fn<A: GoodAllocator>(
         register_accesses: Vec::with_capacity_in(capacity * 3, allocator.clone()),
         indirect_reads: Vec::with_capacity_in(capacity * 8, allocator.clone()),
         indirect_writes: Vec::with_capacity_in(capacity * 8, allocator.clone()),
+        indirect_offset_variables: Vec::with_capacity_in(capacity * 0, allocator.clone()),
+    }
+}
+
+pub fn keccak_special5_with_control_factory_fn<A: GoodAllocator>(
+    delegation_type: u16,
+    num_requests: usize,
+    allocator: A,
+) -> DelegationWitness<A> {
+    let capacity = num_requests + 1;
+    assert!(
+        capacity.is_power_of_two(),
+        "expected capacity to be power of two, got {}",
+        capacity
+    );
+
+    let x11_indirect_access_properties: Vec<_> = (0..12)
+        .map(|el| IndirectAccessLocation {
+            use_writes: true,
+            index: el,
+        })
+        .collect();
+
+    DelegationWitness {
+        num_requests,
+        num_register_accesses_per_delegation: 2,
+        num_indirect_reads_per_delegation: 0,
+        num_indirect_writes_per_delegation: 12,
+        num_indirect_access_variable_offsets_per_delegation: 6,
+        base_register_index: 10,
+        delegation_type,
+
+        // had to add dummy x10 access properties bc he doesn't let me have first register access not be indirect otherwise...
+        indirect_accesses_properties: vec![vec![], x11_indirect_access_properties], // rest is unreachable
+
+        write_timestamp: Vec::with_capacity_in(capacity, allocator.clone()),
+
+        register_accesses: Vec::with_capacity_in(capacity * 2, allocator.clone()),
+        indirect_reads: Vec::with_capacity_in(capacity * 0, allocator.clone()),
+        indirect_writes: Vec::with_capacity_in(capacity * 12, allocator.clone()),
+        indirect_offset_variables: Vec::with_capacity_in(capacity * 6, allocator.clone()),
     }
 }
