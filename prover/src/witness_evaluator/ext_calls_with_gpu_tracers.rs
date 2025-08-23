@@ -286,9 +286,6 @@ where
 
             // serialize_to_file(&chunk.to_vec(), "blake2_extended_delegation_oracle");
 
-            dbg!(chunk.write_timestamp.len());
-            dbg!(chunk.write_timestamp[0]);
-
             let oracle = DelegationCircuitOracle { cycle_data: chunk };
             #[cfg(feature = "debug_logs")]
             println!(
