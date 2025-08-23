@@ -5,6 +5,7 @@ use cs::definitions::{TimestampData, TimestampScalar};
 pub const KECCAK_SPECIAL5_ACCESS_ID: u32 = 1001;
 pub const X11_NUM_WRITES: usize = 6 * 2; // 6 u64 r/w
 const TOTAL_RAM_ACCESSES: usize = X11_NUM_WRITES;
+pub const NUM_VARIABLE_OFFSETS: usize = 6;
 
 pub fn keccak_special5<
     M: MemorySource,
@@ -62,7 +63,7 @@ pub fn keccak_special5<
     const PRECOMPILE_THETA_RHO: u32 = 2;
     const PRECOMPILE_CHI1: u32 = 3;
     const PRECOMPILE_CHI2: u32 = 4;
-    let state_indexes: [usize; 6] = {
+    let sparse_access_state_indexes: [usize; NUM_VARIABLE_OFFSETS] = {
         const PERMUTATIONS_ADJUSTED: [usize; 25 * 25] = {
             let perms = [
                 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
@@ -149,22 +150,24 @@ pub fn keccak_special5<
     };
 
     // read u64 state words
-    let state_indexes_u32 = {
-        let mut state_indexes_u32 = [0; 12];
+    let state_access_u32_word_offsets = {
+        let mut result = [0; 12];
         for i in 0..6 {
-            state_indexes_u32[i * 2] = state_indexes[i] * 2;
-            state_indexes_u32[i * 2 + 1] = state_indexes[i] * 2 + 1;
+            result[i * 2] = sparse_access_state_indexes[i] * 2;
+            result[i * 2 + 1] = sparse_access_state_indexes[i] * 2 + 1;
         }
-        state_indexes_u32
+        result
     };
     let mut state_accesses: [RegisterOrIndirectReadWriteData; X11_NUM_WRITES] =
         register_indirect_read_write_sparse::<_, X11_NUM_WRITES>(
             x11 as usize,
-            state_indexes_u32,
+            state_access_u32_word_offsets,
             memory_source,
         );
-    let state_read_addresses: [u32; X11_NUM_WRITES] =
-        std::array::from_fn(|i| x11 + (core::mem::size_of::<u32>() * state_indexes_u32[i]) as u32);
+
+    let state_read_addresses: [u32; X11_NUM_WRITES] = std::array::from_fn(|i| {
+        x11 + (core::mem::size_of::<u32>() * state_access_u32_word_offsets[i]) as u32
+    });
 
     // COMPUTE THE ACTUAL PRECOMPILES
     let state_inputs: [u64; 6] = core::array::from_fn(|i| {
@@ -278,7 +281,7 @@ pub fn keccak_special5<
     // write down to RAM
     write_indirect_accesses_sparse::<_, X11_NUM_WRITES>(
         x11 as usize,
-        state_indexes_u32,
+        state_access_u32_word_offsets,
         &state_accesses,
         memory_source,
     );
@@ -305,6 +308,6 @@ pub fn keccak_special5<
         &mut [],
         &state_read_addresses,
         &mut state_accesses,
-        &state_indexes.map(|x| RegisterOrIndirectVariableOffsetData::from(x as u16)),
+        &sparse_access_state_indexes.map(|x| RegisterOrIndirectVariableOffsetData::from(x as u16)),
     );
 }

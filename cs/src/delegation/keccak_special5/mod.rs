@@ -253,20 +253,24 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         );
         [s1, s2, s3, s4, s5, s6]
     };
+
+    // Variables above count in notion of "state element", that is itself u64 word. So we should
+    // read two u32 words
+
     let (state_inputs, state_outputs) = {
         let state_accesses = state_indexes
             .iter()
             .flat_map(|&var| {
                 [
                     IndirectAccessOffset {
-                        variable_dependent: Some((8, var)),
+                        variable_dependent: Some((core::mem::size_of::<u64>() as u32, var)),
                         offset_constant: 0,
                         assume_no_alignment_overflow: true,
                         is_write_access: true,
                     },
                     IndirectAccessOffset {
-                        variable_dependent: Some((8, var)),
-                        offset_constant: 4,
+                        variable_dependent: Some((core::mem::size_of::<u64>() as u32, var)),
+                        offset_constant: core::mem::size_of::<u32>() as u32,
                         assume_no_alignment_overflow: true,
                         is_write_access: true,
                     },
