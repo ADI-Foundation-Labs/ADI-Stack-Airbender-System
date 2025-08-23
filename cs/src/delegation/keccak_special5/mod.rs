@@ -239,17 +239,17 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         cs.enforce_lookup_tuple_for_fixed_table(
             &[control, s1, s2].map(LookupInput::from),
             TableType::KeccakPermutationIndices12,
-            true,
+            false,
         );
         cs.enforce_lookup_tuple_for_fixed_table(
             &[control, s3, s4].map(LookupInput::from),
             TableType::KeccakPermutationIndices34,
-            true,
+            false,
         );
         cs.enforce_lookup_tuple_for_fixed_table(
             &[control, s5, s6].map(LookupInput::from),
             TableType::KeccakPermutationIndices56,
-            true,
+            false,
         );
         [s1, s2, s3, s4, s5, s6]
     };
@@ -865,7 +865,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
     //     println!("precompile_rotation_flags: {:?}", precompile_rotation_flags.map(|b| b.get_value(cs)));
     // }
     // 1
-    println!("\tbinop 1..");
     enforce_binop(
         cs,
         precompile_flags,
@@ -887,7 +886,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         ],
     );
     // 2
-    println!("\tbinop 2..");
     enforce_binop(
         cs,
         precompile_flags,
@@ -909,7 +907,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         ],
     );
     // 3
-    println!("\tbinop 3..");
     enforce_binop(
         cs,
         precompile_flags,
@@ -931,7 +928,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         ],
     );
     // 4
-    println!("\tbinop 4..");
     enforce_binop(
         cs,
         precompile_flags,
@@ -953,7 +949,6 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         ],
     );
     // 5
-    println!("\tbinop 5..");
     enforce_binop(
         cs,
         precompile_flags,
@@ -975,32 +970,26 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         ],
     );
 
+    let s0 = Box::new([
+        (p0_idx5, p0_idx5_new),
+        (p0_idx10, p0_idx10_new),
+        (p0_idx15, p0_idx15_new),
+        (p0_idx20, p0_idx20_new),
+    ]);
+    let s1 = Box::new([(p1_0, p1_0_new)]);
+    let s2 = Box::new([(p2_idcol, p2_idcol_new)]);
+    let s3 = Box::new([
+        (p3_idx3, p3_idx3_new),
+        (p3_idx4, p3_idx4_new),
+        (p3_idx1, p3_26_new),
+    ]);
+    let s4 = Box::new([
+        (p4_25, p4_25_new),
+        (p4_26, p4_26_new),
+        (p4_idx0_new, p4_27_new),
+    ]);
     // WE ALSO CANNOT FORGET TO COPY OVER UNTOUCHED VALUES BACK TO THEIR RAM ARGUMENT WRITE-SET
-    println!("\tfinal copies..");
-    enforce_copies(
-        cs,
-        precompile_flags,
-        [
-            Box::leak(Box::new([
-                (p0_idx5, p0_idx5_new),
-                (p0_idx10, p0_idx10_new),
-                (p0_idx15, p0_idx15_new),
-                (p0_idx20, p0_idx20_new),
-            ])),
-            Box::leak(Box::new([(p1_0, p1_0_new)])),
-            Box::leak(Box::new([(p2_idcol, p2_idcol_new)])),
-            Box::leak(Box::new([
-                (p3_idx3, p3_idx3_new),
-                (p3_idx4, p3_idx4_new),
-                (p3_idx1, p3_26_new),
-            ])),
-            Box::leak(Box::new([
-                (p4_25, p4_25_new),
-                (p4_26, p4_26_new),
-                (p4_idx0_new, p4_27_new),
-            ])),
-        ],
-    );
+    enforce_copies(cs, precompile_flags, [&*s0, &*s1, &*s2, &*s3, &*s4]);
 
     if DEBUG {
         unsafe {
@@ -1300,7 +1289,7 @@ fn enforce_binop<F: PrimeField, CS: Circuit<F>>(
 fn enforce_copies<F: PrimeField, CS: Circuit<F>>(
     cs: &mut CS,
     precompile_flags: [Boolean; 5],
-    input_output_candidates: [&'static [(LongRegister<F>, LongRegister<F>)]; 5],
+    input_output_candidates: [&'_ [(LongRegister<F>, LongRegister<F>)]; 5],
 ) {
     for (flag, candidates) in precompile_flags.into_iter().zip(input_output_candidates) {
         for (in_u64, out_u64) in candidates {
