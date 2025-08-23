@@ -74,7 +74,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
 
     #[track_caller]
     fn add_variable(&mut self) -> Variable {
-        // if self.no_index_assigned == 29 {
+        // if self.no_index_assigned == 42 {
         //     panic!("debug");
         // }
         let variable = Variable(self.no_index_assigned);
@@ -308,7 +308,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
             }
         };
 
-        let mut indirect_accesses = vec![];
+        let mut indirect_accesses: Vec<IndirectAccessType> = vec![];
 
         for (indirect_access_idx, access_description) in
             request.indirect_accesses.into_iter().enumerate()
@@ -332,6 +332,53 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
                     );
                 }
             }
+            // make formal witness assignment to placeholder to drive witness resolution
+            if let Some((_, var)) = access_description.variable_dependent {
+                let is_already_assigned_in_other_accesses =
+                    self.register_and_indirect_memory_accesses.iter().any(|el| {
+                        el.indirect_accesses.iter().any(|el| {
+                            if let Some((_, other_var)) = el.variable_dependent() {
+                                other_var == var
+                            } else {
+                                false
+                            }
+                        })
+                    });
+                let is_already_assigned_in_this_access = indirect_accesses.iter().any(|el| {
+                    if let Some((_, other_var)) = el.variable_dependent() {
+                        other_var == var
+                    } else {
+                        false
+                    }
+                });
+                let is_already_assigned =
+                    is_already_assigned_in_other_accesses || is_already_assigned_in_this_access;
+                if is_already_assigned == false {
+                    self.require_invariant(
+                        var,
+                        Invariant::Substituted((
+                            Placeholder::DelegationIndirectAccessVariableOffset {
+                                register_index,
+                                word_index: indirect_access_idx,
+                            },
+                            0,
+                        )),
+                    );
+
+                    // it was not used in other accesses, so it needs an oracle value
+                    let value_fn = move |placer: &mut Self::WitnessPlacer| {
+                        let value = placer.get_oracle_u16(
+                            Placeholder::DelegationIndirectAccessVariableOffset {
+                                register_index,
+                                word_index: indirect_access_idx,
+                            },
+                        );
+                        placer.assign_u16(var, &value);
+                    };
+                    self.set_values(value_fn);
+                }
+            }
+
             let access = if access_description.is_write_access {
                 let read_low = self.add_variable();
                 let read_high = self.add_variable();
@@ -545,6 +592,67 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
         self.lookup_storage.push(query);
 
         output_variables
+    }
+
+    #[track_caller]
+    fn set_variables_from_lookup_constrained<const M: usize, const N: usize>(
+        &mut self,
+        inputs: [LookupInput<F>; M],
+        output_variables: [Variable; N],
+        table_type: Num<F>,
+    ) {
+        assert_eq!(M + N, COMMON_TABLE_WIDTH);
+        assert!(
+            table_type != TableType::ZeroEntry.to_num()
+                && table_type != TableType::DynamicPlaceholder.to_num()
+        );
+
+        if M == COMMON_TABLE_WIDTH {
+            assert_eq!(N, 0);
+            // just add lookup, no witness evaluation here
+
+            panic!("Please use `enforce_lookup_tuple_for_fixed_table` if no outputs are required");
+        }
+
+        assert!(M == 1 || M == 2);
+
+        let inputs_vars = inputs.clone();
+        let value_fn = move |placer: &mut Self::WitnessPlacer| {
+            let input_values: [_; M] = std::array::from_fn(|i| inputs_vars[i].evaluate(placer));
+            let table_id = if let Num::Constant(c) = table_type {
+                <Self::WitnessPlacer as WitnessTypeSet<F>>::U16::constant(c.as_u64() as u16)
+            } else if let Num::Var(v) = table_type {
+                placer.get_u16(v)
+            } else {
+                unreachable!()
+            };
+            let output_values = placer.lookup::<M, N>(&input_values, &table_id);
+            for (var, value) in output_variables.iter().zip(output_values.iter()) {
+                placer.assign_field(*var, value);
+            }
+        };
+        self.set_values(value_fn);
+
+        let input_len = M;
+        let row = std::array::from_fn(|idx| {
+            if idx < input_len {
+                inputs[idx].clone()
+            } else {
+                LookupInput::Variable(output_variables[idx - input_len])
+            }
+        });
+        let query = LookupQuery {
+            row,
+            table: if let Num::Constant(c) = table_type {
+                LookupQueryTableType::Constant(TableType::get_table_from_id(c.as_u64() as u32))
+            } else if let Num::Var(v) = table_type {
+                LookupQueryTableType::Variable(v)
+            } else {
+                unreachable!()
+            },
+        };
+
+        self.lookup_storage.push(query);
     }
 
     fn require_invariant(&mut self, variable: Variable, invariant: Invariant) {
