@@ -35,6 +35,7 @@ pub struct BasicAssembly<F: PrimeField, W: WitnessPlacer<F> = CSDebugWitnessEval
     delegated_computation_requests: Vec<DelegatedComputationRequest>,
     degegated_request_to_process: Option<DelegatedProcessingData>,
     register_and_indirect_memory_accesses: Vec<RegisterAndIndirectAccesses>,
+    register_and_indirect_memory_accesses_offset_variables_idxes: HashMap<Variable, usize>,
     decoder_machine_state: Option<DecoderCircuitMachineState<F>>,
     executor_machine_state: Option<OpcodeFamilyCircuitState<F>>,
 
@@ -61,6 +62,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
             delegated_computation_requests: vec![],
             degegated_request_to_process: None,
             register_and_indirect_memory_accesses: vec![],
+            register_and_indirect_memory_accesses_offset_variables_idxes: HashMap::new(),
             witness_graph: WitnessResolutionGraph::new(),
 
             decoder_machine_state: None,
@@ -333,33 +335,23 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
                 }
             }
             // make formal witness assignment to placeholder to drive witness resolution
-            if let Some((_, var)) = access_description.variable_dependent {
-                let is_already_assigned_in_other_accesses =
-                    self.register_and_indirect_memory_accesses.iter().any(|el| {
-                        el.indirect_accesses.iter().any(|el| {
-                            if let Some((_, other_var)) = el.variable_dependent() {
-                                other_var == var
-                            } else {
-                                false
-                            }
-                        })
-                    });
-                let is_already_assigned_in_this_access = indirect_accesses.iter().any(|el| {
-                    if let Some((_, other_var)) = el.variable_dependent() {
-                        other_var == var
-                    } else {
-                        false
-                    }
-                });
-                let is_already_assigned =
-                    is_already_assigned_in_other_accesses || is_already_assigned_in_this_access;
-                if is_already_assigned == false {
+            let variable_dependent = if let Some((off, var)) = access_description.variable_dependent
+            {
+                if self
+                    .register_and_indirect_memory_accesses_offset_variables_idxes
+                    .contains_key(&var)
+                    == false
+                {
+                    let idx = self
+                        .register_and_indirect_memory_accesses_offset_variables_idxes
+                        .len();
+                    self.register_and_indirect_memory_accesses_offset_variables_idxes
+                        .insert(var, idx);
                     self.require_invariant(
                         var,
                         Invariant::Substituted((
                             Placeholder::DelegationIndirectAccessVariableOffset {
-                                register_index,
-                                word_index: indirect_access_idx,
+                                variable_index: idx,
                             },
                             0,
                         )),
@@ -369,15 +361,25 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
                     let value_fn = move |placer: &mut Self::WitnessPlacer| {
                         let value = placer.get_oracle_u16(
                             Placeholder::DelegationIndirectAccessVariableOffset {
-                                register_index,
-                                word_index: indirect_access_idx,
+                                variable_index: idx,
                             },
                         );
                         placer.assign_u16(var, &value);
                     };
                     self.set_values(value_fn);
                 }
-            }
+
+                Some((
+                    off,
+                    var,
+                    self.register_and_indirect_memory_accesses_offset_variables_idxes
+                        .get(&var)
+                        .copied()
+                        .unwrap(),
+                ))
+            } else {
+                None
+            };
 
             let access = if access_description.is_write_access {
                 let read_low = self.add_variable();
@@ -419,7 +421,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
                 IndirectAccessType::Write {
                     read_value: [read_low, read_high],
                     write_value: [write_low, write_high],
-                    variable_dependent: access_description.variable_dependent,
+                    variable_dependent: variable_dependent,
                     offset_constant: access_description.offset_constant,
                     assume_no_alignment_overflow: access_description.assume_no_alignment_overflow,
                 }
@@ -459,7 +461,7 @@ impl<F: PrimeField, W: WitnessPlacer<F>> Circuit<F> for BasicAssembly<F, W> {
 
                 IndirectAccessType::Read {
                     read_value: [read_low, read_high],
-                    variable_dependent: access_description.variable_dependent,
+                    variable_dependent: variable_dependent,
                     offset_constant: access_description.offset_constant,
                     assume_no_alignment_overflow: access_description.assume_no_alignment_overflow,
                 }

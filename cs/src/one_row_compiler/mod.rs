@@ -710,9 +710,9 @@ impl quote::ToTokens for IndirectAccessColumns {
                 offset_constant,
                 variable_dependent,
             } => {
-                if let Some((c, v)) = variable_dependent {
+                if let Some((c, v, i)) = variable_dependent {
                     quote! {
-                        IndirectAccessColumns::ReadAccess { read_timestamp: #read_timestamp, read_value: #read_value, address_derivation_carry_bit: #address_derivation_carry_bit, offset_constant: #offset_constant, variable_dependent: (#c, #v) }
+                        IndirectAccessColumns::ReadAccess { read_timestamp: #read_timestamp, read_value: #read_value, address_derivation_carry_bit: #address_derivation_carry_bit, offset_constant: #offset_constant, variable_dependent: (#c, #v, #i) }
                     }
                 } else {
                     quote! {
@@ -728,9 +728,9 @@ impl quote::ToTokens for IndirectAccessColumns {
                 offset_constant,
                 variable_dependent,
             } => {
-                if let Some((c, v)) = variable_dependent {
+                if let Some((c, v, i)) = variable_dependent {
                     quote! {
-                        IndirectAccessColumns::WriteAccess { read_timestamp: #read_timestamp, read_value: #read_value, write_value: #write_value, address_derivation_carry_bit: #address_derivation_carry_bit, offset_constant: #offset_constant, variable_dependent: (#c, #v) }
+                        IndirectAccessColumns::WriteAccess { read_timestamp: #read_timestamp, read_value: #read_value, write_value: #write_value, address_derivation_carry_bit: #address_derivation_carry_bit, offset_constant: #offset_constant, variable_dependent: (#c, #v, #i) }
                     }
                 } else {
                     quote! {

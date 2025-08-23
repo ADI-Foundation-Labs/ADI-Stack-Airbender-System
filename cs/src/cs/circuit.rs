@@ -219,14 +219,14 @@ pub enum RegisterAccessType {
 pub enum IndirectAccessType {
     Read {
         read_value: [Variable; REGISTER_SIZE],
-        variable_dependent: Option<(u32, Variable)>,
+        variable_dependent: Option<(u32, Variable, usize)>,
         offset_constant: u32,
         assume_no_alignment_overflow: bool,
     },
     Write {
         read_value: [Variable; REGISTER_SIZE],
         write_value: [Variable; REGISTER_SIZE],
-        variable_dependent: Option<(u32, Variable)>,
+        variable_dependent: Option<(u32, Variable, usize)>,
         offset_constant: u32,
         assume_no_alignment_overflow: bool,
     },
@@ -257,7 +257,7 @@ impl IndirectAccessType {
         }
     }
 
-    pub const fn variable_dependent(&self) -> Option<(u32, Variable)> {
+    pub const fn variable_dependent(&self) -> Option<(u32, Variable, usize)> {
         match self {
             Self::Read {
                 variable_dependent, ..
