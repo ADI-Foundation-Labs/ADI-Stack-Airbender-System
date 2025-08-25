@@ -2037,7 +2037,8 @@ pub fn create_keccak_permutation_indices_table<F: PrimeField, const I: usize, co
                     let idx3 = pi[idx + 3];
                     let idx4 = pi[idx + 4];
                     [idx0, idx3, idx4, 25, 26, 27]
-                }
+                },
+                64 if iter == 64 && round == 0 => [0, 0, 0, 0, 0, 0], // PADDING ROW
                 _ => [0, 1, 2, 3, 4, 5], // THIS IS JUNK!!!!
             };
             let result = [

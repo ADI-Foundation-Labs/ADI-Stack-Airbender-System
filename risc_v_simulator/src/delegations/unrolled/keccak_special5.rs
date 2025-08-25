@@ -134,6 +134,7 @@ pub fn keccak_special5_over_unrolled_state<M: MemorySource, TR: Tracer<C>, C: Ma
                 let idx4 = pi[idx + 4];
                 [idx0, idx3, idx4, 25, 26, 27]
             }
+            32 if iteration == 32 && round == 0 => [0, 0, 0, 0, 0, 0], // PADDING
             _ => unreachable!("this is a junk scenario"),
         }
     };

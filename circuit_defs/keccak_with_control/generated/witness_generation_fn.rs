@@ -1313,7 +1313,7 @@ fn eval_fn_35<
     let v_0 = witness_proxy.get_witness_place(33usize);
     let v_1 = witness_proxy.get_witness_place(34usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 0usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 3usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(35usize, v_4);
 }
@@ -1337,7 +1337,7 @@ fn eval_fn_36<
     let v_0 = witness_proxy.get_witness_place(37usize);
     let v_1 = witness_proxy.get_witness_place(38usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 1usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 4usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(39usize, v_4);
 }
@@ -1361,7 +1361,7 @@ fn eval_fn_37<
     let v_0 = witness_proxy.get_witness_place(40usize);
     let v_1 = witness_proxy.get_witness_place(41usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 2usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 5usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(42usize, v_4);
 }
@@ -1385,7 +1385,7 @@ fn eval_fn_38<
     let v_0 = witness_proxy.get_witness_place(43usize);
     let v_1 = witness_proxy.get_witness_place(44usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 3usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 6usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(45usize, v_4);
 }
@@ -1409,7 +1409,7 @@ fn eval_fn_39<
     let v_0 = witness_proxy.get_witness_place(46usize);
     let v_1 = witness_proxy.get_witness_place(47usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 4usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 7usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(48usize, v_4);
 }
@@ -1433,7 +1433,7 @@ fn eval_fn_40<
     let v_0 = witness_proxy.get_witness_place(49usize);
     let v_1 = witness_proxy.get_witness_place(50usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 5usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 8usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(51usize, v_4);
 }
@@ -1457,7 +1457,7 @@ fn eval_fn_41<
     let v_0 = witness_proxy.get_witness_place(52usize);
     let v_1 = witness_proxy.get_witness_place(53usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 6usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 9usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(54usize, v_4);
 }
@@ -1481,7 +1481,7 @@ fn eval_fn_42<
     let v_0 = witness_proxy.get_witness_place(55usize);
     let v_1 = witness_proxy.get_witness_place(56usize);
     let v_2 = witness_proxy.get_witness_place_u16(36usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 7usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 10usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(57usize, v_4);
 }
@@ -1531,7 +1531,7 @@ fn eval_fn_43<
     let mut v_21 = v_19;
     W::Field::add_assign_product(&mut v_21, &v_20, &v_6);
     let v_22 = W::U16::constant(48u16);
-    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 8usize);
+    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 11usize);
     let v_24 = v_23[0usize];
     witness_proxy.set_witness_place(62usize, v_24);
     let v_26 = v_23[1usize];
@@ -1583,7 +1583,7 @@ fn eval_fn_44<
     let mut v_21 = v_19;
     W::Field::add_assign_product(&mut v_21, &v_20, &v_6);
     let v_22 = W::U16::constant(48u16);
-    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 9usize);
+    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 12usize);
     let v_24 = v_23[0usize];
     witness_proxy.set_witness_place(64usize, v_24);
     let v_26 = v_23[1usize];
@@ -1635,7 +1635,7 @@ fn eval_fn_45<
     let mut v_21 = v_19;
     W::Field::add_assign_product(&mut v_21, &v_20, &v_6);
     let v_22 = W::U16::constant(48u16);
-    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 10usize);
+    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 13usize);
     let v_24 = v_23[0usize];
     witness_proxy.set_witness_place(66usize, v_24);
     let v_26 = v_23[1usize];
@@ -1687,7 +1687,7 @@ fn eval_fn_46<
     let mut v_21 = v_19;
     W::Field::add_assign_product(&mut v_21, &v_20, &v_6);
     let v_22 = W::U16::constant(48u16);
-    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 11usize);
+    let v_23 = witness_proxy.lookup::<1usize, 2usize>(&[v_21], v_22, 14usize);
     let v_24 = v_23[0usize];
     witness_proxy.set_witness_place(68usize, v_24);
     let v_26 = v_23[1usize];
@@ -1933,7 +1933,7 @@ fn eval_fn_49<
     let v_0 = witness_proxy.get_witness_place(70usize);
     let v_1 = witness_proxy.get_witness_place(71usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 12usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 15usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(72usize, v_4);
 }
@@ -1957,7 +1957,7 @@ fn eval_fn_50<
     let v_0 = witness_proxy.get_witness_place(74usize);
     let v_1 = witness_proxy.get_witness_place(75usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 13usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 16usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(76usize, v_4);
 }
@@ -1981,7 +1981,7 @@ fn eval_fn_51<
     let v_0 = witness_proxy.get_witness_place(77usize);
     let v_1 = witness_proxy.get_witness_place(78usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 14usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 17usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(79usize, v_4);
 }
@@ -2005,7 +2005,7 @@ fn eval_fn_52<
     let v_0 = witness_proxy.get_witness_place(80usize);
     let v_1 = witness_proxy.get_witness_place(81usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 15usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 18usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(82usize, v_4);
 }
@@ -2029,7 +2029,7 @@ fn eval_fn_53<
     let v_0 = witness_proxy.get_witness_place(83usize);
     let v_1 = witness_proxy.get_witness_place(84usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 16usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 19usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(85usize, v_4);
 }
@@ -2053,7 +2053,7 @@ fn eval_fn_54<
     let v_0 = witness_proxy.get_witness_place(86usize);
     let v_1 = witness_proxy.get_witness_place(87usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 17usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 20usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(88usize, v_4);
 }
@@ -2077,7 +2077,7 @@ fn eval_fn_55<
     let v_0 = witness_proxy.get_witness_place(89usize);
     let v_1 = witness_proxy.get_witness_place(90usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 18usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 21usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(91usize, v_4);
 }
@@ -2101,7 +2101,7 @@ fn eval_fn_56<
     let v_0 = witness_proxy.get_witness_place(92usize);
     let v_1 = witness_proxy.get_witness_place(93usize);
     let v_2 = witness_proxy.get_witness_place_u16(73usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 19usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 22usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(94usize, v_4);
 }
@@ -2154,7 +2154,7 @@ fn eval_fn_57<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 20usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 23usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(96usize, v_26);
     let v_28 = v_25[1usize];
@@ -2209,7 +2209,7 @@ fn eval_fn_58<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 21usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 24usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(98usize, v_26);
     let v_28 = v_25[1usize];
@@ -2264,7 +2264,7 @@ fn eval_fn_59<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 22usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 25usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(100usize, v_26);
     let v_28 = v_25[1usize];
@@ -2319,7 +2319,7 @@ fn eval_fn_60<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 23usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 26usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(102usize, v_26);
     let v_28 = v_25[1usize];
@@ -2565,7 +2565,7 @@ fn eval_fn_63<
     let v_0 = witness_proxy.get_witness_place(104usize);
     let v_1 = witness_proxy.get_witness_place(105usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 24usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 27usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(106usize, v_4);
 }
@@ -2589,7 +2589,7 @@ fn eval_fn_64<
     let v_0 = witness_proxy.get_witness_place(108usize);
     let v_1 = witness_proxy.get_witness_place(109usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 25usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 28usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(110usize, v_4);
 }
@@ -2613,7 +2613,7 @@ fn eval_fn_65<
     let v_0 = witness_proxy.get_witness_place(111usize);
     let v_1 = witness_proxy.get_witness_place(112usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 26usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 29usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(113usize, v_4);
 }
@@ -2637,7 +2637,7 @@ fn eval_fn_66<
     let v_0 = witness_proxy.get_witness_place(114usize);
     let v_1 = witness_proxy.get_witness_place(115usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 27usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 30usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(116usize, v_4);
 }
@@ -2661,7 +2661,7 @@ fn eval_fn_67<
     let v_0 = witness_proxy.get_witness_place(117usize);
     let v_1 = witness_proxy.get_witness_place(118usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 28usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 31usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(119usize, v_4);
 }
@@ -2685,7 +2685,7 @@ fn eval_fn_68<
     let v_0 = witness_proxy.get_witness_place(120usize);
     let v_1 = witness_proxy.get_witness_place(121usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 29usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 32usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(122usize, v_4);
 }
@@ -2709,7 +2709,7 @@ fn eval_fn_69<
     let v_0 = witness_proxy.get_witness_place(123usize);
     let v_1 = witness_proxy.get_witness_place(124usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 30usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 33usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(125usize, v_4);
 }
@@ -2733,7 +2733,7 @@ fn eval_fn_70<
     let v_0 = witness_proxy.get_witness_place(126usize);
     let v_1 = witness_proxy.get_witness_place(127usize);
     let v_2 = witness_proxy.get_witness_place_u16(107usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 31usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 34usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(128usize, v_4);
 }
@@ -2787,7 +2787,7 @@ fn eval_fn_71<
     let mut v_24 = v_22;
     W::Field::add_assign_product(&mut v_24, &v_23, &v_7);
     let v_25 = W::U16::constant(48u16);
-    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 32usize);
+    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 35usize);
     let v_27 = v_26[0usize];
     witness_proxy.set_witness_place(129usize, v_27);
     let v_29 = v_26[1usize];
@@ -2843,7 +2843,7 @@ fn eval_fn_72<
     let mut v_24 = v_22;
     W::Field::add_assign_product(&mut v_24, &v_23, &v_7);
     let v_25 = W::U16::constant(48u16);
-    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 33usize);
+    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 36usize);
     let v_27 = v_26[0usize];
     witness_proxy.set_witness_place(131usize, v_27);
     let v_29 = v_26[1usize];
@@ -2899,7 +2899,7 @@ fn eval_fn_73<
     let mut v_24 = v_22;
     W::Field::add_assign_product(&mut v_24, &v_23, &v_7);
     let v_25 = W::U16::constant(48u16);
-    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 34usize);
+    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 37usize);
     let v_27 = v_26[0usize];
     witness_proxy.set_witness_place(133usize, v_27);
     let v_29 = v_26[1usize];
@@ -2955,7 +2955,7 @@ fn eval_fn_74<
     let mut v_24 = v_22;
     W::Field::add_assign_product(&mut v_24, &v_23, &v_7);
     let v_25 = W::U16::constant(48u16);
-    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 35usize);
+    let v_26 = witness_proxy.lookup::<1usize, 2usize>(&[v_24], v_25, 38usize);
     let v_27 = v_26[0usize];
     witness_proxy.set_witness_place(135usize, v_27);
     let v_29 = v_26[1usize];
@@ -3201,7 +3201,7 @@ fn eval_fn_77<
     let v_0 = witness_proxy.get_witness_place(137usize);
     let v_1 = witness_proxy.get_witness_place(138usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 36usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 39usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(139usize, v_4);
 }
@@ -3225,7 +3225,7 @@ fn eval_fn_78<
     let v_0 = witness_proxy.get_witness_place(141usize);
     let v_1 = witness_proxy.get_witness_place(142usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 37usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 40usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(143usize, v_4);
 }
@@ -3249,7 +3249,7 @@ fn eval_fn_79<
     let v_0 = witness_proxy.get_witness_place(144usize);
     let v_1 = witness_proxy.get_witness_place(145usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 38usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 41usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(146usize, v_4);
 }
@@ -3273,7 +3273,7 @@ fn eval_fn_80<
     let v_0 = witness_proxy.get_witness_place(147usize);
     let v_1 = witness_proxy.get_witness_place(148usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 39usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 42usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(149usize, v_4);
 }
@@ -3297,7 +3297,7 @@ fn eval_fn_81<
     let v_0 = witness_proxy.get_witness_place(150usize);
     let v_1 = witness_proxy.get_witness_place(151usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 40usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 43usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(152usize, v_4);
 }
@@ -3321,7 +3321,7 @@ fn eval_fn_82<
     let v_0 = witness_proxy.get_witness_place(153usize);
     let v_1 = witness_proxy.get_witness_place(154usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 41usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 44usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(155usize, v_4);
 }
@@ -3345,7 +3345,7 @@ fn eval_fn_83<
     let v_0 = witness_proxy.get_witness_place(156usize);
     let v_1 = witness_proxy.get_witness_place(157usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 42usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 45usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(158usize, v_4);
 }
@@ -3369,7 +3369,7 @@ fn eval_fn_84<
     let v_0 = witness_proxy.get_witness_place(159usize);
     let v_1 = witness_proxy.get_witness_place(160usize);
     let v_2 = witness_proxy.get_witness_place_u16(140usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 43usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 46usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(161usize, v_4);
 }
@@ -3422,7 +3422,7 @@ fn eval_fn_85<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 44usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 47usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(162usize, v_26);
     let v_28 = v_25[1usize];
@@ -3477,7 +3477,7 @@ fn eval_fn_86<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 45usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 48usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(164usize, v_26);
     let v_28 = v_25[1usize];
@@ -3532,7 +3532,7 @@ fn eval_fn_87<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 46usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 49usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(166usize, v_26);
     let v_28 = v_25[1usize];
@@ -3587,7 +3587,7 @@ fn eval_fn_88<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 47usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 50usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(168usize, v_26);
     let v_28 = v_25[1usize];
@@ -3860,7 +3860,7 @@ fn eval_fn_91<
     let v_0 = witness_proxy.get_witness_place(170usize);
     let v_1 = witness_proxy.get_witness_place(171usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 48usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 51usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(172usize, v_4);
 }
@@ -3884,7 +3884,7 @@ fn eval_fn_92<
     let v_0 = witness_proxy.get_witness_place(174usize);
     let v_1 = witness_proxy.get_witness_place(175usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 49usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 52usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(176usize, v_4);
 }
@@ -3908,7 +3908,7 @@ fn eval_fn_93<
     let v_0 = witness_proxy.get_witness_place(177usize);
     let v_1 = witness_proxy.get_witness_place(178usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 50usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 53usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(179usize, v_4);
 }
@@ -3932,7 +3932,7 @@ fn eval_fn_94<
     let v_0 = witness_proxy.get_witness_place(180usize);
     let v_1 = witness_proxy.get_witness_place(181usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 51usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 54usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(182usize, v_4);
 }
@@ -3956,7 +3956,7 @@ fn eval_fn_95<
     let v_0 = witness_proxy.get_witness_place(183usize);
     let v_1 = witness_proxy.get_witness_place(184usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 52usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 55usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(185usize, v_4);
 }
@@ -3980,7 +3980,7 @@ fn eval_fn_96<
     let v_0 = witness_proxy.get_witness_place(186usize);
     let v_1 = witness_proxy.get_witness_place(187usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 53usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 56usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(188usize, v_4);
 }
@@ -4004,7 +4004,7 @@ fn eval_fn_97<
     let v_0 = witness_proxy.get_witness_place(189usize);
     let v_1 = witness_proxy.get_witness_place(190usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 54usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 57usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(191usize, v_4);
 }
@@ -4028,7 +4028,7 @@ fn eval_fn_98<
     let v_0 = witness_proxy.get_witness_place(192usize);
     let v_1 = witness_proxy.get_witness_place(193usize);
     let v_2 = witness_proxy.get_witness_place_u16(173usize);
-    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 55usize);
+    let v_3 = witness_proxy.lookup::<2usize, 1usize>(&[v_0, v_1], v_2, 58usize);
     let v_4 = v_3[0usize];
     witness_proxy.set_witness_place(194usize, v_4);
 }
@@ -4081,7 +4081,7 @@ fn eval_fn_99<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 56usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 59usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(195usize, v_26);
     let v_28 = v_25[1usize];
@@ -4136,7 +4136,7 @@ fn eval_fn_100<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 57usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 60usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(197usize, v_26);
     let v_28 = v_25[1usize];
@@ -4191,7 +4191,7 @@ fn eval_fn_101<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 58usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 61usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(199usize, v_26);
     let v_28 = v_25[1usize];
@@ -4246,7 +4246,7 @@ fn eval_fn_102<
     let mut v_23 = v_21;
     W::Field::add_assign_product(&mut v_23, &v_22, &v_7);
     let v_24 = W::U16::constant(48u16);
-    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 59usize);
+    let v_25 = witness_proxy.lookup::<1usize, 2usize>(&[v_23], v_24, 62usize);
     let v_26 = v_25[0usize];
     witness_proxy.set_witness_place(201usize, v_26);
     let v_28 = v_25[1usize];

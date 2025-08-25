@@ -1,6 +1,108 @@
 [
   [
     {
+      "Field": {
+        "Place": 3
+      }
+    },
+    {
+      "Field": {
+        "Place": 4
+      }
+    },
+    {
+      "Field": {
+        "Place": 5
+      }
+    },
+    {
+      "Integer": {
+        "ConstantU16": 43
+      }
+    },
+    {
+      "PerformLookup": {
+        "input_subexpr_idxes": [
+          0,
+          1,
+          2
+        ],
+        "table_id_subexpr_idx": 3,
+        "num_outputs": 0,
+        "lookup_mapping_idx": 0
+      }
+    }
+  ],
+  [
+    {
+      "Field": {
+        "Place": 3
+      }
+    },
+    {
+      "Field": {
+        "Place": 6
+      }
+    },
+    {
+      "Field": {
+        "Place": 7
+      }
+    },
+    {
+      "Integer": {
+        "ConstantU16": 44
+      }
+    },
+    {
+      "PerformLookup": {
+        "input_subexpr_idxes": [
+          0,
+          1,
+          2
+        ],
+        "table_id_subexpr_idx": 3,
+        "num_outputs": 0,
+        "lookup_mapping_idx": 1
+      }
+    }
+  ],
+  [
+    {
+      "Field": {
+        "Place": 3
+      }
+    },
+    {
+      "Field": {
+        "Place": 8
+      }
+    },
+    {
+      "Field": {
+        "Place": 9
+      }
+    },
+    {
+      "Integer": {
+        "ConstantU16": 45
+      }
+    },
+    {
+      "PerformLookup": {
+        "input_subexpr_idxes": [
+          0,
+          1,
+          2
+        ],
+        "table_id_subexpr_idx": 3,
+        "num_outputs": 0,
+        "lookup_mapping_idx": 2
+      }
+    }
+  ],
+  [
+    {
       "Bool": {
         "OracleValue": {
           "placeholder": "ExecuteDelegation"
@@ -11079,7 +11181,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 0
+        "lookup_mapping_idx": 3
       }
     },
     {
@@ -11124,7 +11226,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 1
+        "lookup_mapping_idx": 4
       }
     },
     {
@@ -11169,7 +11271,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 2
+        "lookup_mapping_idx": 5
       }
     },
     {
@@ -11214,7 +11316,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 3
+        "lookup_mapping_idx": 6
       }
     },
     {
@@ -11259,7 +11361,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 4
+        "lookup_mapping_idx": 7
       }
     },
     {
@@ -11304,7 +11406,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 5
+        "lookup_mapping_idx": 8
       }
     },
     {
@@ -11349,7 +11451,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 6
+        "lookup_mapping_idx": 9
       }
     },
     {
@@ -11394,7 +11496,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 7
+        "lookup_mapping_idx": 10
       }
     },
     {
@@ -11608,7 +11710,7 @@
         ],
         "table_id_subexpr_idx": 22,
         "num_outputs": 2,
-        "lookup_mapping_idx": 8
+        "lookup_mapping_idx": 11
       }
     },
     {
@@ -11839,7 +11941,7 @@
         ],
         "table_id_subexpr_idx": 22,
         "num_outputs": 2,
-        "lookup_mapping_idx": 9
+        "lookup_mapping_idx": 12
       }
     },
     {
@@ -12070,7 +12172,7 @@
         ],
         "table_id_subexpr_idx": 22,
         "num_outputs": 2,
-        "lookup_mapping_idx": 10
+        "lookup_mapping_idx": 13
       }
     },
     {
@@ -12301,7 +12403,7 @@
         ],
         "table_id_subexpr_idx": 22,
         "num_outputs": 2,
-        "lookup_mapping_idx": 11
+        "lookup_mapping_idx": 14
       }
     },
     {
@@ -13899,7 +14001,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 12
+        "lookup_mapping_idx": 15
       }
     },
     {
@@ -13944,7 +14046,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 13
+        "lookup_mapping_idx": 16
       }
     },
     {
@@ -13989,7 +14091,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 14
+        "lookup_mapping_idx": 17
       }
     },
     {
@@ -14034,7 +14136,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 15
+        "lookup_mapping_idx": 18
       }
     },
     {
@@ -14079,7 +14181,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 16
+        "lookup_mapping_idx": 19
       }
     },
     {
@@ -14124,7 +14226,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 17
+        "lookup_mapping_idx": 20
       }
     },
     {
@@ -14169,7 +14271,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 18
+        "lookup_mapping_idx": 21
       }
     },
     {
@@ -14214,7 +14316,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 19
+        "lookup_mapping_idx": 22
       }
     },
     {
@@ -14448,7 +14550,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 20
+        "lookup_mapping_idx": 23
       }
     },
     {
@@ -14699,7 +14801,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 21
+        "lookup_mapping_idx": 24
       }
     },
     {
@@ -14950,7 +15052,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 22
+        "lookup_mapping_idx": 25
       }
     },
     {
@@ -15201,7 +15303,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 23
+        "lookup_mapping_idx": 26
       }
     },
     {
@@ -16799,7 +16901,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 24
+        "lookup_mapping_idx": 27
       }
     },
     {
@@ -16844,7 +16946,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 25
+        "lookup_mapping_idx": 28
       }
     },
     {
@@ -16889,7 +16991,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 26
+        "lookup_mapping_idx": 29
       }
     },
     {
@@ -16934,7 +17036,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 27
+        "lookup_mapping_idx": 30
       }
     },
     {
@@ -16979,7 +17081,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 28
+        "lookup_mapping_idx": 31
       }
     },
     {
@@ -17024,7 +17126,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 29
+        "lookup_mapping_idx": 32
       }
     },
     {
@@ -17069,7 +17171,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 30
+        "lookup_mapping_idx": 33
       }
     },
     {
@@ -17114,7 +17216,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 31
+        "lookup_mapping_idx": 34
       }
     },
     {
@@ -17353,7 +17455,7 @@
         ],
         "table_id_subexpr_idx": 25,
         "num_outputs": 2,
-        "lookup_mapping_idx": 32
+        "lookup_mapping_idx": 35
       }
     },
     {
@@ -17609,7 +17711,7 @@
         ],
         "table_id_subexpr_idx": 25,
         "num_outputs": 2,
-        "lookup_mapping_idx": 33
+        "lookup_mapping_idx": 36
       }
     },
     {
@@ -17865,7 +17967,7 @@
         ],
         "table_id_subexpr_idx": 25,
         "num_outputs": 2,
-        "lookup_mapping_idx": 34
+        "lookup_mapping_idx": 37
       }
     },
     {
@@ -18121,7 +18223,7 @@
         ],
         "table_id_subexpr_idx": 25,
         "num_outputs": 2,
-        "lookup_mapping_idx": 35
+        "lookup_mapping_idx": 38
       }
     },
     {
@@ -19719,7 +19821,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 36
+        "lookup_mapping_idx": 39
       }
     },
     {
@@ -19764,7 +19866,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 37
+        "lookup_mapping_idx": 40
       }
     },
     {
@@ -19809,7 +19911,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 38
+        "lookup_mapping_idx": 41
       }
     },
     {
@@ -19854,7 +19956,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 39
+        "lookup_mapping_idx": 42
       }
     },
     {
@@ -19899,7 +20001,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 40
+        "lookup_mapping_idx": 43
       }
     },
     {
@@ -19944,7 +20046,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 41
+        "lookup_mapping_idx": 44
       }
     },
     {
@@ -19989,7 +20091,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 42
+        "lookup_mapping_idx": 45
       }
     },
     {
@@ -20034,7 +20136,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 43
+        "lookup_mapping_idx": 46
       }
     },
     {
@@ -20268,7 +20370,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 44
+        "lookup_mapping_idx": 47
       }
     },
     {
@@ -20519,7 +20621,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 45
+        "lookup_mapping_idx": 48
       }
     },
     {
@@ -20770,7 +20872,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 46
+        "lookup_mapping_idx": 49
       }
     },
     {
@@ -21021,7 +21123,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 47
+        "lookup_mapping_idx": 50
       }
     },
     {
@@ -22798,7 +22900,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 48
+        "lookup_mapping_idx": 51
       }
     },
     {
@@ -22843,7 +22945,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 49
+        "lookup_mapping_idx": 52
       }
     },
     {
@@ -22888,7 +22990,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 50
+        "lookup_mapping_idx": 53
       }
     },
     {
@@ -22933,7 +23035,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 51
+        "lookup_mapping_idx": 54
       }
     },
     {
@@ -22978,7 +23080,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 52
+        "lookup_mapping_idx": 55
       }
     },
     {
@@ -23023,7 +23125,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 53
+        "lookup_mapping_idx": 56
       }
     },
     {
@@ -23068,7 +23170,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 54
+        "lookup_mapping_idx": 57
       }
     },
     {
@@ -23113,7 +23215,7 @@
         ],
         "table_id_subexpr_idx": 2,
         "num_outputs": 1,
-        "lookup_mapping_idx": 55
+        "lookup_mapping_idx": 58
       }
     },
     {
@@ -23347,7 +23449,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 56
+        "lookup_mapping_idx": 59
       }
     },
     {
@@ -23598,7 +23700,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 57
+        "lookup_mapping_idx": 60
       }
     },
     {
@@ -23849,7 +23951,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 58
+        "lookup_mapping_idx": 61
       }
     },
     {
@@ -24100,7 +24202,7 @@
         ],
         "table_id_subexpr_idx": 24,
         "num_outputs": 2,
-        "lookup_mapping_idx": 59
+        "lookup_mapping_idx": 62
       }
     },
     {

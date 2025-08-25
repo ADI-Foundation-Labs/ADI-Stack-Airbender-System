@@ -216,9 +216,9 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
         // cs.create_register_and_indirect_memory_accesses
         let [s1, s2, s3, s4, s5, s6] = from_fn(|_| cs.add_variable());
         // dbg!([s1, s2, s3, s4, s5, s6]);
-        cs.enforce_lookup_tuple_for_fixed_table(&[control, s1, s2].map(LookupInput::from), TableType::KeccakPermutationIndices12, true);
-        cs.enforce_lookup_tuple_for_fixed_table(&[control, s3, s4].map(LookupInput::from), TableType::KeccakPermutationIndices34, true);
-        cs.enforce_lookup_tuple_for_fixed_table(&[control, s5, s6].map(LookupInput::from), TableType::KeccakPermutationIndices56, true);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s1, s2].map(LookupInput::from), TableType::KeccakPermutationIndices12, false);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s3, s4].map(LookupInput::from), TableType::KeccakPermutationIndices34, false);
+        cs.enforce_lookup_tuple_for_fixed_table(&[control, s5, s6].map(LookupInput::from), TableType::KeccakPermutationIndices56, false);
         [s1, s2, s3, s4, s5, s6]
     };
     let (state_inputs, state_outputs) = {
