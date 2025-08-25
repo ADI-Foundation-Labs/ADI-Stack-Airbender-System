@@ -873,7 +873,7 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
 
                     let common_part_stream = if carry_bit_column.num_elements() == 0 {
                         let add_variable_offset_quote =
-                            if let Some((coeff, var)) = indirect_access.variable_dependent() {
+                            if let Some((coeff, var, _)) = indirect_access.variable_dependent() {
                                 assert!(var.num_elements() == 1);
                                 assert!(coeff < 1 << 16);
                                 let variable_offset_expr = read_value_expr(
@@ -883,9 +883,9 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                                 );
                                 quote! {
                                     // add variable-dependent contribution
-                                    let mut t = #variable_offset_expr;
-                                    address_low.mul_assign_by_base(&Mersenne31Field(#coeff));
-                                    address_low.add_assign(&t);
+                                    let mut variable_offset = #variable_offset_expr;
+                                    variable_offset.mul_assign_by_base(&Mersenne31Field(#coeff));
+                                    address_low.add_assign(&variable_offset);
                                 }
                             } else {
                                 quote! {
@@ -895,6 +895,7 @@ pub(crate) fn transform_delegation_ram_memory_accumulators(
                         quote! {
                             let mut address_low = #register_read_value_low_expr;
                             address_low.add_assign_base(&Mersenne31Field(#constant_offset));
+
                             #add_variable_offset_quote
 
                             let mut address_contribution = #memory_argument_linearization_challenges_ident

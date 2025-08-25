@@ -19,18 +19,21 @@ fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
     serde_json::from_reader(src).unwrap()
 }
 
-#[ignore = "explicit panic in verifier"]
 #[test]
 fn test_transcript() {
     // create an oracle to feed into verifier and look at the transcript values
 
-    let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/delegation_proof");
+    // let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/delegation_proof");
     // let proof: Proof = deserialize_from_file("../../zksync-airbender/prover/blake2s_delegator_proof");
+    let proof: Proof =
+        deserialize_from_file("../../zksync-airbender/prover/keccak_delegator_proof");
 
-    let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
-        deserialize_from_file("../../zksync-airbender/prover/full_machine_layout.json");
+    // let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
+    //     deserialize_from_file("../../zksync-airbender/prover/full_machine_layout.json");
     // let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
     // deserialize_from_file("../../zksync-airbender/prover/blake2s_delegator_layout");
+    let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
+        deserialize_from_file("../prover/keccak_delegation_circuit_layout.json");
 
     // now form flattened iterator
     use verifier_common::proof_flattener::*;
