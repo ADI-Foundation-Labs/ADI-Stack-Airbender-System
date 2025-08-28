@@ -492,8 +492,8 @@ fn run_keccak_test() {
 #[allow(unused)]
 const APP_KECCAK_SIMPLE_BIN: &[u8] = include_bytes!("../../app_keccak_simple.bin");
 
-// #[allow(unused)]
-// const APP_KECCAK_BAD_BIN: &[u8] = include_bytes!("../../app_keccak_bad.bin"); // SHOULD FAIL
+#[allow(unused)]
+const APP_KECCAK_BAD_BIN: &[u8] = include_bytes!("../../app_keccak_bad.bin"); // SHOULD FAIL
 
-// #[allow(unused)]
-// const APP_KECCAK_BENCH_BIN: &[u8] = include_bytes!("../../app_keccak_bench.bin");
+#[allow(unused)]
+const APP_KECCAK_BENCH_BIN: &[u8] = include_bytes!("../../app_keccak_bench.bin"); // 2k HASHES CHAIN
