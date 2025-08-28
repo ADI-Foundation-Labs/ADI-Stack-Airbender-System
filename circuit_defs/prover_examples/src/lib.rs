@@ -277,22 +277,25 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
 
         memory_trees.push(caps);
         if let Some(previous_aux) = previous_aux.take() {
-            let this = u32_from_field_elems(&aux_data.lazy_init_first_row);
-            let previous = u32_from_field_elems(&previous_aux.lazy_init_one_before_last_row);
-            if this > previous {
-                // normal ascending comparison
-            } else {
-                // we expect zero prepadding, and zero teardown data
-                assert_eq!(this, previous);
-                assert_eq!(previous, 0);
-                assert_eq!(
-                    u32_from_field_elems(&previous_aux.teardown_value_one_before_last_row),
-                    0
-                );
-                assert_eq!(
-                    u32_from_field_elems(&previous_aux.teardown_timestamp_one_before_last_row),
-                    0
-                );
+            assert!(aux_data.aux_boundary_data.len() == previous_aux.aux_boundary_data.len());
+            for i in 0..aux_data.aux_boundary_data.len() {
+                let this = u32_from_field_elems(&aux_data.aux_boundary_data[i].lazy_init_first_row);
+                let previous = u32_from_field_elems(&previous_aux.aux_boundary_data[i].lazy_init_one_before_last_row);
+                if this > previous {
+                    // normal ascending comparison
+                } else {
+                    // we expect zero prepadding, and zero teardown data
+                    assert_eq!(this, previous);
+                    assert_eq!(previous, 0);
+                    assert_eq!(
+                        u32_from_field_elems(&previous_aux.aux_boundary_data[i].teardown_value_one_before_last_row),
+                        0
+                    );
+                    assert_eq!(
+                        u32_from_field_elems(&previous_aux.aux_boundary_data[i].teardown_timestamp_one_before_last_row),
+                        0
+                    );
+                }
             }
         }
 
@@ -452,18 +455,21 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
         let mut public_inputs = witness_trace.aux_data.first_row_public_inputs.clone();
         public_inputs.extend_from_slice(&witness_trace.aux_data.one_before_last_row_public_inputs);
 
+        assert!(witness_trace.aux_data.aux_boundary_data.len() == 1, "multiple lazy init/teardowns not yet supported here");
         let external_values = ExternalValues {
             challenges: external_challenges,
             aux_boundary_values: AuxArgumentsBoundaryValues {
-                lazy_init_first_row: witness_trace.aux_data.lazy_init_first_row,
-                teardown_value_first_row: witness_trace.aux_data.teardown_value_first_row,
-                teardown_timestamp_first_row: witness_trace.aux_data.teardown_timestamp_first_row,
-                lazy_init_one_before_last_row: witness_trace.aux_data.lazy_init_one_before_last_row,
+                lazy_init_first_row: witness_trace.aux_data.aux_boundary_data[0].lazy_init_first_row,
+                teardown_value_first_row: witness_trace.aux_data.aux_boundary_data[0].teardown_value_first_row,
+                teardown_timestamp_first_row: witness_trace.aux_data.aux_boundary_data[0].teardown_timestamp_first_row,
+                lazy_init_one_before_last_row: witness_trace.aux_data.aux_boundary_data[0].lazy_init_one_before_last_row,
                 teardown_value_one_before_last_row: witness_trace
                     .aux_data
+                    .aux_boundary_data[0]
                     .teardown_value_one_before_last_row,
                 teardown_timestamp_one_before_last_row: witness_trace
                     .aux_data
+                    .aux_boundary_data[0]
                     .teardown_timestamp_one_before_last_row,
             },
         };

@@ -14,6 +14,7 @@ use verifier_common::prover::definitions::MerkleTreeCap;
 use verifier_common::prover::fft::GoodAllocator;
 use verifier_common::prover::prover_stages::{flatten_merkle_caps, Proof};
 use verifier_common::transcript::Blake2sBufferingTranscript;
+use cs::definitions::ShuffleRamInitAndTeardownLayout;
 
 mod constants;
 
@@ -26,27 +27,33 @@ pub const BASE_PROGRAM: &[u8] = include_bytes!("../../examples/hashed_fibonacci/
 pub const BASE_PROGRAM_TEXT_SECTION: &[u8] =
     include_bytes!("../../examples/hashed_fibonacci/app.text");
 
-pub const BASE_LAYER_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/base_layer.bin");
+pub const BASE_LAYER_VERIFIER: &[u8] = &[]; // include_bytes!("../../tools/verifier/base_layer.bin");
 pub const RECURSION_LAYER_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/recursion_layer.bin");
 pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer_no_delegation.bin");
 pub const FINAL_RECURSION_LAYER_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/final_recursion_layer.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/final_recursion_layer.bin");
 
 pub const BASE_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/base_layer_with_output.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/base_layer_with_output.bin");
 pub const RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer_with_output.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/recursion_layer_with_output.bin");
 pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER_WITH_OUTPUT: &[u8] =
     include_bytes!("../../tools/verifier/recursion_layer_no_delegation_with_output.bin");
 pub const FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/final_recursion_layer_with_output.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/final_recursion_layer_with_output.bin");
 
-pub const UNIVERSAL_CIRCUIT_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/universal.bin");
+pub const UNIVERSAL_CIRCUIT_VERIFIER: &[u8] = &[]; // include_bytes!("../../tools/verifier/universal.bin");
 
 pub const UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/universal_no_delegation.bin");
+    &[];
+    // include_bytes!("../../tools/verifier/universal_no_delegation.bin");
 
 // Methods to fetch the verification keys for the binaries above.
 // They are usually refreshed with build_vk.sh
@@ -179,7 +186,7 @@ impl ProgramProof {
         // basic ones
         responses.push(self.base_layer_proofs.len() as u32);
         for proof in self.base_layer_proofs.iter() {
-            let t = verifier_common::proof_flattener::flatten_full_proof(proof, true);
+            let t = verifier_common::proof_flattener::flatten_full_proof(proof, &[ShuffleRamInitAndTeardownLayout::empty()]);
             responses.extend(t);
         }
         // then for every allowed delegation circuit
@@ -187,7 +194,7 @@ impl ProgramProof {
             if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
                 responses.push(proofs.len() as u32);
                 for proof in proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, false);
+                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, &[]);
                     responses.extend(t);
                 }
             } else {
