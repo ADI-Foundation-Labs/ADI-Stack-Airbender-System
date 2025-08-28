@@ -3,8 +3,6 @@ use super::*;
 pub(crate) mod quotient_parts;
 pub mod stage2;
 pub mod stage3;
-// pub mod stage4;
-// pub mod stage5;
 pub(crate) mod stage_2_ram_shared;
 pub(crate) mod stage_2_shared;
 
@@ -97,13 +95,22 @@ pub fn prove_configured_for_unrolled_circuits<
     // that are still part of the circuit, even though they are not formally the public input
 
     // circuit sequence and delegation type
+    transcript_input.push(0u32); // for compatibility with verifier layouts for now
     transcript_input.push(delegation_processing_type as u32);
     // public inputs
     transcript_input.extend(public_inputs.iter().map(|el| el.to_reduced_u32()));
     // commit our setup
     flatten_merkle_caps_into(&setup_precomputations.trees, &mut transcript_input);
     transcript_input.extend(external_challenges.memory_argument.flatten().into_iter());
-    if let Some(delegation_argument_challenges) = external_challenges.delegation_argument.as_ref() {
+    if compiled_circuit
+        .stage_2_layout
+        .delegation_processing_aux_poly
+        .is_some()
+    {
+        let Some(delegation_argument_challenges) = external_challenges.delegation_argument.as_ref()
+        else {
+            panic!("Must have delegation argument challenge if argument is present");
+        };
         transcript_input.extend(delegation_argument_challenges.flatten().into_iter());
     }
     if let Some(machine_state_challenges) = external_challenges

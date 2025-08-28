@@ -11,3 +11,9 @@ rustfmt src/generated.rs
 rustfmt src/generated_inlined_verifier.rs
 cp src/generated.rs ../verifier/src/generated/circuit_layout.rs
 cp src/generated_inlined_verifier.rs ../verifier/src/generated/quotient.rs
+
+cargo test -- test::generate_for_unrolled_circuits --exact
+rustfmt generated/add_sub_lui_auipc_mop_preprocessed_layout.rs
+rustfmt generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs
+cp generated/add_sub_lui_auipc_mop_preprocessed_layout.rs ../verifier/src/generated/add_sub_lui_auipc_mop_preprocessed_layout.rs
+cp generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs ../verifier/src/generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs

@@ -202,7 +202,9 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
     // let binary = std::fs::read("../examples/hashed_fibonacci/app.bin").unwrap();
     assert!(binary.len() % 4 == 0);
     let binary: Vec<_> = binary
-        .array_chunks::<4>()
+        .as_chunks::<4>()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
 
@@ -210,7 +212,9 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
     // let text_section = std::fs::read("../examples/hashed_fibonacci/app.text").unwrap();
     assert!(text_section.len() % 4 == 0);
     let text_section: Vec<_> = text_section
-        .array_chunks::<4>()
+        .as_chunks::<4>()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
 
@@ -647,8 +651,12 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         }
         assert!(proof.delegation_argument_accumulator.is_none());
 
+        serialize_to_file(&proof, "add_sub_lui_auipc_mop_unrolled_proof.json");
+
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
+
+    panic!();
 
     if true {
         println!("Will try to prove JUMP/BRANCH/SLT circuit");
