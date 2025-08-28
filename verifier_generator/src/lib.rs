@@ -46,7 +46,8 @@ mod test {
     fn launch() {
         // let compiled_circuit = deserialize_from_file("../prover/full_machine_layout.json");
         // let compiled_circuit = deserialize_from_file("../prover/blake2s_delegation_circuit_layout.json");
-        let compiled_circuit = deserialize_from_file("../prover/keccak_delegation_circuit_layout.json");
+        let compiled_circuit =
+            deserialize_from_file("../prover/keccak_delegation_circuit_layout.json");
 
         let result = generate_from_parts(&compiled_circuit);
 
@@ -59,12 +60,31 @@ mod test {
         // let compiled_circuit = deserialize_from_file("../prover/full_machine_layout.json");
         // let compiled_circuit =
         //     deserialize_from_file("../prover/blake2s_delegation_circuit_layout.json");
-        let compiled_circuit = deserialize_from_file("../prover/keccak_delegation_circuit_layout.json");
+        let compiled_circuit =
+            deserialize_from_file("../prover/keccak_delegation_circuit_layout.json");
 
         let result = generate_inlined(compiled_circuit);
 
         let mut dst = std::fs::File::create("./src/generated_inlined_verifier.rs").unwrap();
         dst.write_all(&result.to_string().as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn generate_for_unrolled_circuits() {
+        let circuit_names = vec!["add_sub_lui_auipc_mop_preprocessed"];
+
+        for name in circuit_names {
+            let compiled_circuit = deserialize_from_file(&format!("../cs/{}_layout.json", name));
+
+            let result = generate_from_parts(&compiled_circuit);
+            let mut dst = std::fs::File::create(format!("./generated/{}_layout.rs", name)).unwrap();
+            dst.write_all(&result.to_string().as_bytes()).unwrap();
+
+            let result = generate_inlined(compiled_circuit);
+            let mut dst =
+                std::fs::File::create(format!("./generated/{}_quotient.rs", name)).unwrap();
+            dst.write_all(&result.to_string().as_bytes()).unwrap();
+        }
     }
 
     #[test]

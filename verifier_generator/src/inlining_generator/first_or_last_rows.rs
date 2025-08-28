@@ -211,7 +211,7 @@ pub(crate) fn transform_first_or_last_rows(
         let t = quote! {
             let #individual_term_ident = {
                 let mut #individual_term_ident = #value_expr;
-                let t = #aux_proof_values_ident.memory_grand_product_accumulator_final_value;
+                let t = #aux_proof_values_ident.grand_product_accumulator_final_value;
                 #individual_term_ident.sub_assign(&t);
 
                 #individual_term_ident
@@ -320,6 +320,33 @@ pub(crate) fn transform_first_or_last_rows(
 
                 accumulate_contributions(&mut last_row_and_zero_streams, None, vec![t], idents);
             }
+        }
+
+        // Decoder lookups
+        if stage_2_layout
+            .intermediate_poly_for_decoder_accesses
+            .num_elements()
+            > 0
+        {
+            let offset = stage_2_layout
+                .decoder_lookup_intermediate_poly_for_multiplicities_absolute_poly_idx_for_verifier(
+                );
+            let multiplicities_acc_expr = read_stage_2_value_expr(offset, idents, false);
+
+            let offset = stage_2_layout
+                .get_intermediate_poly_for_decoder_lookup_absolute_poly_idx_for_verifier();
+            let lookup_acc_expr = read_stage_2_value_expr(offset, idents, false);
+
+            let t = quote! {
+                let #individual_term_ident = {
+                    let mut #individual_term_ident = #multiplicities_acc_expr;
+                    #individual_term_ident.sub_assign(&#lookup_acc_expr);
+
+                    #individual_term_ident
+                };
+            };
+
+            accumulate_contributions(&mut last_row_and_zero_streams, None, vec![t], idents);
         }
 
         // generic lookup

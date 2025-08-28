@@ -1,10 +1,11 @@
 #![cfg_attr(not(any(test, feature = "replace_csr")), no_std)]
 #![feature(ptr_as_ref_unchecked)]
 #![feature(slice_from_ptr_range)]
-#![feature(allocator_api)]
+#![cfg_attr(not(any(test, feature = "proof_utils")), feature(allocator_api))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+#[cfg(feature = "proof_utils")]
 extern crate alloc;
 
 use core::mem::MaybeUninit;
@@ -91,6 +92,10 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
     ProofSkeletonInstance::fill::<I>((&mut skeleton) as *mut _);
     // let skeleton = skeleton.assume_init();
 
+    dbg!(skeleton.memory_argument_challenges);
+    dbg!(skeleton.delegation_argument_challenges);
+    dbg!(skeleton.machine_state_permutation_challenges);
+
     let mut queries = MaybeUninit::<[QueryValuesInstance; NUM_QUERIES]>::uninit().assume_init();
     QueryValuesInstance::fill_array::<I, V, NUM_QUERIES>(
         (&mut queries) as *mut _,
@@ -108,8 +113,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
 
     // draw local lookup argument challenges
     let mut transcript_challenges = MaybeUninit::<
-        [u32; ((NUM_LOOKUP_ARGUMENT_LINEARIZATION_CHALLENGES + 1) * 4)
-            .next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)],
+        [u32; (NUM_STAGE_2_CHALLENGES * 4).next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)],
     >::uninit()
     .assume_init();
     Transcript::draw_randomness_using_hasher(
@@ -132,6 +136,41 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .unwrap_unchecked()
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
+    let (decoder_lookup_linearization_challenges, decoder_lookup_gamma) =
+        if VERIFIER_COMPILED_LAYOUT
+            .witness_layout
+            .multiplicities_columns_for_decoder_in_executor_families
+            .num_elements()
+            > 0
+        {
+            let linearization_challenges: [Mersenne31Quartic;
+                EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES] =
+                core::array::from_fn(|_| {
+                    Mersenne31Quartic::from_array_of_base(
+                        it.next()
+                            .unwrap_unchecked()
+                            .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
+                    )
+                });
+            let additive_part = Mersenne31Quartic::from_array_of_base(
+                it.next()
+                    .unwrap_unchecked()
+                    .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
+            );
+
+            (linearization_challenges, additive_part)
+        } else {
+            (
+                [Mersenne31Quartic::ZERO;
+                    EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES],
+                Mersenne31Quartic::ZERO,
+            )
+        };
+
+    dbg!(lookup_argument_linearization_challenges);
+    dbg!(lookup_argument_gamma);
+    dbg!(decoder_lookup_linearization_challenges);
+    dbg!(decoder_lookup_gamma);
 
     // commit stage 2 artifacts - tree and memory grand product / delegation set accumulator
     Blake2sTranscript::commit_with_seed_using_hasher(
@@ -164,6 +203,11 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
 
+    dbg!(quotient_alpha);
+    dbg!(quotient_beta);
+
+    let quotient_alpha = Mersenne31Quartic::ONE;
+
     // commit quotient tree
     Blake2sTranscript::commit_with_seed_using_hasher(
         &mut transcript_hasher,
@@ -188,6 +232,8 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .unwrap_unchecked()
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
+
+    dbg!(z);
 
     // commit evaluations
     Blake2sTranscript::commit_with_seed_using_hasher(
@@ -451,15 +497,23 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             };
 
         let aux_proof_values = ProofAuxValues {
-            memory_grand_product_accumulator_final_value: skeleton.memory_grand_product_accumulator,
+            grand_product_accumulator_final_value: skeleton.grand_product_accumulator,
             delegation_argument_accumulator_sum,
         };
 
-        let delegation_argument_linearization_challenges =
-            if skeleton.delegation_argument_challenges.len() > 0 {
-                *skeleton.delegation_argument_challenges.get_unchecked(0)
+        let delegation_argument_challenges = if skeleton.delegation_argument_challenges.len() > 0 {
+            *skeleton.delegation_argument_challenges.get_unchecked(0)
+        } else {
+            ExternalDelegationArgumentChallenges::default()
+        };
+
+        let machine_state_permutation_challenges =
+            if skeleton.machine_state_permutation_challenges.len() > 0 {
+                *skeleton
+                    .machine_state_permutation_challenges
+                    .get_unchecked(0)
             } else {
-                ExternalDelegationArgumentChallenges::default()
+                ExternalMachineStateArgumentChallenges::default()
             };
 
         assert!((u32::MAX >> CIRCUIT_SEQUENCE_BITS_SHIFT) >= skeleton.circuit_sequence_idx);
@@ -492,16 +546,19 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             quotient_alpha,
             quotient_beta,
             &divisors,
-            lookup_argument_linearization_challenges,
+            &lookup_argument_linearization_challenges,
             lookup_argument_gamma,
             lookup_argument_two_gamma,
-            skeleton
+            &skeleton
                 .memory_argument_challenges
                 .memory_argument_linearization_challenges,
             skeleton.memory_argument_challenges.memory_argument_gamma,
-            delegation_argument_linearization_challenges
-                .delegation_argument_linearization_challenges,
-            delegation_argument_linearization_challenges.delegation_argument_gamma,
+            &delegation_argument_challenges.delegation_argument_linearization_challenges,
+            delegation_argument_challenges.delegation_argument_gamma,
+            &decoder_lookup_linearization_challenges,
+            decoder_lookup_gamma,
+            &machine_state_permutation_challenges.linearization_challenges,
+            machine_state_permutation_challenges.additive_term,
             &skeleton.public_inputs,
             &aux_proof_values,
             &skeleton.aux_boundary_values,
@@ -919,7 +976,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         proof_state_dst.lazy_init_boundary_values = skeleton.aux_boundary_values;
     }
     // - memory grand product and delegation accumulators
-    proof_state_dst.memory_grand_product_accumulator = skeleton.memory_grand_product_accumulator;
+    proof_state_dst.memory_grand_product_accumulator = skeleton.grand_product_accumulator;
     if NUM_DELEGATION_CHALLENGES > 0 {
         proof_state_dst.delegation_argument_accumulator = skeleton.delegation_argument_accumulator;
     }

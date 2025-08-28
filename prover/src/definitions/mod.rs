@@ -365,7 +365,7 @@ pub struct ExternalValues {
 
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ProofAuxValues {
-    pub memory_grand_product_accumulator_final_value: Mersenne31Quartic,
+    pub grand_product_accumulator_final_value: Mersenne31Quartic,
     pub delegation_argument_accumulator_sum: Mersenne31Quartic,
 }
 
