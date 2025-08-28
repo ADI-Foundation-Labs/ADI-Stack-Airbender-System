@@ -22,6 +22,8 @@ use crate::cycle::status_registers::TrapReason;
 use crate::cycle::IMStandardIsaConfig;
 use crate::cycle::MachineConfig;
 use crate::mmu::MMUImplementation;
+#[cfg(feature = "cycle_marker")]
+use crate::cycle::state::{CycleMarker, Mark, CYCLE_MARKER};
 
 mod delegations;
 
@@ -320,7 +322,8 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
     #[inline(always)]
     fn add_marker(&self) {
         #[cfg(feature = "cycle_marker")]
-        CYCLE_MARKER.with_borrow_mut(|cm| cm.add_marker(self.cycle_counter as u64))
+        CYCLE_MARKER.with_borrow_mut(|cm| cm.add_marker())
+        // CYCLE_MARKER.with_borrow_mut(|cm| cm.add_marker(self.cycle_counter as u64))
     }
 
     #[inline(always)]
