@@ -45,13 +45,51 @@ pub fn keccak_special5_over_unrolled_state<M: MemorySource, TR: Tracer<C>, C: Ma
         precompile < 5 && iteration < 5 && round < 24,
         "the control parameters are invalid"
     );
-
-    // extract state indexes (for address r/w)
+ 
     const PRECOMPILE_IOTA_COLUMNXOR: u32 = 0;
     const PRECOMPILE_COLUMNMIX: u32 = 1;
     const PRECOMPILE_THETA_RHO: u32 = 2;
     const PRECOMPILE_CHI1: u32 = 3;
     const PRECOMPILE_CHI2: u32 = 4;
+
+    // update the control register
+    let control_next = match precompile {
+        PRECOMPILE_IOTA_COLUMNXOR => {
+            let iteration_next = (iteration + 1) % 5;
+            let precompile_next = if iteration == 4 { PRECOMPILE_COLUMNMIX } else { precompile };
+            let round_next = round as u32;
+            (1<<precompile_next) | (1<<iteration_next)<<5 | round_next<<10
+        }
+        PRECOMPILE_COLUMNMIX => {
+            let iteration_next = iteration;
+            let precompile_next = PRECOMPILE_THETA_RHO;
+            let round_next = round as u32;
+            (1<<precompile_next) | (1<<iteration_next)<<5 | round_next<<10
+        }
+        PRECOMPILE_THETA_RHO => {
+            let iteration_next = (iteration + 1) % 5;
+            let precompile_next = if iteration == 4 { PRECOMPILE_CHI1 } else { precompile };
+            let round_next = round as u32;
+            (1<<precompile_next) | (1<<iteration_next)<<5 | round_next<<10
+        }
+        PRECOMPILE_CHI1 => {
+            let iteration_next = iteration;
+            let precompile_next = PRECOMPILE_CHI2;
+            let round_next = round as u32;
+            (1<<precompile_next) | (1<<iteration_next)<<5 | round_next<<10
+        }
+        PRECOMPILE_CHI2 => {
+            let iteration_next = (iteration + 1) % 5;
+            let precompile_next = if iteration == 4 { PRECOMPILE_IOTA_COLUMNXOR } else { PRECOMPILE_CHI1 };
+            let round_next = if iteration == 4 { round as u32 + 1 } else { round as u32 };
+            (1<<precompile_next) | (1<<iteration_next)<<5 | round_next<<10
+        }
+        _ => unreachable!()
+    };
+    let x10_next = control_next << 16;
+    machine_state.registers[10] = x10_next;
+
+    // extract state indexes (for address r/w)
     let sparse_access_state_indexes: [usize; 6] = {
         const PERMUTATIONS_ADJUSTED: [usize; 25 * 25] = {
             let perms = [
@@ -278,7 +316,7 @@ pub fn keccak_special5_over_unrolled_state<M: MemorySource, TR: Tracer<C>, C: Ma
     let mut register_accesses = [
         RegisterOrIndirectReadWriteData {
             read_value: x10,
-            write_value: x10,
+            write_value: x10_next,
             timestamp: TimestampData::EMPTY,
         },
         RegisterOrIndirectReadWriteData {

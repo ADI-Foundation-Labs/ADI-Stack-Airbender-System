@@ -7,7 +7,7 @@ use super::{ColumnAddress, ColumnSet};
 #[derive(Clone, Copy, Debug)]
 pub struct MachineCycleStartOrEndState<F: PrimeField> {
     pub pc: [Variable; 2],
-    pub(crate) timestamp: [Variable; NUM_TIMESTAMP_COLUMNS_FOR_RAM],
+    #[allow(dead_code)] pub(crate) timestamp: [Variable; NUM_TIMESTAMP_COLUMNS_FOR_RAM],
     pub(crate) _marker: core::marker::PhantomData<F>,
 }
 
@@ -43,7 +43,7 @@ pub struct DecoderCircuitMachineState<F: PrimeField> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct OpcodeFamilyCircuitState<F: PrimeField> {
-    pub(crate) execute: Variable, // Boolean
+    #[allow(dead_code)] pub(crate) execute: Variable, // Boolean
     pub cycle_start_state: MachineCycleStartOrEndState<F>,
     pub decoder_data: DecoderData<F>,
     pub cycle_end_state: MachineCycleStartOrEndState<F>,
