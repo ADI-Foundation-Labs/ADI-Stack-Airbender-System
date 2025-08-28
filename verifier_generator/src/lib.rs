@@ -1,4 +1,5 @@
 #![expect(warnings)]
+#![feature(slice_as_chunks)]
 
 use ::prover::*;
 use prover::cs::one_row_compiler::*;

@@ -4,6 +4,7 @@
 #![feature(slice_from_ptr_range)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![feature(slice_as_chunks)]
 
 use core::mem::MaybeUninit;
 
