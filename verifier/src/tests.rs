@@ -80,10 +80,18 @@ fn test_unified_cycle_or_delegation() {
 fn test_unrolled_circuit() {
     // create an oracle to feed into verifier and look at the transcript values
 
+    // let name = "add_sub_lui_auipc_mop";
+    // let name = "jump_branch_slt";
+    // let name = "shift_binop_csrrw";
+    // let name = "mul_div_unsigned";
+    // let name = "word_only_load_store";
+    // let name = "subword_only_load_store";
+    let name = "inits_and_teardowns";
+
     let proof: prover::prover_stages::unrolled_prover::UnrolledModeProof =
-        deserialize_from_file("../prover/add_sub_lui_auipc_mop_unrolled_proof.json");
+        deserialize_from_file(&format!("../prover/{}_unrolled_proof.json", name));
     let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
-        deserialize_from_file("../cs/add_sub_lui_auipc_mop_preprocessed_layout.json");
+        deserialize_from_file(&format!("../cs/{}_preprocessed_layout.json", name));
 
     // now form flattened iterator
     use verifier_common::proof_flattener::*;

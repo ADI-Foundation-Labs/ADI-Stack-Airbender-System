@@ -12,8 +12,9 @@ rustfmt src/generated_inlined_verifier.rs
 cp src/generated.rs ../verifier/src/generated/circuit_layout.rs
 cp src/generated_inlined_verifier.rs ../verifier/src/generated/quotient.rs
 
+CIRCUIT_NAME="inits_and_teardowns"
+
 cargo test -- test::generate_for_unrolled_circuits --exact
-rustfmt generated/add_sub_lui_auipc_mop_preprocessed_layout.rs
-rustfmt generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs
-cp generated/add_sub_lui_auipc_mop_preprocessed_layout.rs ../verifier/src/generated/add_sub_lui_auipc_mop_preprocessed_layout.rs
-cp generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs ../verifier/src/generated/add_sub_lui_auipc_mop_preprocessed_quotient.rs
+rustfmt generated/*.rs
+cp generated/${CIRCUIT_NAME}_preprocessed_layout.rs ../verifier/src/generated/circuit_layout.rs
+cp generated/${CIRCUIT_NAME}_preprocessed_quotient.rs ../verifier/src/generated/quotient.rs

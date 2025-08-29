@@ -558,7 +558,7 @@ pub fn generate_inlined(compiled_circuit: CompiledCircuitArtifact<Mersenne31Fiel
 
     // and shuffle RAM lazy init if it exists
     if memory_layout.shuffle_ram_inits_and_teardowns.len() > 0 {
-        transform_shuffle_ram_lazy_init(
+        transform_shuffle_ram_lazy_init_address_ordering(
             &memory_layout.shuffle_ram_inits_and_teardowns,
             &lazy_init_address_aux_vars,
             &idents,

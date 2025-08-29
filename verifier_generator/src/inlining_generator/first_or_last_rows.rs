@@ -228,6 +228,10 @@ pub(crate) fn transform_first_or_last_rows(
         // range checks
         {
             // range check 16
+            if stage_2_layout
+                .intermediate_poly_for_range_check_16_multiplicity
+                .num_elements()
+                > 0
             {
                 let offset = stage_2_layout
                     .range_check_16_intermediate_poly_for_multiplicities_absolute_poly_idx_for_verifier();
@@ -284,6 +288,10 @@ pub(crate) fn transform_first_or_last_rows(
             }
 
             // timestamp range checks
+            if stage_2_layout
+                .intermediate_poly_for_timestamp_range_check_multiplicity
+                .num_elements()
+                > 0
             {
                 let offset = stage_2_layout
                     .timestamp_range_check_intermediate_poly_for_multiplicities_absolute_poly_idx_for_verifier();

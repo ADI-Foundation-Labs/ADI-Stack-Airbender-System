@@ -656,8 +656,6 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    panic!();
-
     if true {
         println!("Will try to prove JUMP/BRANCH/SLT circuit");
 
@@ -784,6 +782,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             );
         }
         assert!(proof.delegation_argument_accumulator.is_none());
+
+        serialize_to_file(&proof, "jump_branch_slt_unrolled_proof.json");
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
@@ -934,6 +934,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             Mersenne31Quartic::ZERO
         );
 
+        serialize_to_file(&proof, "shift_binop_csrrw_unrolled_proof.json");
+
         delegation_argument_accumulator.add_assign(&proof.delegation_argument_accumulator.unwrap());
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
@@ -1071,6 +1073,12 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             );
         }
         assert!(proof.delegation_argument_accumulator.is_none());
+
+        if SUPPORT_SIGNED {
+            serialize_to_file(&proof, "mul_div_unrolled_proof.json");
+        } else {
+            serialize_to_file(&proof, "mul_div_unsigned_unrolled_proof.json");
+        };
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
@@ -1215,6 +1223,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             );
         }
         assert!(proof.delegation_argument_accumulator.is_none());
+
+        serialize_to_file(&proof, "word_only_load_store_unrolled_proof.json");
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
@@ -1361,6 +1371,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         }
         assert!(proof.delegation_argument_accumulator.is_none());
 
+        serialize_to_file(&proof, "subword_only_load_store_unrolled_proof.json");
+
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
@@ -1490,6 +1502,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             &worker,
         );
         println!("Proving time is {:?}", now.elapsed());
+
+        serialize_to_file(&proof, "inits_and_teardowns_unrolled_proof.json");
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
