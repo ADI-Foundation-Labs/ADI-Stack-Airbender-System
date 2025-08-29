@@ -1,7 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![feature(allocator_api)]
-#![feature(array_chunks)]
 
 use std::alloc::Global;
 use std::collections::HashMap;
