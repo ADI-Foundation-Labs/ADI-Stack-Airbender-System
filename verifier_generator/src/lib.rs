@@ -69,7 +69,17 @@ mod test {
 
     #[test]
     fn generate_for_unrolled_circuits() {
-        let circuit_names = vec!["add_sub_lui_auipc_mop_preprocessed"];
+        let circuit_names = vec![
+            "add_sub_lui_auipc_mop_preprocessed",
+            "jump_branch_slt_preprocessed",
+            "shift_binop_csrrw_preprocessed",
+            "mul_div_preprocessed",
+            "mul_div_unsigned_preprocessed",
+            "load_store_preprocessed",
+            "word_only_load_store_preprocessed",
+            "subword_only_load_store_preprocessed",
+            "inits_and_teardowns_preprocessed",
+        ];
 
         for name in circuit_names {
             let compiled_circuit = deserialize_from_file(&format!("../cs/{}_layout.json", name));
