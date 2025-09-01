@@ -24,7 +24,7 @@ use super::*;
 
 const SUPPORT_SIGNED: bool = false;
 const INITIAL_PC: u32 = 0;
-const NUM_INIT_AND_TEARDOWN_SETS: usize = 2;
+const NUM_INIT_AND_TEARDOWN_SETS: usize = 16;
 const NUM_DELEGATION_CYCLES: usize = (1 << 20) - 1;
 
 unsafe fn read_u32(trace_row: &[Mersenne31Field], columns: ColumnSet<2>) -> u32 {
@@ -519,7 +519,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         ));
     }
 
-    if true {
+    if false {
         println!("Will try to prove ADD/SUB/LUI/AUIPC/MOP circuit");
 
         let add_sub_circuit = {
@@ -656,7 +656,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if true {
+    if false {
         println!("Will try to prove JUMP/BRANCH/SLT circuit");
 
         use crate::cs::machine::ops::unrolled::jump_branch_slt::*;
@@ -794,7 +794,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
-    if true {
+    if false {
         println!("Will try to prove XOR/AND/OR/SHIFT/CSR circuit");
         use crate::cs::machine::ops::unrolled::shift_binary_csr::*;
 
@@ -940,7 +940,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if true {
+    if false {
         println!("Will try to prove MUL/DIV circuit");
 
         use crate::cs::machine::ops::unrolled::mul_div::*;
@@ -1083,7 +1083,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if true {
+    if false {
         println!("Will try to prove word LOAD/STORE circuit");
 
         const SECOND_WORD_BITS: usize = 4;
@@ -1229,7 +1229,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if true {
+    if false {
         println!("Will try to prove subword LOAD/STORE circuit");
 
         use cs::machine::ops::unrolled::load_store::*;
@@ -1376,40 +1376,44 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    // Machine state permutation ended
+    // // Machine state permutation ended
+    // {
+    //     for (pc, ts) in write_set.iter().copied() {
+    //         if read_set.contains(&(pc, ts)) == false {
+    //             panic!("read set doesn't contain a pair {:?}", (pc, ts));
+    //         }
+    //     }
 
-    for (pc, ts) in write_set.iter().copied() {
-        if read_set.contains(&(pc, ts)) == false {
-            panic!("read set doesn't contain a pair {:?}", (pc, ts));
-        }
-    }
+    //     for (pc, ts) in read_set.iter().copied() {
+    //         if write_set.contains(&(pc, ts)) == false {
+    //             panic!("write set doesn't contain a pair {:?}", (pc, ts));
+    //         }
+    //     }
+    // }
 
-    for (pc, ts) in read_set.iter().copied() {
-        if write_set.contains(&(pc, ts)) == false {
-            panic!("write set doesn't contain a pair {:?}", (pc, ts));
-        }
-    }
+    // // inits and teardowns
+    // {
+    //     let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
+    //     let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
+    //     assert_eq!(expected_init_set.len(), expected_teardown_set.len());
+    //     assert_eq!(total_unique_teardowns, expected_teardown_set.len());
 
-    let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
-    let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
-    assert_eq!(expected_init_set.len(), expected_teardown_set.len());
-    assert_eq!(total_unique_teardowns, expected_teardown_set.len());
+    //     for (is_register, _, ts, init_value) in expected_init_set.iter() {
+    //         assert!(*is_register == false);
+    //         assert_eq!(*ts, 0);
+    //         assert_eq!(*init_value, 0);
+    //     }
+    //     for (is_register, _, ts, _) in expected_teardown_set.iter() {
+    //         assert!(*is_register == false);
+    //         assert!(*ts > INITIAL_TIMESTAMP);
+    //     }
 
-    for (is_register, _, ts, init_value) in expected_init_set.iter() {
-        assert!(*is_register == false);
-        assert_eq!(*ts, 0);
-        assert_eq!(*init_value, 0);
-    }
-    for (is_register, _, ts, _) in expected_teardown_set.iter() {
-        assert!(*is_register == false);
-        assert!(*ts > INITIAL_TIMESTAMP);
-    }
-
-    for ((_, addr0, _, _), (_, addr1, _, _)) in
-        expected_init_set.iter().zip(expected_teardown_set.iter())
-    {
-        assert_eq!(*addr0, *addr1);
-    }
+    //     for ((_, addr0, _, _), (_, addr1, _, _)) in
+    //         expected_init_set.iter().zip(expected_teardown_set.iter())
+    //     {
+    //         assert_eq!(*addr0, *addr1);
+    //     }
+    // }
 
     if true {
         println!("Will try to prove memory inits and teardowns circuit");

@@ -92,10 +92,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
     ProofSkeletonInstance::fill::<I>((&mut skeleton) as *mut _);
     // let skeleton = skeleton.assume_init();
 
-    dbg!(skeleton.memory_argument_challenges);
-    dbg!(skeleton.delegation_argument_challenges);
-    dbg!(skeleton.machine_state_permutation_challenges);
-
     let mut queries = MaybeUninit::<[QueryValuesInstance; NUM_QUERIES]>::uninit().assume_init();
     QueryValuesInstance::fill_array::<I, V, NUM_QUERIES>(
         (&mut queries) as *mut _,

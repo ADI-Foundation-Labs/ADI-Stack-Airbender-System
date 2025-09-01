@@ -189,6 +189,7 @@ pub fn prover_stage_2_for_unrolled_circuit<
 
     #[cfg(feature = "debug_logs")]
     println!("Evaluating lookup tables preprocessing");
+    #[cfg(feature = "debug_logs")]
     let now = std::time::Instant::now();
 
     // we will preprocess everything as a single vector for generic lookup tables,
@@ -307,6 +308,7 @@ pub fn prover_stage_2_for_unrolled_circuit<
     let decoder_preprocessing_ref = &decoder_preprocessing;
     let shuffle_ram_inits_and_teardowns_ref = &shuffle_ram_inits_and_teardowns;
 
+    #[cfg(feature = "debug_logs")]
     let now = std::time::Instant::now();
 
     assert!(exec_trace.width() >= stage_1_output.num_witness_columns);

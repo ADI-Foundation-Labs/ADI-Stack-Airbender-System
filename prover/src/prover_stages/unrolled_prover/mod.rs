@@ -102,6 +102,8 @@ pub fn prove_configured_for_unrolled_circuits<
     // commit our setup
     flatten_merkle_caps_into(&setup_precomputations.trees, &mut transcript_input);
     transcript_input.extend(external_challenges.memory_argument.flatten().into_iter());
+
+    // these challenges are optional as they do not end up used otherwise
     if compiled_circuit
         .stage_2_layout
         .delegation_processing_aux_poly
@@ -113,12 +115,27 @@ pub fn prove_configured_for_unrolled_circuits<
         };
         transcript_input.extend(delegation_argument_challenges.flatten().into_iter());
     }
-    if let Some(machine_state_challenges) = external_challenges
-        .machine_state_permutation_argument
-        .as_ref()
+
+    if compiled_circuit
+        .memory_layout
+        .machine_state_layout
+        .is_some()
+        || compiled_circuit
+            .memory_layout
+            .intermediate_state_layout
+            .is_some()
     {
+        let Some(machine_state_challenges) = external_challenges
+            .machine_state_permutation_argument
+            .as_ref()
+        else {
+            panic!("Must have machine state permutation argument challenge if argument is present");
+        };
         transcript_input.extend(machine_state_challenges.flatten().into_iter());
     }
+
+    // aux boundary values - in case of init/teardown being present
+    transcript_input.extend(aux_boundary_values.iter().map(|el| el.flatten()).flatten());
 
     let stage_1_output = stage1::prover_stage_1(
         compiled_circuit,
