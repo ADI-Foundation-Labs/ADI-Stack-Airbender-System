@@ -93,6 +93,9 @@ fn test_unrolled_circuit() {
     let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
         deserialize_from_file(&format!("../cs/{}_preprocessed_layout.json", name));
 
+    dbg!(&proof.public_inputs);
+    dbg!(&proof.aux_boundary_values);
+
     // now form flattened iterator
     use verifier_common::proof_flattener::*;
 

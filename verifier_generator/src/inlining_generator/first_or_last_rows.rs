@@ -261,15 +261,17 @@ pub(crate) fn transform_first_or_last_rows(
                 if let Some(lazy_init_address_range_check_16) =
                     stage_2_layout.lazy_init_address_range_check_16
                 {
-                    let offset = lazy_init_address_range_check_16
-                        .get_ext4_poly_index_in_openings(0, stage_2_layout);
-                    let el_expr = read_stage_2_value_expr(offset, idents, false);
+                    for i in 0..lazy_init_address_range_check_16.num_pairs {
+                        let offset = lazy_init_address_range_check_16
+                            .get_ext4_poly_index_in_openings(i, stage_2_layout);
+                        let el_expr = read_stage_2_value_expr(offset, idents, false);
 
-                    let t = quote! {
-                        let t = #el_expr;
-                        #individual_term_ident.sub_assign(&t);
-                    };
-                    substream.extend(t);
+                        let t = quote! {
+                            let t = #el_expr;
+                            #individual_term_ident.sub_assign(&t);
+                        };
+                        substream.extend(t);
+                    }
                 }
 
                 if let Some(_remainder) = stage_2_layout.remainder_for_range_check_16 {

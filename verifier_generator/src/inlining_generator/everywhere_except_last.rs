@@ -625,10 +625,6 @@ pub(crate) fn transform_shuffle_ram_lazy_init_range_checks(
 
         let t0 = quote! {
             let #individual_term_ident = {
-                let a = #a_expr;
-                let b = #b_expr;
-                let c = #c_expr;
-
                 let mut #individual_term_ident = a;
                 #individual_term_ident.mul_assign(&b);
                 #individual_term_ident.sub_assign(&c);
@@ -639,15 +635,12 @@ pub(crate) fn transform_shuffle_ram_lazy_init_range_checks(
         streams.push(t0);
 
         // now accumulator * denom - numerator == 0
-        let acc_offset =
-            lazy_init_address_range_check_16.get_ext4_poly_index_in_openings(0, stage_2_layout);
+        let acc_offset = lazy_init_address_range_check_16
+            .get_ext4_poly_index_in_openings(init_idx, stage_2_layout);
         let acc_expr = read_stage_2_value_expr(acc_offset, idents, false);
 
         let t1 = quote! {
             let #individual_term_ident = {
-                let a = #a_expr;
-                let b = #b_expr;
-                let c = #c_expr;
                 let acc_value = #acc_expr;
 
                 let mut denom = #lookup_argument_gamma_ident;
@@ -1806,12 +1799,9 @@ pub(crate) fn transform_shuffle_ram_lazy_init_padding(
         .zip(lazy_init_address_aux_vars.iter())
     {
         let lazy_init_address_start = init_and_teardown.lazy_init_addresses_columns.start();
-
         let teardown_values_start = init_and_teardown.lazy_teardown_values_columns.start();
-
         let teardown_timestamps_start = init_and_teardown.lazy_teardown_timestamps_columns.start();
 
-        let comparison_aux_vars = lazy_init_address_aux_vars;
         let ShuffleRamAuxComparisonSet { final_borrow, .. } = *aux_vars;
 
         let final_borrow_value_expr = read_value_expr(final_borrow, idents, false);

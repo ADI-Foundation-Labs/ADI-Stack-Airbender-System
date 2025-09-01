@@ -147,9 +147,22 @@ pub fn flatten_unrolled_circuits_proof_for_skeleton(
         result.extend(delegation_argument.flatten());
     }
     // state permutation argument challenges
-    if let Some(machine_state_permutation_argument) =
-        proof.external_challenges.machine_state_permutation_argument
+    if compiled_circuit
+        .memory_layout
+        .machine_state_layout
+        .is_some()
+        || compiled_circuit
+            .memory_layout
+            .intermediate_state_layout
+            .is_some()
     {
+        let Some(machine_state_permutation_argument) =
+            proof.external_challenges.machine_state_permutation_argument
+        else {
+            panic!(
+                "Must have a machine state permutation argument challenge if argument is present"
+            );
+        };
         result.extend(machine_state_permutation_argument.flatten());
     }
     for el in proof.aux_boundary_values.iter() {

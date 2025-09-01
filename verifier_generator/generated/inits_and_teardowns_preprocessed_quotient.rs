@@ -1220,9 +1220,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(0usize));
-                        let b = *(memory.get_unchecked(1usize));
-                        let c = *(stage_2.get_unchecked(16usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1236,9 +1233,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(0usize));
-                        let b = *(memory.get_unchecked(1usize));
-                        let c = *(stage_2.get_unchecked(16usize));
                         let acc_value = *(stage_2.get_unchecked(48usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
@@ -1266,9 +1260,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(6usize));
-                        let b = *(memory.get_unchecked(7usize));
-                        let c = *(stage_2.get_unchecked(17usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1282,10 +1273,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(6usize));
-                        let b = *(memory.get_unchecked(7usize));
-                        let c = *(stage_2.get_unchecked(17usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(49usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1312,9 +1300,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(12usize));
-                        let b = *(memory.get_unchecked(13usize));
-                        let c = *(stage_2.get_unchecked(18usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1328,10 +1313,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(12usize));
-                        let b = *(memory.get_unchecked(13usize));
-                        let c = *(stage_2.get_unchecked(18usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(50usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1358,9 +1340,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(18usize));
-                        let b = *(memory.get_unchecked(19usize));
-                        let c = *(stage_2.get_unchecked(19usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1374,10 +1353,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(18usize));
-                        let b = *(memory.get_unchecked(19usize));
-                        let c = *(stage_2.get_unchecked(19usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(51usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1404,9 +1380,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(24usize));
-                        let b = *(memory.get_unchecked(25usize));
-                        let c = *(stage_2.get_unchecked(20usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1420,10 +1393,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(24usize));
-                        let b = *(memory.get_unchecked(25usize));
-                        let c = *(stage_2.get_unchecked(20usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(52usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1450,9 +1420,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(30usize));
-                        let b = *(memory.get_unchecked(31usize));
-                        let c = *(stage_2.get_unchecked(21usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1466,10 +1433,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(30usize));
-                        let b = *(memory.get_unchecked(31usize));
-                        let c = *(stage_2.get_unchecked(21usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(53usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1496,9 +1460,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(36usize));
-                        let b = *(memory.get_unchecked(37usize));
-                        let c = *(stage_2.get_unchecked(22usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1512,10 +1473,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(36usize));
-                        let b = *(memory.get_unchecked(37usize));
-                        let c = *(stage_2.get_unchecked(22usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(54usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1542,9 +1500,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(42usize));
-                        let b = *(memory.get_unchecked(43usize));
-                        let c = *(stage_2.get_unchecked(23usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1558,10 +1513,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(42usize));
-                        let b = *(memory.get_unchecked(43usize));
-                        let c = *(stage_2.get_unchecked(23usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(55usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1588,9 +1540,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(48usize));
-                        let b = *(memory.get_unchecked(49usize));
-                        let c = *(stage_2.get_unchecked(24usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1604,10 +1553,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(48usize));
-                        let b = *(memory.get_unchecked(49usize));
-                        let c = *(stage_2.get_unchecked(24usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(56usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1634,9 +1580,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(54usize));
-                        let b = *(memory.get_unchecked(55usize));
-                        let c = *(stage_2.get_unchecked(25usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1650,10 +1593,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(54usize));
-                        let b = *(memory.get_unchecked(55usize));
-                        let c = *(stage_2.get_unchecked(25usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(57usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1680,9 +1620,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(60usize));
-                        let b = *(memory.get_unchecked(61usize));
-                        let c = *(stage_2.get_unchecked(26usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1696,10 +1633,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(60usize));
-                        let b = *(memory.get_unchecked(61usize));
-                        let c = *(stage_2.get_unchecked(26usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(58usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1726,9 +1660,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(66usize));
-                        let b = *(memory.get_unchecked(67usize));
-                        let c = *(stage_2.get_unchecked(27usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1742,10 +1673,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(66usize));
-                        let b = *(memory.get_unchecked(67usize));
-                        let c = *(stage_2.get_unchecked(27usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(59usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1772,9 +1700,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(72usize));
-                        let b = *(memory.get_unchecked(73usize));
-                        let c = *(stage_2.get_unchecked(28usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1788,10 +1713,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(72usize));
-                        let b = *(memory.get_unchecked(73usize));
-                        let c = *(stage_2.get_unchecked(28usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(60usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1818,9 +1740,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(78usize));
-                        let b = *(memory.get_unchecked(79usize));
-                        let c = *(stage_2.get_unchecked(29usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1834,10 +1753,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(78usize));
-                        let b = *(memory.get_unchecked(79usize));
-                        let c = *(stage_2.get_unchecked(29usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(61usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1864,9 +1780,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(84usize));
-                        let b = *(memory.get_unchecked(85usize));
-                        let c = *(stage_2.get_unchecked(30usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1880,10 +1793,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(84usize));
-                        let b = *(memory.get_unchecked(85usize));
-                        let c = *(stage_2.get_unchecked(30usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(62usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -1910,9 +1820,6 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(90usize));
-                        let b = *(memory.get_unchecked(91usize));
-                        let c = *(stage_2.get_unchecked(31usize));
                         let mut individual_term = a;
                         individual_term.mul_assign(&b);
                         individual_term.sub_assign(&c);
@@ -1926,10 +1833,7 @@ unsafe fn evaluate_every_row_except_last(
                 accumulated_contribution.mul_assign(&quotient_alpha);
                 let contribution = {
                     let individual_term = {
-                        let a = *(memory.get_unchecked(90usize));
-                        let b = *(memory.get_unchecked(91usize));
-                        let c = *(stage_2.get_unchecked(31usize));
-                        let acc_value = *(stage_2.get_unchecked(48usize));
+                        let acc_value = *(stage_2.get_unchecked(63usize));
                         let mut denom = lookup_argument_gamma;
                         denom.add_assign(&a);
                         denom.add_assign(&b);
@@ -4797,6 +4701,36 @@ unsafe fn evaluate_last_row_and_zero(
                 let t = *(stage_2.get_unchecked(47usize));
                 individual_term.sub_assign(&t);
                 let t = *(stage_2.get_unchecked(48usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(49usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(50usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(51usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(52usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(53usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(54usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(55usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(56usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(57usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(58usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(59usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(60usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(61usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(62usize));
+                individual_term.sub_assign(&t);
+                let t = *(stage_2.get_unchecked(63usize));
                 individual_term.sub_assign(&t);
                 individual_term
             };
