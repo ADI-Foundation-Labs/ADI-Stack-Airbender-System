@@ -199,7 +199,7 @@ pub fn bigint_with_control_factory_fn<A: GoodAllocator>(
     }
 }
 
-pub fn keccak_special5_with_control_factory_fn<A: GoodAllocator>(
+pub fn keccak_special5_factory_fn<A: GoodAllocator>(
     delegation_type: u16,
     num_requests: usize,
     allocator: A,
