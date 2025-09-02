@@ -407,7 +407,9 @@ mod test {
         assert!(buffer.len() % 4 == 0, "text section is not aligned");
 
         let binary: Vec<u32> = buffer
-            .as_chunks::<4>().0.into_iter()
+            .as_chunks::<4>()
+            .0
+            .into_iter()
             .map(|el| u32::from_le_bytes(*el))
             .collect();
 

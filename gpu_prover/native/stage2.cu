@@ -87,7 +87,6 @@ EXTERN __launch_bounds__(128, 8) __global__ void range_check_aggregated_entry_in
     // st_modifier::cg to cache stores for upcoming lookup_a_args_kernel
     vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup, const unsigned multiplicities_src_cols_start,
     const unsigned multiplicities_dst_cols_start, const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
-
   aggregated_entry_invs_and_multiplicities_arg_kernel<1>(challenges, witness_cols, setup_cols, stage_2_e4_cols, aggregated_entry_invs, start_col_in_setup,
                                                          multiplicities_src_cols_start, multiplicities_dst_cols_start, num_multiplicities_cols,
                                                          num_table_rows_tail, log_n);
@@ -157,7 +156,7 @@ EXTERN __launch_bounds__(128, 8) __global__
     void lookup_args_kernel(__grid_constant__ const RangeCheckArgsLayout range_check_16_layout,
                             __grid_constant__ const FlattenedLookupExpressionsLayout expressions,
                             __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
-                            __grid_constant__ const LazyInitTeardownLayout lazy_init_teardown_layout, matrix_getter<bf, ld_modifier::cs> setup_cols,
+                            __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts, matrix_getter<bf, ld_modifier::cs> setup_cols,
                             matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
                             vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
                             vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_timestamp_range_checks,
@@ -250,7 +249,8 @@ EXTERN __launch_bounds__(128, 8) __global__
   }
 
   // 32-bit lazy init address cols, treated as an extra pair of range check 16 cols
-  if (lazy_init_teardown_layout.process_shuffle_ram_init) {
+  for (unsigned i = 0; i < lazy_init_teardown_layouts.num_lazy_init_teardown_sets; i++) {
+    const auto &lazy_init_teardown_layout = lazy_init_teardown_layouts.layouts[i];
     const bf val0 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start));
     const bf val1 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1));
     const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
@@ -273,8 +273,9 @@ EXTERN __launch_bounds__(128, 8) __global__
     void shuffle_ram_memory_args_kernel(__grid_constant__ const MemoryChallenges challenges, __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
                                         matrix_getter<bf, ld_modifier::cs> setup_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
                                         vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                        __grid_constant__ const LazyInitTeardownLayout lazy_init_teardown_layout,
-                                        const bf memory_timestamp_high_from_circuit_idx, const unsigned memory_args_start, const unsigned log_n) {
+                                        __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
+                                        const bf memory_timestamp_high_from_circuit_idx, const unsigned lazy_init_teardown_args_start,
+                                        const unsigned memory_args_start, const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.
@@ -290,28 +291,38 @@ EXTERN __launch_bounds__(128, 8) __global__
   // helped by precomputed cross-term challenge combinations.
   // It's hard to say what level of unrolling would be optimal.
 
+  e4 num_over_denom_acc{};
+
   // Shuffle ram init
-  e4 numerator{challenges.gamma};
-  const bf address_low = memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start);
-  numerator = e4::add(numerator, e4::mul(challenges.address_low_challenge, address_low));
-  const bf address_high = memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1);
-  numerator = e4::add(numerator, e4::mul(challenges.address_high_challenge, address_high));
+  for (unsigned i = 0; i < lazy_init_teardown_layouts.num_lazy_init_teardown_sets; i++) {
+    const auto &lazy_init_teardown_layout = lazy_init_teardown_layouts.layouts[i];
 
-  e4 denom{numerator};
-  const bf value_low = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_value_start);
-  denom = e4::add(denom, e4::mul(challenges.value_low_challenge, value_low));
-  const bf value_high = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_value_start + 1);
-  denom = e4::add(denom, e4::mul(challenges.value_high_challenge, value_high));
-  const bf timestamp_low = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_timestamp_start);
-  denom = e4::add(denom, e4::mul(challenges.timestamp_low_challenge, timestamp_low));
-  const bf timestamp_high = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_timestamp_start + 1);
-  denom = e4::add(denom, e4::mul(challenges.timestamp_high_challenge, timestamp_high));
+    e4 numerator{challenges.gamma};
+    const bf address_low = memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start);
+    numerator = e4::add(numerator, e4::mul(challenges.address_low_challenge, address_low));
+    const bf address_high = memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1);
+    numerator = e4::add(numerator, e4::mul(challenges.address_high_challenge, address_high));
 
-  // flush result
-  e4 num_over_denom_acc = numerator;
-  e4 denom_inv{e4::inv(denom)};
-  num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
-  stage_2_e4_cols.set_at_col(memory_args_start, num_over_denom_acc);
+    e4 denom{numerator};
+    const bf value_low = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_value_start);
+    denom = e4::add(denom, e4::mul(challenges.value_low_challenge, value_low));
+    const bf value_high = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_value_start + 1);
+    denom = e4::add(denom, e4::mul(challenges.value_high_challenge, value_high));
+    const bf timestamp_low = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_timestamp_start);
+    denom = e4::add(denom, e4::mul(challenges.timestamp_low_challenge, timestamp_low));
+    const bf timestamp_high = memory_cols.get_at_col(lazy_init_teardown_layout.teardown_timestamp_start + 1);
+    denom = e4::add(denom, e4::mul(challenges.timestamp_high_challenge, timestamp_high));
+
+    // flush result
+    if (i == 0) {
+      num_over_denom_acc = numerator;
+    } else {
+      num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
+    }
+    e4 denom_inv{e4::inv(denom)};
+    num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
+    stage_2_e4_cols.set_at_col(lazy_init_teardown_args_start + i, num_over_denom_acc);
+  }
 
   // Shuffle ram accesses
   // first, read a couple values common across accesses:
@@ -376,77 +387,6 @@ EXTERN __launch_bounds__(128, 8) __global__
 
     // flush result
     num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
-    e4 denom_inv{e4::inv(denom)};
-    num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
-    stage_2_e4_cols.set_at_col(memory_args_start + 1 + i, num_over_denom_acc);
-  }
-}
-
-EXTERN __launch_bounds__(128, 8) __global__
-    void batched_ram_memory_args_kernel(__grid_constant__ const MemoryChallenges challenges, __grid_constant__ const BatchedRamAccesses batched_ram_accesses,
-                                        matrix_getter<bf, ld_modifier::cs> memory_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                        const unsigned memory_args_start, const unsigned log_n) {
-  const unsigned n = 1u << log_n;
-  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
-  // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.
-  if (gid >= n - 1)
-    return;
-
-  stage_2_e4_cols.add_row(gid);
-  memory_cols.add_row(gid);
-
-  // Batched ram accesses
-  // Compute address_high_contribution, which is common across accesses
-  const bf address_high = memory_cols.get_at_col(batched_ram_accesses.abi_mem_offset_high_col);
-  const e4 address_high_contribution = e4::mul(address_high, challenges.address_high_challenge);
-  // Compute write_timestamp_contribution, also common across accesses
-  const bf write_timestamp_low = memory_cols.get_at_col(batched_ram_accesses.write_timestamp_col);
-  const e4 write_timestamp_low_contribution = e4::mul(write_timestamp_low, challenges.timestamp_low_challenge);
-  const bf write_timestamp_high = memory_cols.get_at_col(batched_ram_accesses.write_timestamp_col + 1);
-  const e4 write_timestamp_high_contribution = e4::mul(write_timestamp_high, challenges.timestamp_high_challenge);
-  const e4 write_timestamp_contribution = e4::add(write_timestamp_low_contribution, write_timestamp_high_contribution);
-
-  e4 num_over_denom_acc{};
-#pragma unroll 1
-  for (unsigned i = 0; i < batched_ram_accesses.num_accesses; i++) {
-    const auto &access = batched_ram_accesses.accesses[i];
-    e4 numerator = e4::add(access.gamma_plus_address_low_contribution, address_high_contribution);
-
-    e4 denom{};
-
-    if (access.is_write) {
-      denom = numerator;
-
-      const bf read_value_low = memory_cols.get_at_col(access.read_value_col);
-      denom = e4::add(denom, e4::mul(challenges.value_low_challenge, read_value_low));
-      const bf read_value_high = memory_cols.get_at_col(access.read_value_col + 1);
-      denom = e4::add(denom, e4::mul(challenges.value_high_challenge, read_value_high));
-
-      const bf write_value_low = memory_cols.get_at_col(access.maybe_write_value_col);
-      numerator = e4::add(numerator, e4::mul(challenges.value_low_challenge, write_value_low));
-      const bf write_value_high = memory_cols.get_at_col(access.maybe_write_value_col + 1);
-      numerator = e4::add(numerator, e4::mul(challenges.value_high_challenge, write_value_high));
-    } else {
-      const bf value_low = memory_cols.get_at_col(access.read_value_col);
-      numerator = e4::add(numerator, e4::mul(challenges.value_low_challenge, value_low));
-      const bf value_high = memory_cols.get_at_col(access.read_value_col + 1);
-      numerator = e4::add(numerator, e4::mul(challenges.value_high_challenge, value_high));
-
-      denom = numerator;
-    }
-
-    numerator = e4::add(numerator, write_timestamp_contribution);
-
-    const bf read_timestamp_low = memory_cols.get_at_col(access.read_timestamp_col);
-    denom = e4::add(denom, e4::mul(challenges.timestamp_low_challenge, read_timestamp_low));
-    const bf read_timestamp_high = memory_cols.get_at_col(access.read_timestamp_col + 1);
-    denom = e4::add(denom, e4::mul(challenges.timestamp_high_challenge, read_timestamp_high));
-
-    // flush result
-    if (i == 0)
-      num_over_denom_acc = numerator;
-    else
-      num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
     e4 denom_inv{e4::inv(denom)};
     num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
     stage_2_e4_cols.set_at_col(memory_args_start + i, num_over_denom_acc);
@@ -538,10 +478,23 @@ EXTERN __launch_bounds__(128, 8) __global__
     for (; flat_indirect_idx < lim; flat_indirect_idx++) {
       const auto &indirect_access = register_and_indirect_accesses.indirect_accesses[flat_indirect_idx];
 
-      const unsigned address = base_low + indirect_access.offset;
-      const unsigned of = address >> 16;
-      const bf address_low = bf{address & 0x0000ffff};
-      const bf address_high = bf{base_high + of};
+      // imitates prover/src/prover_stages/stage2_utils.rs
+      unsigned address_low_u32 = base_low + indirect_access.offset_constant;
+      const unsigned of_low_0 = address_low_u32 >> 16;
+      address_low_u32 = address_low_u32 & 0x0000ffff;
+      // account for variable_dependent offset, if used
+      unsigned of_low_1 = 0;
+      if (indirect_access.has_variable_dependent) {
+        const bf v = memory_cols.get_at_col(indirect_access.maybe_variable_dependent_col);
+        const bf v_canonical = bf::into_canonical(v);
+        const unsigned extra_low = indirect_access.maybe_variable_dependent_coeff * v_canonical.limb;
+        address_low_u32 = address_low_u32 + extra_low;
+        of_low_1 = address_low_u32 >> 16;
+        address_low_u32 = address_low_u32 & 0x0000ffff;
+      }
+      const bf address_low = bf{address_low_u32};
+      // this should never overflow, because our address space should be representable with 32 bits.
+      const bf address_high = bf{base_high + (of_low_0 | of_low_1)};
 
       e4 numerator{challenges.gamma};
       numerator = e4::add(numerator, e4::mul(challenges.address_low_challenge, address_low));
@@ -549,7 +502,7 @@ EXTERN __launch_bounds__(128, 8) __global__
 
       e4 denom{};
 
-      if (indirect_access.is_write) {
+      if (indirect_access.has_write) {
         denom = numerator;
 
         const bf read_value_low = memory_cols.get_at_col(indirect_access.read_value_col);

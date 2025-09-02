@@ -41,6 +41,14 @@ extern "C" struct RangeCheckArgsLayout {
   // const unsigned maybe_e4_arg_remainder_col;
 };
 
+constexpr unsigned NUM_STATE_LINKAGE_CONSTRAINTS = 2;
+
+extern "C" struct StateLinkageConstraints {
+  const unsigned srcs[NUM_STATE_LINKAGE_CONSTRAINTS];
+  const unsigned dsts[NUM_STATE_LINKAGE_CONSTRAINTS];
+  const unsigned num_constraints;
+};
+
 extern "C" struct MemoryChallenges {
   const field::ext4_field address_low_challenge;
   const field::ext4_field address_high_challenge;
@@ -168,6 +176,8 @@ DEVICE_FORCEINLINE void eval_a_and_b(field::base_field a_and_b[2], const Flatten
   }
 }
 
+constexpr unsigned MAX_LAZY_INIT_TEARDOWN_SETS = 1;
+
 extern "C" struct LazyInitTeardownLayout {
   const unsigned init_address_start;
   const unsigned teardown_value_start;
@@ -178,6 +188,11 @@ extern "C" struct LazyInitTeardownLayout {
   const unsigned init_address_final_borrow;
   const unsigned bf_arg_col;
   const unsigned e4_arg_col;
+};
+
+extern "C" struct LazyInitTeardownLayouts {
+  const LazyInitTeardownLayout layouts[MAX_LAZY_INIT_TEARDOWN_SETS];
+  const unsigned num_lazy_init_teardown_sets;
   const bool process_shuffle_ram_init;
 };
 
@@ -199,23 +214,6 @@ extern "C" struct ShuffleRamAccesses {
   const unsigned write_timestamp_in_setup_start;
 };
 
-constexpr unsigned MAX_BATCHED_RAM_ACCESSES = 36;
-
-extern "C" struct BatchedRamAccess {
-  const field::ext4_field gamma_plus_address_low_contribution;
-  const unsigned read_timestamp_col;
-  const unsigned read_value_col;
-  const unsigned maybe_write_value_col;
-  const bool is_write;
-};
-
-extern "C" struct BatchedRamAccesses {
-  const BatchedRamAccess accesses[MAX_BATCHED_RAM_ACCESSES];
-  const unsigned num_accesses;
-  const unsigned write_timestamp_col;
-  const unsigned abi_mem_offset_high_col;
-};
-
 extern "C" struct RegisterAccess {
   const field::ext4_field gamma_plus_one_plus_address_low_contribution;
   const unsigned read_timestamp_col;
@@ -225,13 +223,16 @@ extern "C" struct RegisterAccess {
 };
 
 extern "C" struct IndirectAccess {
-  const unsigned offset;
   const unsigned read_timestamp_col;
   const unsigned read_value_col;
   const unsigned maybe_write_value_col;
-  const unsigned address_derivation_carry_bit_col;
-  const unsigned address_derivation_carry_bit_num_elements;
-  const bool is_write;
+  const unsigned maybe_address_derivation_carry_bit_col;
+  const unsigned maybe_variable_dependent_coeff;
+  const unsigned maybe_variable_dependent_col;
+  const unsigned offset_constant;
+  const bool has_address_derivation_carry_bit;
+  const bool has_variable_dependent;
+  const bool has_write;
 };
 
 constexpr unsigned MAX_REGISTER_ACCESSES = 4;

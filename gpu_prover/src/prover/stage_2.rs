@@ -95,7 +95,7 @@ impl<'a, C: ProverContext> StageTwoOutput<'a, C> {
                     .next_multiple_of(BLAKE2S_DIGEST_SIZE_U32_WORDS)];
             let mut guard = seed_clone.lock().unwrap();
             Transcript::draw_randomness(&mut guard, &mut transcript_challenges);
-            let mut it = transcript_challenges.array_chunks::<4>();
+            let mut it = transcript_challenges.into_iter().array_chunks::<4>();
             let mut get_challenge =
                 || E4::from_coeffs_in_base(&it.next().unwrap().map(BF::from_nonreduced_u32));
             let linearization_challenges = std::array::from_fn(|_| get_challenge());
@@ -171,10 +171,7 @@ impl<'a, C: ProverContext> StageTwoOutput<'a, C> {
         let last_row = Arc::new(last_row);
         let last_row_clone = last_row.clone();
         self.last_row = Some(last_row);
-        let offset_for_grand_product_poly = layout
-            .intermediate_polys_for_memory_argument
-            .get_range(cached_data.offset_for_grand_product_accumulation_poly)
-            .start;
+        let offset_for_grand_product_poly = layout.intermediate_poly_for_grand_product.start();
         self.offset_for_grand_product_poly = offset_for_grand_product_poly;
         let offset_for_sum_over_delegation_poly =
             if cached_data.handle_delegation_requests || cached_data.process_delegations {

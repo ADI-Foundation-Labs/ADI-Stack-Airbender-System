@@ -607,40 +607,6 @@ impl MultiplicitiesLayout {
     }
 }
 
-const MAX_STATE_LINKAGE_CONSTRAINTS: usize = 2;
-
-#[derive(Clone)]
-#[repr(C)]
-struct StateLinkageConstraints {
-    pub srcs: [u32; MAX_STATE_LINKAGE_CONSTRAINTS],
-    pub dsts: [u32; MAX_STATE_LINKAGE_CONSTRAINTS],
-    num_constraints: u32,
-}
-
-impl StateLinkageConstraints {
-    pub fn new(circuit: &CompiledCircuitArtifact<BF>) -> Self {
-        let num_constraints = circuit.state_linkage_constraints.len();
-        assert!(num_constraints <= MAX_STATE_LINKAGE_CONSTRAINTS);
-        let mut srcs = [0; MAX_STATE_LINKAGE_CONSTRAINTS];
-        let mut dsts = [0; MAX_STATE_LINKAGE_CONSTRAINTS];
-        for (i, (src, dst)) in circuit.state_linkage_constraints.iter().enumerate() {
-            let ColumnAddress::WitnessSubtree(col) = *src else {
-                panic!()
-            };
-            srcs[i] = col as u32;
-            let ColumnAddress::WitnessSubtree(col) = *dst else {
-                panic!()
-            };
-            dsts[i] = col as u32;
-        }
-        Self {
-            srcs,
-            dsts,
-            num_constraints: num_constraints as u32,
-        }
-    }
-}
-
 const MAX_BOUNDARY_CONSTRAINTS_FIRST_ROW: usize = 8;
 const MAX_BOUNDARY_CONSTRAINTS_ONE_BEFORE_LAST_ROW: usize = 8;
 
@@ -834,12 +800,11 @@ cuda_kernel!(
     delegation_challenges: DelegationChallenges,
     delegation_processing_metadata: DelegationProcessingMetadata,
     delegation_request_metadata: DelegationRequestMetadata,
+    lazy_init_teardown_args_start: u32,
     memory_args_start: u32,
     memory_grand_product_col: u32,
-    lazy_init_teardown_layout: LazyInitTeardownLayout,
+    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     shuffle_ram_accesses: ShuffleRamAccesses,
-    process_batch_ram_access: bool,
-    batched_ram_accesses: BatchedRamAccesses,
     process_registers_and_indirect_access: bool,
     register_and_indirect_accesses: RegisterAndIndirectAccesses,
     range_check_16_layout: RangeCheck16ArgsLayout,
@@ -879,11 +844,11 @@ pub struct Metadata {
     generic_lookup_multiplicities_layout: MultiplicitiesLayout,
     state_linkage_constraints: StateLinkageConstraints,
     boundary_constraints: BoundaryConstraints,
+    lazy_init_teardown_args_start: usize,
     memory_args_start: usize,
     memory_grand_product_col: usize,
-    lazy_init_teardown_layout: LazyInitTeardownLayout,
+    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     shuffle_ram_accesses: ShuffleRamAccesses,
-    batched_ram_accesses: BatchedRamAccesses,
     range_check_16_multiplicities_layout: MultiplicitiesLayout,
     timestamp_range_check_multiplicities_layout: MultiplicitiesLayout,
     delegation_aux_poly_col: usize,
@@ -920,26 +885,22 @@ impl Metadata {
         assert!(num_stage_2_bf_cols <= e4_cols_offset);
         assert!(e4_cols_offset - num_stage_2_bf_cols < 4);
         let alpha_powers_layout =
-            AlphaPowersLayout::new(&circuit, cached_data.num_stage_3_quotient_terms);
+            AlphaPowersLayout::new(circuit, cached_data.num_stage_3_quotient_terms);
         let ProverCachedData {
             trace_len,
             memory_timestamp_high_from_circuit_idx,
-            delegation_type: _,
             memory_argument_challenges,
-            execute_delegation_argument: _,
             delegation_challenges,
             process_shuffle_ram_init,
             shuffle_ram_inits_and_teardowns,
             lazy_init_address_range_check_16,
             handle_delegation_requests,
-            delegation_request_layout: _,
             process_batch_ram_access,
             process_registers_and_indirect_access,
             delegation_processor_layout,
             process_delegations,
             delegation_processing_aux_poly,
             num_set_polys_for_memory_shuffle,
-            offset_for_grand_product_accumulation_poly,
             range_check_16_multiplicities_src,
             range_check_16_multiplicities_dst,
             range_check_16_setup_column,
@@ -953,9 +914,11 @@ impl Metadata {
             range_check_16_width_1_lookups_access_via_expressions,
             timestamp_range_check_width_1_lookups_access_via_expressions,
             timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
-            memory_accumulator_dst_start,
             ..
         } = cached_data.clone();
+        if process_batch_ram_access {
+            panic!("deprecated");
+        }
 
         // println!(
         //     "memory_timestamp_high_from_circuit_idx {}",
@@ -1077,37 +1040,9 @@ impl Metadata {
             .stage_2_layout
             .intermediate_polys_for_memory_argument
             .num_elements();
-        let batched_ram_accesses = if process_batch_ram_access {
-            assert!(!process_shuffle_ram_init);
-            assert_eq!(circuit.memory_layout.shuffle_ram_access_sets.len(), 0);
-            assert!(!process_registers_and_indirect_access);
-            assert_eq!(
-                circuit.memory_layout.register_and_indirect_accesses.len(),
-                0
-            );
-            let batched_ram_accesses = &circuit.memory_layout.batched_ram_accesses;
-            assert!(batched_ram_accesses.len() > 0);
-            let write_timestamp_col = delegation_processor_layout.write_timestamp.start();
-            let abi_mem_offset_high_col = delegation_processor_layout.abi_mem_offset_high.start();
-            assert_eq!(
-                num_memory_args,
-                batched_ram_accesses.len() + 1, /* grand product */
-            );
-            assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-            BatchedRamAccesses::new(
-                &memory_challenges,
-                batched_ram_accesses,
-                write_timestamp_col,
-                abi_mem_offset_high_col,
-            )
-        } else {
-            BatchedRamAccesses::default()
-        };
         let register_and_indirect_accesses = if process_registers_and_indirect_access {
             assert!(!process_shuffle_ram_init);
             assert_eq!(circuit.memory_layout.shuffle_ram_access_sets.len(), 0);
-            assert!(!process_batch_ram_access);
-            assert_eq!(circuit.memory_layout.batched_ram_accesses.len(), 0);
             let register_and_indirect_accesses =
                 &circuit.memory_layout.register_and_indirect_accesses;
             assert!(register_and_indirect_accesses.len() > 0);
@@ -1119,7 +1054,7 @@ impl Metadata {
             }
             assert_eq!(
                 num_memory_args,
-                num_intermediate_polys_for_register_accesses + 1, /* grand product */
+                num_intermediate_polys_for_register_accesses,
             );
             assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
             RegisterAndIndirectAccesses::new(
@@ -1166,17 +1101,17 @@ impl Metadata {
                 FlattenedLookupExpressionsForShuffleRamLayout::default()
             };
         // 32-bit lazy init addresses are treated as a pair of range check 16 cols
-        let lazy_init_teardown_layout = if process_shuffle_ram_init {
-            assert!(circuit.lazy_init_address_aux_vars.is_some());
-            LazyInitTeardownLayout::new(
+        let lazy_init_teardown_layouts = if process_shuffle_ram_init {
+            assert!(circuit.lazy_init_address_aux_vars.len() > 0);
+            LazyInitTeardownLayouts::new(
                 circuit,
                 &lazy_init_address_range_check_16,
                 &shuffle_ram_inits_and_teardowns,
                 &translate_e4_offset,
             )
         } else {
-            assert!(circuit.lazy_init_address_aux_vars.is_none());
-            LazyInitTeardownLayout::default()
+            assert_eq!(circuit.lazy_init_address_aux_vars.len(), 0);
+            LazyInitTeardownLayouts::default()
         };
         // Host work to precompute constants_times_challenges_sum and some helpers that
         // streamline device computation
@@ -1193,15 +1128,6 @@ impl Metadata {
         if process_delegations {
             alpha_offset += 4;
         }
-        if process_batch_ram_access {
-            for i in 0..batched_ram_accesses.num_accesses as usize {
-                if batched_ram_accesses.accesses[i].is_write {
-                    alpha_offset += 6;
-                } else {
-                    alpha_offset += 4;
-                }
-            }
-        }
         if process_registers_and_indirect_access {
             let mut flat_indirect_idx = 0;
             for i in 0..register_and_indirect_accesses.num_register_accesses as usize {
@@ -1211,16 +1137,16 @@ impl Metadata {
                 } else {
                     alpha_offset += 4;
                 }
-                for j in 0..register_and_indirect_accesses.indirect_accesses_per_register_access[i]
+                for _j in 0..register_and_indirect_accesses.indirect_accesses_per_register_access[i]
                 {
                     let indirect_access =
                         &register_and_indirect_accesses.indirect_accesses[flat_indirect_idx];
-                    if indirect_access.is_write {
+                    if indirect_access.has_write {
                         alpha_offset += 6;
                     } else {
                         alpha_offset += 4;
                     }
-                    if j > 0 && indirect_access.address_derivation_carry_bit_num_elements > 0 {
+                    if indirect_access.has_address_derivation_carry_bit {
                         alpha_offset += 1; // address_derivation_carry_bit constraint
                     }
                     flat_indirect_idx += 1;
@@ -1303,7 +1229,7 @@ impl Metadata {
             );
         }
         // lazy init addresses range checks
-        if process_shuffle_ram_init {
+        for _ in 0..lazy_init_teardown_layouts.num_lazy_init_teardown_sets {
             alpha_offset += 1;
             let alpha = h_alphas_for_hardcoded_every_row_except_last[alpha_offset];
             helpers.push(*alpha.clone().mul_assign(&lookup_gamma));
@@ -1503,17 +1429,37 @@ impl Metadata {
                 helpers.push(*alpha.clone().mul_assign(&challenge));
             }
         }
-        let memory_args_start = translate_e4_offset(memory_accumulator_dst_start);
-        if process_shuffle_ram_init {
-            // the initial increment by 6 corresponds to the constraints that
-            // ensure lazy init limbs are zero if "final borrow" is zero
+        let raw_memory_args_start = circuit
+            .stage_2_layout
+            .intermediate_polys_for_memory_argument
+            .start();
+        let memory_args_start = translate_e4_offset(raw_memory_args_start);
+        assert_eq!(
+            circuit
+                .stage_2_layout
+                .intermediate_polys_for_memory_init_teardown
+                .num_elements(),
+            lazy_init_teardown_layouts.num_lazy_init_teardown_sets as usize,
+        );
+        let raw_lazy_init_teardown_args_start = circuit
+            .stage_2_layout
+            .intermediate_polys_for_memory_init_teardown
+            .start();
+        let lazy_init_teardown_args_start = translate_e4_offset(raw_lazy_init_teardown_args_start);
+        // for lazy init padding constraints (limbs are zero if "final borrow" is zero)
+        for _ in 0..lazy_init_teardown_layouts.num_lazy_init_teardown_sets {
             alpha_offset += 6;
+        }
+        // for lazy init memory accumulator contributions
+        for i in 0..lazy_init_teardown_layouts.num_lazy_init_teardown_sets as usize {
             let alpha = h_alphas_for_hardcoded_every_row_except_last[alpha_offset];
             alpha_offset += 1;
             let alpha_times_gamma = *alpha.clone().mul_assign(&memory_challenges.gamma);
-            constants_times_challenges
-                .sum
-                .sub_assign(&alpha_times_gamma);
+            if i == 0 {
+                constants_times_challenges
+                    .sum
+                    .sub_assign(&alpha_times_gamma);
+            }
             let mc = &memory_challenges;
             helpers.push(*alpha.clone().mul_assign(&mc.address_low_challenge));
             helpers.push(*alpha.clone().mul_assign(&mc.address_high_challenge));
@@ -1576,23 +1522,6 @@ impl Metadata {
                     .mul_assign_by_base(&decompression_factor_inv),
             );
         }
-        for i in 0..batched_ram_accesses.num_accesses as usize {
-            let access = &batched_ram_accesses.accesses[i];
-            let alpha = h_alphas_for_hardcoded_every_row_except_last[alpha_offset];
-            alpha_offset += 1;
-            let mc = &memory_challenges;
-            let mut constant = access.gamma_plus_address_low_contribution;
-            constant.mul_assign(&alpha);
-            if i == 0 {
-                constants_times_challenges.sum.sub_assign(&constant);
-            }
-            helpers.push(*alpha.clone().mul_assign(&mc.address_high_challenge));
-            helpers.push(*alpha.clone().mul_assign(&mc.value_low_challenge));
-            helpers.push(*alpha.clone().mul_assign(&mc.value_high_challenge));
-            helpers.push(*alpha.clone().mul_assign(&mc.timestamp_low_challenge));
-            helpers.push(*alpha.clone().mul_assign(&mc.timestamp_high_challenge));
-            helpers.push(*constant.mul_assign_by_base(&decompression_factor_inv));
-        }
         let mut flat_indirect_idx = 0;
         for i in 0..register_and_indirect_accesses.num_register_accesses as usize {
             let register_access = &register_and_indirect_accesses.register_accesses[i];
@@ -1615,9 +1544,15 @@ impl Metadata {
                 flat_indirect_idx += 1;
                 let alpha = h_alphas_for_hardcoded_every_row_except_last[alpha_offset];
                 alpha_offset += 1;
-                // we expect offset == 0 for the first indirect access and offset > 0 for others
-                assert_eq!(j == 0, indirect_access.offset == 0);
-                let offset = BF::from_u64_unchecked(indirect_access.offset as u64);
+                // sanity checks based on our known circuit geometries
+                if indirect_access.has_write {
+                    if j == 0 {
+                        assert_eq!(j == 0, indirect_access.offset_constant == 0);
+                    }
+                } else {
+                    assert_eq!(j == 0, indirect_access.offset_constant == 0);
+                }
+                let offset = BF::from_u64_unchecked(indirect_access.offset_constant as u64);
                 let mut constant = *mc
                     .address_low_challenge
                     .clone()
@@ -1633,11 +1568,7 @@ impl Metadata {
                 helpers.push(*constant.mul_assign_by_base(&decompression_factor_inv));
             }
         }
-        assert_eq!(
-            offset_for_grand_product_accumulation_poly,
-            num_memory_args - 1
-        );
-        let memory_grand_product_col = memory_args_start + num_memory_args - 1;
+        let memory_grand_product_col = get_grand_product_col(circuit);
         alpha_offset += 1;
         assert_eq!(
             alpha_offset,
@@ -1647,7 +1578,7 @@ impl Metadata {
         alpha_offset = 0;
         let state_linkage_constraints = StateLinkageConstraints::new(circuit);
         alpha_offset += state_linkage_constraints.num_constraints as usize;
-        if process_shuffle_ram_init {
+        for _ in 0..lazy_init_teardown_layouts.num_lazy_init_teardown_sets {
             // alphas for "next lazy init timestamp > current lazy init timestamp"
             alpha_offset += 2;
         }
@@ -1658,9 +1589,9 @@ impl Metadata {
             external_values,
             public_inputs,
             process_shuffle_ram_init,
-            lazy_init_teardown_layout.init_address_start as usize,
-            lazy_init_teardown_layout.teardown_value_start as usize,
-            lazy_init_teardown_layout.teardown_timestamp_start as usize,
+            lazy_init_teardown_layouts.layouts[0].init_address_start as usize,
+            lazy_init_teardown_layouts.layouts[0].teardown_value_start as usize,
+            lazy_init_teardown_layouts.layouts[0].teardown_timestamp_start as usize,
             h_alphas_for_first_row,
             h_alphas_for_one_before_last_row,
             helpers,
@@ -1783,11 +1714,11 @@ impl Metadata {
             generic_lookup_multiplicities_layout,
             state_linkage_constraints,
             boundary_constraints,
+            lazy_init_teardown_args_start,
             memory_args_start,
             memory_grand_product_col,
-            lazy_init_teardown_layout,
+            lazy_init_teardown_layouts,
             shuffle_ram_accesses,
-            batched_ram_accesses,
             range_check_16_multiplicities_layout,
             timestamp_range_check_multiplicities_layout,
             delegation_aux_poly_col,
@@ -1838,7 +1769,6 @@ pub fn compute_stage_3_composition_quotient_on_coset(
         trace_len,
         memory_timestamp_high_from_circuit_idx,
         handle_delegation_requests,
-        process_batch_ram_access,
         process_registers_and_indirect_access,
         process_delegations,
         ..
@@ -1855,11 +1785,11 @@ pub fn compute_stage_3_composition_quotient_on_coset(
         generic_lookup_multiplicities_layout,
         state_linkage_constraints,
         boundary_constraints,
+        lazy_init_teardown_args_start,
         memory_args_start,
         memory_grand_product_col,
-        lazy_init_teardown_layout,
+        lazy_init_teardown_layouts,
         shuffle_ram_accesses,
-        batched_ram_accesses,
         range_check_16_multiplicities_layout,
         timestamp_range_check_multiplicities_layout,
         delegation_aux_poly_col,
@@ -1960,12 +1890,11 @@ pub fn compute_stage_3_composition_quotient_on_coset(
         delegation_challenges,
         delegation_processing_metadata,
         delegation_request_metadata,
+        lazy_init_teardown_args_start as u32,
         memory_args_start as u32,
         memory_grand_product_col as u32,
-        lazy_init_teardown_layout,
+        lazy_init_teardown_layouts,
         shuffle_ram_accesses,
-        process_batch_ram_access,
-        batched_ram_accesses,
         process_registers_and_indirect_access,
         register_and_indirect_accesses,
         range_check_16_layout,
@@ -2004,7 +1933,7 @@ mod tests {
     use era_cudart::memory::{memory_copy_async, DeviceAllocation};
     use fft::materialize_powers_serial_starting_with_one;
     use field::Field;
-    use prover::tests::{run_basic_delegation_test_impl, GpuComparisonArgs};
+    use prover::tests::{run_basic_delegation_test_impl, run_keccak_test_impl, GpuComparisonArgs};
     use serial_test::serial;
 
     type BF = BaseField;
@@ -2040,7 +1969,7 @@ mod tests {
 
         let cached_data = ProverCachedData::new(
             &circuit,
-            &external_values,
+            &external_values.challenges,
             domain_size,
             circuit_sequence,
             delegation_processing_type,
@@ -2233,19 +2162,23 @@ mod tests {
         }
     }
 
-    // #[test]
-    // #[serial]
-    // fn test_stage_3_for_basic_circuit() {
-    //     let ctx = Context::create(12).unwrap();
-    //     run_basic_test_impl(Some(Box::new(comparison_hook)));
-    //     ctx.destroy().unwrap();
-    // }
+    #[test]
+    #[serial]
+    fn test_stage_3_for_main_and_blake() {
+        let ctx = Context::create(12).unwrap();
+        run_basic_delegation_test_impl(
+            Some(Box::new(comparison_hook)),
+            Some(Box::new(comparison_hook)),
+        );
+        ctx.destroy().unwrap();
+    }
 
     #[test]
     #[serial]
-    fn test_stage_3_for_delegation_circuit() {
+    #[ignore]
+    fn test_stage_3_for_main_and_keccak() {
         let ctx = Context::create(12).unwrap();
-        run_basic_delegation_test_impl(
+        run_keccak_test_impl(
             Some(Box::new(comparison_hook)),
             Some(Box::new(comparison_hook)),
         );

@@ -8,6 +8,7 @@ use risc_v_simulator::abstractions::non_determinism::QuasiUARTSource;
 use risc_v_simulator::cycle::MachineConfig;
 use serde::{Deserialize, Serialize};
 use trace_and_split::FinalRegisterValue;
+use verifier_common::cs::definitions::ShuffleRamInitAndTeardownLayout;
 use verifier_common::cs::utils::split_timestamp;
 use verifier_common::prover::definitions::MerkleTreeCap;
 use verifier_common::prover::fft::GoodAllocator;
@@ -87,7 +88,8 @@ pub fn universal_circuit_no_delegation_verifier_vk() -> VerificationKey {
 pub fn get_padded_binary(binary: &[u8]) -> Vec<u32> {
     let mut bytecode = binary
         .as_chunks::<4>()
-        .0.into_iter()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
     trace_and_split::setups::pad_bytecode_for_proving(&mut bytecode);
@@ -179,7 +181,10 @@ impl ProgramProof {
         // basic ones
         responses.push(self.base_layer_proofs.len() as u32);
         for proof in self.base_layer_proofs.iter() {
-            let t = verifier_common::proof_flattener::flatten_full_proof(proof, true);
+            let t = verifier_common::proof_flattener::flatten_full_proof(
+                proof,
+                &[ShuffleRamInitAndTeardownLayout::empty()],
+            );
             responses.extend(t);
         }
         // then for every allowed delegation circuit
@@ -187,7 +192,7 @@ impl ProgramProof {
             if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
                 responses.push(proofs.len() as u32);
                 for proof in proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, false);
+                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, &[]);
                     responses.extend(t);
                 }
             } else {
@@ -260,7 +265,8 @@ pub fn find_binary_exit_point(binary: &[u8]) -> u32 {
 
     let binary: Vec<u32> = binary
         .as_chunks::<4>()
-        .0.into_iter()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
 

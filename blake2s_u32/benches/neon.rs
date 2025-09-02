@@ -10,7 +10,11 @@ fn naive(crit: &mut Criterion) {
     crit.bench_function("Naive impl reduced rounds", |b| {
         b.iter(|| {
             hasher.reset();
-            for chunk in data.as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>().0.into_iter() {
+            for chunk in data
+                .as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+                .0
+                .into_iter()
+            {
                 hasher.absorb::<true>(&chunk);
             }
         });
@@ -19,7 +23,11 @@ fn naive(crit: &mut Criterion) {
     crit.bench_function("Naive impl full rounds", |b| {
         b.iter(|| {
             hasher.reset();
-            for chunk in data.as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>().0.into_iter() {
+            for chunk in data
+                .as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+                .0
+                .into_iter()
+            {
                 hasher.absorb::<false>(&chunk);
             }
         });
@@ -34,7 +42,11 @@ fn neon(crit: &mut Criterion) {
     crit.bench_function("Neon impl reduced rounds", |b| {
         b.iter(|| {
             hasher.reset();
-            for chunk in data.as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>().0.into_iter() {
+            for chunk in data
+                .as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+                .0
+                .into_iter()
+            {
                 hasher.absorb::<true>(&chunk);
             }
         });
@@ -43,7 +55,11 @@ fn neon(crit: &mut Criterion) {
     crit.bench_function("Neon impl full rounds", |b| {
         b.iter(|| {
             hasher.reset();
-            for chunk in data.as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>().0.into_iter() {
+            for chunk in data
+                .as_chunks::<BLAKE2S_BLOCK_SIZE_U32_WORDS>()
+                .0
+                .into_iter()
+            {
                 hasher.absorb::<false>(&chunk);
             }
         });
