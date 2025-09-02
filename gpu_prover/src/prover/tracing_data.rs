@@ -152,6 +152,11 @@ impl<'a, C: ProverContext> TracingDataTransfer<'a, C> {
                         &mut d_trace.indirect_writes,
                         context,
                     )?;
+                    self.transfer.schedule(
+                        h_witness.indirect_offset_variables.clone(),
+                        &mut d_trace.indirect_offset_variables,
+                        context,
+                    )?;
                 }
             },
         }

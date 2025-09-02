@@ -114,6 +114,60 @@ fn test_prove_hashed_fibonacci() -> CudaResult<()> {
 }
 
 #[test]
+fn test_prove_keccak_simple() -> CudaResult<()> {
+    let instant = std::time::Instant::now();
+    MemPoolProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
+    let mut prover_context_config = ProverContextConfig::default();
+    prover_context_config.allocation_block_log_size = 22;
+    let prover_context = MemPoolProverContext::new(&prover_context_config)?;
+    println!("prover_context created in {:?}", instant.elapsed());
+
+    let instant = std::time::Instant::now();
+
+    let worker = Worker::new();
+
+    let mut binary = vec![];
+    std::fs::File::open("../prover/app_keccak_simple.bin")
+        .unwrap()
+        .read_to_end(&mut binary)
+        .unwrap();
+
+    let expected_final_pc = find_binary_exit_point(&binary);
+    println!(
+        "Expected final PC for base program is 0x{:08x}",
+        expected_final_pc
+    );
+
+    let binary = get_padded_binary(&binary);
+    let non_determinism_source = QuasiUARTSource::new_with_reads(vec![1 << 16, 1 << 14]);
+    let main_circuit_precomputations = setups::get_main_riscv_circuit_setup(&binary, &worker);
+    // let _end_params = compute_end_parameters(expected_final_pc, &main_circuit_precomputations);
+    let delegation_precomputations = setups::all_delegation_circuits_precomputations(&worker);
+
+    println!("precomputations created in {:?}", instant.elapsed());
+
+    let (main_proofs, delegation_proofs, _register_values) =
+        prove_image_execution_for_machine_with_gpu_tracers(
+            10,
+            &binary,
+            non_determinism_source,
+            &main_circuit_precomputations,
+            &delegation_precomputations,
+            &prover_context,
+            &worker,
+        )?;
+
+    let total_delegation_proofs: usize = delegation_proofs.iter().map(|(_, x)| x.len()).sum();
+
+    println!(
+        "Created {} basic proofs and {} delegation proofs.",
+        main_proofs.len(),
+        total_delegation_proofs
+    );
+    Ok(())
+}
+
+#[test]
 fn bench_prove_hashed_fibonacci() -> CudaResult<()> {
     let instant = std::time::Instant::now();
     MemPoolProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
