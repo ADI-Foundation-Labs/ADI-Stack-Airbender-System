@@ -14,6 +14,7 @@ use prover::field::*;
 use prover::prover_stages::SetupPrecomputations;
 use prover::tracers::delegation::bigint_with_control_factory_fn;
 use prover::tracers::delegation::blake2_with_control_factory_fn;
+use prover::tracers::delegation::keccak_special5_factory_fn;
 use prover::tracers::oracles::delegation_oracle::DelegationCircuitOracle;
 use prover::tracers::oracles::main_risc_v_circuit::MainRiscVOracle;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
@@ -123,6 +124,16 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                         bigint_with_control_factory_fn(
                             bigint_with_control::DELEGATION_TYPE_ID as u16,
                             bigint_with_control::NUM_DELEGATION_CYCLES,
+                        )
+                    })
+                        as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
+                ),
+                (
+                    keccak_special5::DELEGATION_TYPE_ID as u16,
+                    Box::new(|| {
+                        keccak_special5_factory_fn(
+                            keccak_special5::DELEGATION_TYPE_ID as u16,
+                            keccak_special5::NUM_DELEGATION_CYCLES,
                         )
                     })
                         as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
