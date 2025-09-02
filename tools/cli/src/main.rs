@@ -468,7 +468,11 @@ fn verify_proof(proof_path: &String) {
     oracle_data.extend(
         verifier_common::proof_flattener::flatten_proof_for_skeleton(
             &proof,
-            shuffle_ram_inits_and_teardowns,
+            if shuffle_ram_inits_and_teardowns {
+                1
+            } else {
+                0
+            },
         ),
     );
     for query in proof.queries.iter() {
@@ -508,14 +512,14 @@ fn flatten_file(input_file: &String, output_file: &String) {
     let proof: Proof = deserialize_from_file(input_file);
     //let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
     //        deserialize_from_file("../../prover/delegation_layout");
-    let shuffle_ram_inits_and_teardowns = true;
+    let shuffle_ram_inits_and_teardowns_len = 1;
 
     let mut data = vec![VerifierCircuitsIdentifiers::RiscV as u32];
     // FIXME: this should detect the type of the proof.
     data.extend(
         verifier_common::proof_flattener::flatten_proof_for_skeleton(
             &proof,
-            shuffle_ram_inits_and_teardowns,
+            shuffle_ram_inits_and_teardowns_len,
         ),
     );
 

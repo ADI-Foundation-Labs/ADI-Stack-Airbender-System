@@ -134,6 +134,9 @@ impl AllocationsTracker {
         len: usize,
         placement: AllocationPlacement,
     ) -> Result<NonNull<u8>, AllocError> {
+        if len == 0 {
+            return Ok(self.ptrs[0]);
+        }
         let result = match placement {
             AllocationPlacement::BestFit => self.alloc_best_fit(len),
             AllocationPlacement::Bottom => self.alloc_bottom(len),
@@ -147,7 +150,10 @@ impl AllocationsTracker {
     }
 
     pub fn free(&mut self, mut ptr: NonNull<u8>, mut len: usize) {
-        assert_ne!(len, 0, "attempt to free zero-length allocation");
+        if len == 0 {
+            assert_eq!(ptr, self.ptrs[0]);
+            return;
+        }
         self.used_mem_current -= len;
         unsafe {
             let idx = match self.ptrs.binary_search(&ptr) {

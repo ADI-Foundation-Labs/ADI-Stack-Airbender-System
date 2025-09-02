@@ -1,6 +1,6 @@
 use fft::GoodAllocator;
 use prover::tracers::delegation::{
-    bigint_with_control_factory_fn, blake2_with_control_factory_fn, DelegationWitness,
+    bigint_with_control_factory_fn, blake2_with_control_factory_fn, DelegationWitness, keccak_special5
 };
 use setups::{
     bigint_with_control, blake2_with_compression, final_reduced_risc_v_machine,
@@ -179,6 +179,7 @@ impl MainCircuitType {
 pub enum DelegationCircuitType {
     BigIntWithControl = bigint_with_control::DELEGATION_TYPE_ID,
     Blake2WithCompression = blake2_with_compression::DELEGATION_TYPE_ID,
+    KeccakSpecial5 = keccak_special5::DELEGATION_TYPE_ID,
 }
 
 impl DelegationCircuitType {
@@ -241,6 +242,13 @@ impl DelegationCircuitType {
                     allocator,
                 )
             },
+            DelegationCircuitType::KeccakSpecial5 => |allocator| {
+                keccak_special5_factory_fn(
+                    keccak_special5::DELEGATION_TYPE_ID as u16,
+                    keccak_special5::NUM_DELEGATION_CYCLES,
+                    allocator,
+                )
+            },
         }
     }
 }
@@ -253,6 +261,7 @@ impl From<u16> for DelegationCircuitType {
             blake2_with_compression::DELEGATION_TYPE_ID => {
                 DelegationCircuitType::Blake2WithCompression
             }
+            keccak_special5::DELEGATION_TYPE_ID => DelegationCircuitType::KeccakSpecial5,
             _ => panic!("unknown delegation type {}", delegation_type),
         }
     }

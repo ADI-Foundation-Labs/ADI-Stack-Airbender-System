@@ -90,7 +90,7 @@ cuda_kernel!(
     range_check_16_layout: RangeCheck16ArgsLayout,
     expressions: FlattenedLookupExpressionsLayout,
     expressions_for_shuffle_ram: FlattenedLookupExpressionsForShuffleRamLayout,
-    lazy_init_teardown_layout: LazyInitTeardownLayout,
+    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     setup_cols: PtrAndStride<BF>,
     witness_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
@@ -130,26 +130,14 @@ cuda_kernel!(
     setup_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
-    lazy_init_teardown_layout: LazyInitTeardownLayout,
+    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     memory_timestamp_high_from_circuit_idx: BF,
+    lazy_init_teardown_args_start: u32,
     memory_args_start: u32,
     log_n: u32,
 );
 
 shuffle_ram_memory_args!(ab_shuffle_ram_memory_args_kernel);
-
-cuda_kernel!(
-    BatchedRamMemoryArgs,
-    batched_ram_memory_args,
-    memory_challenges: MemoryChallenges,
-    batched_ram_accesses: BatchedRamAccesses,
-    memory_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    memory_args_start: u32,
-    log_n: u32,
-);
-
-batched_ram_memory_args!(ab_batched_ram_memory_args_kernel);
 
 cuda_kernel!(
     RegisterAndIndirectMemoryArgs,
@@ -286,6 +274,10 @@ pub fn compute_stage_2_args_on_main_domain(
         .stage_2_layout
         .intermediate_polys_for_memory_argument
         .num_elements();
+    let num_lazy_init_teardown_sets = circuit
+        .stage_2_layout
+        .intermediate_polys_for_memory_init_teardown
+        .num_elements();
     let num_stage_2_bf_cols = circuit.stage_2_layout.num_base_field_polys();
     let num_stage_2_e4_cols = circuit.stage_2_layout.num_ext4_field_polys();
     assert_eq!(setup_cols.rows(), n);
@@ -378,23 +370,25 @@ pub fn compute_stage_2_args_on_main_domain(
         range_check_16_width_1_lookups_access_via_expressions,
         timestamp_range_check_width_1_lookups_access_via_expressions,
         timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
-        memory_accumulator_dst_start,
         ..
     } = cached_data.clone();
+    if process_batch_ram_access {
+        panic!("deprecated");
+    }
     assert_eq!(trace_len, n);
     assert_eq!(
         circuit
             .witness_layout
             .multiplicities_columns_for_range_check_16
             .num_elements(),
-        1
+        1,
     );
     assert_eq!(
         circuit
             .witness_layout
             .multiplicities_columns_for_timestamp_range_check
             .num_elements(),
-        1
+        1,
     );
     let num_generic_multiplicities_cols = circuit
         .setup_layout
@@ -412,6 +406,23 @@ pub fn compute_stage_2_args_on_main_domain(
         generic_lookup_setup_columns_start,
         circuit.setup_layout.generic_lookup_setup_columns.start()
     );
+    assert_eq!(process_shuffle_ram_init, num_lazy_init_teardown_sets > 0);
+    assert_eq!(
+        num_lazy_init_teardown_sets,
+        shuffle_ram_inits_and_teardowns.len()
+    );
+    assert_eq!(
+        num_lazy_init_teardown_sets,
+        lazy_init_address_range_check_16
+            .base_field_oracles
+            .num_elements()
+    );
+    assert_eq!(
+        num_lazy_init_teardown_sets,
+        lazy_init_address_range_check_16
+            .ext_4_field_oracles
+            .num_elements()
+    );
     // overall size checks
     let mut num_expected_bf_args = 0;
     // we assume (and assert later) that the numbers of range check 8 and 16 cols are both even.
@@ -421,7 +432,10 @@ pub fn compute_stage_2_args_on_main_domain(
     num_expected_bf_args +=
         timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram.len();
     if process_shuffle_ram_init {
-        num_expected_bf_args += 1; // lazy init address cols are treated as 1 pair of range check 16
+        // lazy init address cols are treated as 1 pair of range check 16
+        num_expected_bf_args += lazy_init_address_range_check_16
+            .base_field_oracles
+            .num_elements();
     }
     assert_eq!(num_stage_2_bf_cols, num_expected_bf_args);
     let mut num_expected_e4_args = 0;
@@ -430,10 +444,16 @@ pub fn compute_stage_2_args_on_main_domain(
     num_expected_e4_args += num_generic_multiplicities_cols;
     num_expected_e4_args += num_expected_bf_args; // each bf arg should have a corresponding e4 arg
     num_expected_e4_args += num_generic_args;
-    num_expected_e4_args += num_memory_args;
     if handle_delegation_requests || process_delegations {
         num_expected_e4_args += 1; // delegation_processing_aux_poly
     }
+    if process_shuffle_ram_init {
+        num_expected_e4_args += lazy_init_address_range_check_16
+            .ext_4_field_oracles
+            .num_elements();
+    }
+    num_expected_e4_args += num_memory_args;
+    num_expected_e4_args += 1; // memory grand product
     assert_eq!(num_stage_2_e4_cols, num_expected_e4_args);
     let setup_cols = setup_cols.as_ptr_and_stride();
     let witness_cols = witness_cols.as_ptr_and_stride();
@@ -618,15 +638,15 @@ pub fn compute_stage_2_args_on_main_domain(
             FlattenedLookupExpressionsForShuffleRamLayout::default()
         };
     // 32-bit lazy init addresses are treated as a pair of range check 16 cols
-    let lazy_init_teardown_layout = if process_shuffle_ram_init {
-        LazyInitTeardownLayout::new(
+    let lazy_init_teardown_layouts = if process_shuffle_ram_init {
+        LazyInitTeardownLayouts::new(
             circuit,
             &lazy_init_address_range_check_16,
             &shuffle_ram_inits_and_teardowns,
             &translate_e4_offset,
         )
     } else {
-        LazyInitTeardownLayout::default()
+        LazyInitTeardownLayouts::default()
     };
     // Width-3 lookups
     let generic_args_start = if num_generic_args > 0 {
@@ -642,7 +662,7 @@ pub fn compute_stage_2_args_on_main_domain(
     let generic_lookups_args_to_table_entries_map =
         generic_lookups_args_to_table_entries_map.as_ptr_and_stride();
     let d_stage_2_bf_cols = stage_2_bf_cols.as_mut_ptr_and_stride();
-    let lazy_init_teardown_layout_copy = lazy_init_teardown_layout.clone();
+    let lazy_init_teardown_layouts_copy = lazy_init_teardown_layouts.clone();
     let block_dim = 128;
     let grid_dim = (n as u32 + 127) / 128;
     let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
@@ -650,7 +670,7 @@ pub fn compute_stage_2_args_on_main_domain(
         range_check_16_layout,
         expressions_layout,
         expressions_for_shuffle_ram_layout,
-        lazy_init_teardown_layout_copy,
+        lazy_init_teardown_layouts_copy,
         setup_cols,
         witness_cols,
         memory_cols,
@@ -674,20 +694,18 @@ pub fn compute_stage_2_args_on_main_domain(
         .stage_2_layout
         .intermediate_polys_for_memory_argument
         .start();
-    assert_eq!(raw_memory_args_start, memory_accumulator_dst_start);
     let memory_args_start = translate_e4_offset(raw_memory_args_start);
+    let raw_lazy_init_teardown_args_start = circuit
+        .stage_2_layout
+        .intermediate_polys_for_memory_init_teardown
+        .start();
+    let lazy_init_teardown_args_start = translate_e4_offset(raw_lazy_init_teardown_args_start);
     if process_shuffle_ram_init {
-        assert!(!process_batch_ram_access);
         assert!(!process_registers_and_indirect_access);
-        assert_eq!(lazy_init_teardown_layout.process_shuffle_ram_init, true);
-        assert!(!process_batch_ram_access);
-        assert_eq!(circuit.memory_layout.batched_ram_accesses.len(), 0);
+        assert_eq!(lazy_init_teardown_layouts.process_shuffle_ram_init, true);
         let write_timestamp_in_setup_start = circuit.setup_layout.timestamp_setup_columns.start();
         let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
-        assert_eq!(
-            num_memory_args,
-            1/* lazy init/teardown */ + shuffle_ram_access_sets.len() + 1, /* grand product */
-        );
+        assert_eq!(num_memory_args, shuffle_ram_access_sets.len());
         assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
         let shuffle_ram_accesses =
             ShuffleRamAccesses::new(shuffle_ram_access_sets, write_timestamp_in_setup_start);
@@ -700,23 +718,16 @@ pub fn compute_stage_2_args_on_main_domain(
             setup_cols,
             memory_cols,
             d_stage_2_e4_cols,
-            lazy_init_teardown_layout,
+            lazy_init_teardown_layouts,
             memory_timestamp_high_from_circuit_idx,
+            lazy_init_teardown_args_start as u32,
             memory_args_start as u32,
             log_n as u32,
         );
         ShuffleRamMemoryArgsFunction(ab_shuffle_ram_memory_args_kernel).launch(&config, &args)?;
     } else {
-        assert!(process_batch_ram_access || process_registers_and_indirect_access);
-        // In principle we can rig batch ram access and registers_and_indirect_access
-        // to coexist in the same circuit. However, our current circuits use either one
-        // or the other, so we expect only one to be true.
-        // TODO: If we ever do want to run them in the same circuit,
-        // consider combining their two kernels to use the same write timestamp contribution
-        // (but make sure batched ram accesses and indirect accesses do not overlap)
-        assert!(process_batch_ram_access != process_registers_and_indirect_access);
+        assert!(process_registers_and_indirect_access);
         assert_eq!(circuit.memory_layout.shuffle_ram_access_sets.len(), 0);
-        let num_batched_ram_accesses = circuit.memory_layout.batched_ram_accesses.len();
         let mut num_intermediate_polys_for_register_accesses = 0;
         for el in circuit.memory_layout.register_and_indirect_accesses.iter() {
             num_intermediate_polys_for_register_accesses += 1;
@@ -724,33 +735,9 @@ pub fn compute_stage_2_args_on_main_domain(
         }
         assert_eq!(
             num_memory_args,
-            num_batched_ram_accesses + num_intermediate_polys_for_register_accesses + 1, /* grand product */
+            num_intermediate_polys_for_register_accesses,
         );
         assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-    }
-    if process_batch_ram_access {
-        let batched_ram_accesses = &circuit.memory_layout.batched_ram_accesses;
-        assert!(batched_ram_accesses.len() > 0);
-        let write_timestamp_col = delegation_processor_layout.write_timestamp.start();
-        let abi_mem_offset_high_col = delegation_processor_layout.abi_mem_offset_high.start();
-        let batched_ram_accesses = BatchedRamAccesses::new(
-            &memory_challenges,
-            batched_ram_accesses,
-            write_timestamp_col,
-            abi_mem_offset_high_col,
-        );
-        let block_dim = 128;
-        let grid_dim = (n as u32 + 127) / 128;
-        let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-        let args = BatchedRamMemoryArgsArguments::new(
-            memory_challenges.clone(),
-            batched_ram_accesses,
-            memory_cols,
-            d_stage_2_e4_cols,
-            memory_args_start as u32,
-            log_n as u32,
-        );
-        BatchedRamMemoryArgsFunction(ab_batched_ram_memory_args_kernel).launch(&config, &args)?;
     }
     if process_registers_and_indirect_access {
         let register_and_indirect_accesses = &circuit.memory_layout.register_and_indirect_accesses;
@@ -888,16 +875,31 @@ pub fn compute_stage_2_args_on_main_domain(
     // last memory arg is the grand product of the second-to-last memory arg
     // Args are vectorized E4, so I need to transpose the second-to-last col
     // to a col of E4 tuples, do the grand product, then transpose back.
-    assert!(num_memory_args >= 2); // weird if this is not the case
+    let grand_product_offset_in_e4_cols = get_grand_product_col(circuit);
+    // TODO: double-check that the following is actually the grand product input
+    // for unrolled circuits
+    let last_memory_arg_offset_in_e4_cols = memory_args_start + num_memory_args - 1;
+    assert!(grand_product_offset_in_e4_cols > last_memory_arg_offset_in_e4_cols);
+    // TODO: this assert in particular is not necessary for correctness.
+    // It's a sanity check for non-unrolled circuits and a reminder to double-check
+    // the layout for unrolled circuits.
+    assert_eq!(
+        grand_product_offset_in_e4_cols - 1,
+        last_memory_arg_offset_in_e4_cols
+    );
     let stride = stage_2_e4_cols.stride();
     let offset = stage_2_e4_cols.offset();
-    let second_to_last_slice_start = 4 * (memory_args_start + num_memory_args - 2) * stride;
-    let (_, slice) = stage_2_e4_cols
+    let last_memory_arg_slice_start = 4 * last_memory_arg_offset_in_e4_cols * stride;
+    let (_, rest) = stage_2_e4_cols
         .slice_mut()
-        .split_at_mut(second_to_last_slice_start);
-    let (second_to_last_slice, last_slice) = slice.split_at_mut(4 * stride);
-    let second_to_last_col = DeviceMatrixChunk::new(second_to_last_slice, stride, offset, n);
-    let mut last_col = DeviceMatrixChunkMut::new(last_slice, stride, offset, n);
+        .split_at_mut(last_memory_arg_slice_start);
+    let (last_memory_arg_slice, rest) = rest.split_at_mut(4 * stride);
+    let grand_product_slice_start_in_rest =
+        4 * (grand_product_offset_in_e4_cols - last_memory_arg_offset_in_e4_cols - 1);
+    let (_, rest) = rest.split_at_mut(grand_product_slice_start_in_rest);
+    let (grand_product_slice, _) = rest.split_at_mut(4 * stride);
+    let last_memory_arg = DeviceMatrixChunk::new(last_memory_arg_slice, stride, offset, n);
+    let mut grand_product = DeviceMatrixChunkMut::new(grand_product_slice, stride, offset, n);
     // Repurposes aggregated_entry_inv scratch space, which should have
     // an underlying allocation of size >= 2 * n E4 elements
     // I think 2 size-n scratch arrays is the best we can do, keeping in mind that device scan
@@ -908,15 +910,9 @@ pub fn compute_stage_2_args_on_main_domain(
         scratch_for_aggregated_entry_invs.split_at_mut(n);
     let (grand_product_e4_scratch_slice, _) = grand_product_e4_scratch_slice.split_at_mut(n);
     let transposed_scratch_slice = unsafe { transposed_scratch_slice.transmute_mut::<BF>() };
-    let mut second_to_last_col_transposed = DeviceMatrixMut::new(transposed_scratch_slice, 4);
-    transpose(
-        &second_to_last_col,
-        &mut second_to_last_col_transposed,
-        stream,
-    )?;
+    let mut last_memory_arg_transposed = DeviceMatrixMut::new(transposed_scratch_slice, 4);
+    transpose(&last_memory_arg, &mut last_memory_arg_transposed, stream)?;
     let transposed_scratch_slice = unsafe { transposed_scratch_slice.transmute_mut::<E4>() };
-    let grand_product_e4_scratch_slice =
-        unsafe { grand_product_e4_scratch_slice.transmute_mut::<E4>() };
     scan(
         ScanOperation::Product,
         false,
@@ -928,7 +924,7 @@ pub fn compute_stage_2_args_on_main_domain(
     let grand_product_e4_scratch_slice =
         unsafe { grand_product_e4_scratch_slice.transmute_mut::<BF>() };
     let grand_product_transposed = DeviceMatrix::new(grand_product_e4_scratch_slice, 4);
-    transpose(&grand_product_transposed, &mut last_col, stream)
+    transpose(&grand_product_transposed, &mut grand_product, stream)
 }
 
 #[cfg(test)]
@@ -939,7 +935,7 @@ mod tests {
 
     use era_cudart::memory::{memory_copy_async, DeviceAllocation};
     use field::Field;
-    use prover::tests::{run_basic_delegation_test_impl, GpuComparisonArgs};
+    use prover::tests::{run_basic_delegation_test_impl, run_keccak_test_impl, GpuComparisonArgs};
     use serial_test::serial;
 
     type BF = BaseField;
@@ -968,7 +964,7 @@ mod tests {
         let domain_size = 1 << log_n;
         let cached_data = ProverCachedData::new(
             &circuit,
-            &external_values,
+            &external_values.challenges,
             domain_size,
             circuit_sequence,
             delegation_processing_type,
@@ -982,6 +978,10 @@ mod tests {
         let num_witness_cols = circuit.witness_layout.total_width;
         let num_memory_cols = circuit.memory_layout.total_width;
         let num_trace_cols = num_witness_cols + num_memory_cols;
+        println!(
+            "num_witness_cols {} num_memory_cols {}",
+            num_witness_cols, num_memory_cols
+        );
         let num_stage_2_cols = circuit.stage_2_layout.total_width;
         let num_generic_args = circuit
             .stage_2_layout
@@ -1175,14 +1175,22 @@ mod tests {
             translate_e4_offset(args_metadata.ext_4_field_oracles.start());
         // collect locations of lazy init address args
         let lazy_init_lookup_set = cached_data.lazy_init_address_range_check_16;
-        let (lazy_init_bf_arg_col, lazy_init_e4_arg_col) = if cached_data.process_shuffle_ram_init {
-            (
-                lazy_init_lookup_set.base_field_oracles.start(),
-                translate_e4_offset(lazy_init_lookup_set.ext_4_field_oracles.start()),
-            )
-        } else {
-            (0, 0)
-        };
+        assert_eq!(
+            lazy_init_lookup_set.base_field_oracles.num_elements(),
+            lazy_init_lookup_set.ext_4_field_oracles.num_elements(),
+        );
+        let (lazy_init_bf_args_start, lazy_init_e4_args_start, num_lazy_init_teardown_sets) =
+            if cached_data.process_shuffle_ram_init {
+                (
+                    lazy_init_lookup_set.base_field_oracles.start(),
+                    translate_e4_offset(lazy_init_lookup_set.ext_4_field_oracles.start()),
+                    lazy_init_lookup_set.base_field_oracles.num_elements(),
+                )
+            } else {
+                assert_eq!(lazy_init_lookup_set.base_field_oracles.num_elements(), 0);
+                assert_eq!(lazy_init_lookup_set.ext_4_field_oracles.num_elements(), 0);
+                (0, 0, 0)
+            };
         // collect locations of generic args
         let raw_col = circuit
             .stage_2_layout
@@ -1214,9 +1222,22 @@ mod tests {
         // collect locations of memory args
         let raw_col = circuit
             .stage_2_layout
+            .intermediate_polys_for_memory_init_teardown
+            .start();
+        assert_eq!(
+            num_lazy_init_teardown_sets,
+            circuit
+                .stage_2_layout
+                .intermediate_polys_for_memory_init_teardown
+                .num_elements(),
+        );
+        let lazy_init_teardown_args_start = translate_e4_offset(raw_col);
+        let raw_col = circuit
+            .stage_2_layout
             .intermediate_polys_for_memory_argument
             .start();
         let memory_args_start = translate_e4_offset(raw_col);
+        let grand_product_col = get_grand_product_col(circuit);
         let h_stage_2_bf_cols = &h_stage_2_cols[0..num_stage_2_bf_cols * domain_size];
         let start = e4_cols_offset * domain_size;
         let end = start + 4 * num_stage_2_e4_cols * domain_size;
@@ -1230,61 +1251,59 @@ mod tests {
             let mut stage_2_trace_view = prover_data.stage_2_result.ldes[domain_index]
                 .trace
                 .row_view(range.clone());
+            println!(
+                "memory_args_start {} num_memory_args {}",
+                memory_args_start, num_memory_args
+            );
             for i in 0..domain_size {
                 let stage_2_trace_view_row = stage_2_trace_view.current_row_ref();
+                let src_bf = stage_2_trace_view_row.as_ptr();
+                let src_e4 = stage_2_trace_view_row
+                    .as_ptr()
+                    .add(circuit.stage_2_layout.ext4_polys_offset)
+                    .cast::<E4>();
+                assert!(src_e4.is_aligned());
                 // range check 16 comparisons
-                let src = stage_2_trace_view_row.as_ptr();
                 let start = range_check_16_bf_args_start;
                 let end = start + range_check_16_num_bf_args;
                 for j in start..end {
                     assert_eq!(
                         h_stage_2_bf_cols[i + j * domain_size],
-                        src.add(j).read(),
+                        src_bf.add(j).read(),
                         "range check 16 bf failed at row {} col {}",
                         i,
                         j,
                     );
                 }
-                let src = stage_2_trace_view_row
-                    .as_ptr()
-                    .add(circuit.stage_2_layout.ext4_polys_offset)
-                    .cast::<E4>();
-                assert!(src.is_aligned());
                 let start = range_check_16_e4_args_start;
                 let end = start + range_check_16_num_e4_args;
                 for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "range check 16 e4 failed at row {} col {}",
                         i,
                         j,
                     );
                 }
                 // timestamp range check comparisons
-                let src = stage_2_trace_view_row.as_ptr();
                 let start = timestamp_range_check_bf_args_start;
                 let end = start + timestamp_range_check_num_bf_args;
                 for j in start..end {
                     assert_eq!(
                         h_stage_2_bf_cols[i + j * domain_size],
-                        src.add(j).read(),
+                        src_bf.add(j).read(),
                         "timestamp range check bf failed at row {} col {}",
                         i,
                         j,
                     );
                 }
-                let src = stage_2_trace_view_row
-                    .as_ptr()
-                    .add(circuit.stage_2_layout.ext4_polys_offset)
-                    .cast::<E4>();
-                assert!(src.is_aligned());
                 let start = timestamp_range_check_e4_args_start;
                 let end = start + timestamp_range_check_num_e4_args;
                 for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "timestamp range check e4 failed at row {} col {}",
                         i,
                         j,
@@ -1292,24 +1311,22 @@ mod tests {
                 }
                 // Comparisons for 32-bit lazy init address args,
                 // (treated as an extra pair of range check 16 args)
-                if cached_data.process_shuffle_ram_init {
-                    let src = stage_2_trace_view_row.as_ptr();
-                    let j = lazy_init_bf_arg_col;
+                let start = lazy_init_bf_args_start;
+                let end = lazy_init_bf_args_start + num_lazy_init_teardown_sets;
+                for j in start..end {
                     assert_eq!(
                         h_stage_2_bf_cols[i + j * domain_size],
-                        src.add(j).read(),
+                        src_bf.add(j).read(),
                         "lazy init address bf failed at row {}",
                         i,
                     );
-                    let src = stage_2_trace_view_row
-                        .as_ptr()
-                        .add(circuit.stage_2_layout.ext4_polys_offset)
-                        .cast::<E4>();
-                    assert!(src.is_aligned());
-                    let j = lazy_init_e4_arg_col;
+                }
+                let start = lazy_init_e4_args_start;
+                let end = lazy_init_e4_args_start + num_lazy_init_teardown_sets;
+                for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "lazy init address e4 failed at row {}",
                         i,
                     );
@@ -1320,7 +1337,7 @@ mod tests {
                 for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "generic e4 failed at row {} col {}",
                         i,
                         j,
@@ -1332,7 +1349,7 @@ mod tests {
                 for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "multiplicities args e4 failed at row {} col {}",
                         i,
                         j,
@@ -1343,9 +1360,24 @@ mod tests {
                     let j = delegation_aux_poly_col;
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "delegation aux poly failed at row {}",
                         i,
+                    );
+                }
+                // shuffle ram init/teardown comparison
+                let start = lazy_init_teardown_args_start;
+                let end = lazy_init_teardown_args_start + num_lazy_init_teardown_sets;
+                if i == 0 {
+                    println!("start {} end {}", start, end);
+                }
+                for j in start..end {
+                    assert_eq!(
+                        get_vectorized_e4_val(i, j),
+                        src_e4.add(j).read(),
+                        "init/teardown e4 failed at row {} col {}",
+                        i,
+                        j,
                     );
                 }
                 // memory arg comparisons
@@ -1354,30 +1386,43 @@ mod tests {
                 for j in start..end {
                     assert_eq!(
                         get_vectorized_e4_val(i, j),
-                        src.add(j).read(),
+                        src_e4.add(j).read(),
                         "memory e4 failed at row {} col {}",
                         i,
                         j,
                     );
                 }
+                // memory grand product comparison
+                let j = grand_product_col;
+                assert_eq!(
+                    get_vectorized_e4_val(i, j),
+                    src_e4.add(j).read(),
+                    "grand product e4 failed at row {} col {}",
+                    i,
+                    j,
+                );
                 stage_2_trace_view.advance_row();
             }
         }
     }
 
-    // #[test]
-    // #[serial]
-    // fn test_stage_2_for_basic_circuit() {
-    //     let ctx = Context::create(12).unwrap();
-    //     run_basic_test_impl(Some(Box::new(comparison_hook)));
-    //     ctx.destroy().unwrap();
-    // }
+    #[test]
+    #[serial]
+    fn test_stage_2_for_main_and_blake() {
+        let ctx = DeviceContext::create(12).unwrap();
+        run_basic_delegation_test_impl(
+            Some(Box::new(comparison_hook)),
+            Some(Box::new(comparison_hook)),
+        );
+        ctx.destroy().unwrap();
+    }
 
     #[test]
     #[serial]
-    fn test_stage_2_for_delegation_circuit() {
+    #[ignore]
+    fn test_stage_2_for_main_and_keccak() {
         let ctx = DeviceContext::create(12).unwrap();
-        run_basic_delegation_test_impl(
+        run_keccak_test_impl(
             Some(Box::new(comparison_hook)),
             Some(Box::new(comparison_hook)),
         );

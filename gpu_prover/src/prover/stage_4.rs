@@ -6,8 +6,7 @@ use super::stage_2::StageTwoOutput;
 use super::stage_3::StageThreeOutput;
 use super::stage_4_kernels::{
     compute_deep_denom_at_z_on_main_domain, compute_deep_quotient_on_main_domain,
-    get_e4_scratch_count_for_deep_quotiening, get_metadata, ChallengesTimesEvals,
-    NonWitnessChallengesAtZOmega,
+    prepare_challenges_for_gpu_transfer, ChallengesTimesEvalsSums,
 };
 use super::trace_holder::{extend_trace, TraceHolder};
 use super::{BF, E2, E4};
@@ -208,36 +207,29 @@ impl StageFourOutput {
             false,
             &stream,
         )?;
-        let e4_scratch_elems = get_e4_scratch_count_for_deep_quotiening();
-        let mut h_e4_scratch = unsafe { context.alloc_host_uninit_slice(e4_scratch_elems) };
+        let num_terms_at_z = circuit.num_openings_at_z();
+        let num_terms_at_z_omega = circuit.num_openings_at_z_omega();
+        let num_terms_total = num_terms_at_z + num_terms_at_z_omega;
+        let mut h_e4_scratch = unsafe { context.alloc_host_uninit_slice(num_terms_total) };
         let h_e4_scratch_accessor = h_e4_scratch.get_mut_accessor();
         let mut h_challenges_times_evals =
-            unsafe { context.alloc_host_uninit::<ChallengesTimesEvals>() };
+            unsafe { context.alloc_host_uninit::<ChallengesTimesEvalsSums>() };
         let h_challenges_times_evals_accessor = h_challenges_times_evals.get_mut_accessor();
-        let mut h_non_witness_challenges_at_z_omega =
-            unsafe { context.alloc_host_uninit::<NonWitnessChallengesAtZOmega>() };
-        let h_non_witness_challenges_at_z_omega_accessor =
-            h_non_witness_challenges_at_z_omega.get_mut_accessor();
-        let cached_data_clone = cached_data.clone();
         let omega_inv = PRECOMPUTATIONS.omegas_inv[log_domain_size as usize];
-        let circuit_clone = circuit.clone();
-        let get_challenges = move || unsafe {
-            let _ = get_metadata(
+        let get_challenges = move || {
+            prepare_challenges_for_gpu_transfer(
                 values_at_z_accessor.get(),
                 *alpha_accessor.get(),
                 omega_inv,
-                &cached_data_clone,
-                &circuit_clone,
+                num_terms_at_z,
+                num_terms_at_z_omega,
                 h_e4_scratch_accessor.get_mut(),
                 h_challenges_times_evals_accessor.get_mut(),
-                h_non_witness_challenges_at_z_omega_accessor.get_mut(),
             );
         };
         callbacks.schedule(get_challenges, stream)?;
-        let mut d_e4_scratch = context.alloc(e4_scratch_elems, AllocationPlacement::BestFit)?;
+        let mut d_e4_scratch = context.alloc(num_terms_total, AllocationPlacement::BestFit)?;
         let mut d_challenges_times_evals = context.alloc(1, AllocationPlacement::BestFit)?;
-        let mut d_non_witness_challenges_at_z_omega =
-            context.alloc(1, AllocationPlacement::BestFit)?;
         memory_copy_async(
             &mut d_e4_scratch,
             unsafe { h_e4_scratch_accessor.get() },
@@ -248,24 +240,8 @@ impl StageFourOutput {
             slice::from_ref(unsafe { h_challenges_times_evals_accessor.get() }),
             stream,
         )?;
-        memory_copy_async(
-            &mut d_non_witness_challenges_at_z_omega,
-            slice::from_ref(unsafe { h_non_witness_challenges_at_z_omega_accessor.get() }),
-            stream,
-        )?;
         let mut d_quotient = DeviceMatrixMut::new(&mut vectorized_ldes[COSET_INDEX], trace_len);
-        let metadata = get_metadata(
-            &vec![E4::ZERO; num_evals],
-            E4::ZERO,
-            omega_inv,
-            &cached_data,
-            &circuit,
-            &mut vec![E4::ZERO; e4_scratch_elems],
-            &mut ChallengesTimesEvals::default(),
-            &mut NonWitnessChallengesAtZOmega::default(),
-        );
         compute_deep_quotient_on_main_domain(
-            metadata,
             &d_setup_cols,
             &d_witness_cols,
             &d_memory_cols,
@@ -274,7 +250,6 @@ impl StageFourOutput {
             &d_denom_at_z,
             &mut d_e4_scratch,
             &d_challenges_times_evals[0],
-            &d_non_witness_challenges_at_z_omega[0],
             &mut d_quotient,
             &cached_data,
             &circuit,

@@ -993,7 +993,7 @@ mod test {
         let fn_ptr = full_statement_verifier::RISC_V_REDUCED_MACHINE_VERIFIER_PTR;
 
         let proof = &proofs.base_layer_proofs[1];
-        let source = flatten_full_proof(proof, true);
+        let source = flatten_full_proof(proof, 1);
 
         // we have a problem with a stack size in debug, so let's cheat
         std::thread::Builder::new()

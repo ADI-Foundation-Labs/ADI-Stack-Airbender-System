@@ -110,9 +110,8 @@ where
         } else if *delegation_type == KECCAK_SPECIAL5_ACCESS_ID {
             let num_requests_per_circuit = circuit.num_requests_per_circuit;
             let delegation_type = *delegation_type as u16;
-            let factory_fn = move || {
-                keccak_special5_factory_fn(delegation_type, num_requests_per_circuit)
-            };
+            let factory_fn =
+                move || keccak_special5_factory_fn(delegation_type, num_requests_per_circuit);
             factories.insert(
                 delegation_type,
                 Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,

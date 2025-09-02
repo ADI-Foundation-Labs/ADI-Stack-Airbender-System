@@ -10,10 +10,9 @@ use cs::definitions::{
     REGISTER_SIZE,
 };
 use cs::one_row_compiler::{
-    BatchedRamAccessColumns, ColumnAddress, CompiledCircuitArtifact,
-    LookupWidth1SourceDestInformation, LookupWidth1SourceDestInformationForExpressions,
-    RegisterOnlyAccessAddress, RegisterOrRamAccessAddress, ShuffleRamAddress,
-    ShuffleRamQueryColumns,
+    ColumnAddress, CompiledCircuitArtifact, LookupWidth1SourceDestInformation,
+    LookupWidth1SourceDestInformationForExpressions, RegisterOnlyAccessAddress,
+    RegisterOrRamAccessAddress, ShuffleRamAddress, ShuffleRamQueryColumns,
 };
 use field::{Field, FieldExtension, PrimeField};
 use prover::definitions::{ExternalDelegationArgumentChallenges, ExternalMemoryArgumentChallenges};
@@ -21,88 +20,8 @@ use prover::prover_stages::cached_data::ProverCachedData;
 
 use super::{BF, E4};
 use std::mem::size_of;
-// TODO: Once we have an overall prove function, consider making a big standalon helper
+// TODO: Once we have an overall prove function, consider making a big standalone helper
 // that creates all args common to stages 2 and 3.
-
-#[derive(Clone, Default)]
-#[repr(C)]
-pub struct LookupChallenges {
-    pub linearization_challenges: [E4; NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1],
-    pub gamma: E4,
-}
-
-impl LookupChallenges {
-    #[allow(dead_code)]
-    pub fn new(challenges: &[E4], gamma: E4) -> Self {
-        // ensures size matches corresponding cuda struct
-        assert_eq!(NUM_LOOKUP_ARGUMENT_KEY_PARTS, 4);
-        assert_eq!(challenges.len(), NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1);
-        let linearization_challenges: [E4; NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1] =
-            std::array::from_fn(|i| challenges[i]);
-        Self {
-            linearization_challenges,
-            gamma,
-        }
-    }
-}
-
-#[derive(Clone)]
-#[repr(C)]
-pub struct RangeCheck16ArgsLayout {
-    pub num_dst_cols: u32,
-    pub src_cols_start: u32,
-    pub bf_args_start: u32,
-    pub e4_args_start: u32,
-    // to be used if num_src_cols is odd, currently not supported on CPU
-    // pub maybe_e4_arg_remainder_col: u32,
-}
-
-impl RangeCheck16ArgsLayout {
-    pub fn new<F: Fn(usize) -> usize>(
-        circuit: &CompiledCircuitArtifact<BF>,
-        range_check_16_width_1_lookups_access: &Vec<LookupWidth1SourceDestInformation>,
-        range_check_16_width_1_lookups_access_via_expressions: &Vec<
-            LookupWidth1SourceDestInformationForExpressions<BF>,
-        >,
-        translate_e4_offset: &F,
-    ) -> Self {
-        let num_src_cols = circuit.witness_layout.range_check_16_columns.num_elements();
-        assert_eq!(num_src_cols % 2, 0);
-        let num_dst_cols = num_src_cols / 2;
-        let src_cols_start = circuit.witness_layout.range_check_16_columns.start();
-        let args_metadata = &circuit.stage_2_layout.intermediate_polys_for_range_check_16;
-        assert_eq!(
-            num_dst_cols + range_check_16_width_1_lookups_access_via_expressions.len(),
-            args_metadata.base_field_oracles.num_elements()
-        );
-        assert_eq!(
-            args_metadata.base_field_oracles.num_elements(),
-            args_metadata.ext_4_field_oracles.num_elements()
-        );
-        let bf_args_start = args_metadata.base_field_oracles.start();
-        let e4_args_start = translate_e4_offset(args_metadata.ext_4_field_oracles.start());
-        // double-check that expected layout is consistent with layout in CachedData
-        assert_eq!(range_check_16_width_1_lookups_access.len(), num_dst_cols);
-        for (i, lookup_set) in range_check_16_width_1_lookups_access.iter().enumerate() {
-            assert_eq!(lookup_set.a_col, src_cols_start + 2 * i);
-            assert_eq!(lookup_set.b_col, src_cols_start + 2 * i + 1);
-            assert_eq!(
-                lookup_set.base_field_quadratic_oracle_col,
-                bf_args_start + i
-            );
-            assert_eq!(
-                translate_e4_offset(lookup_set.ext4_field_inverses_columns_start),
-                e4_args_start + i,
-            );
-        }
-        Self {
-            num_dst_cols: num_dst_cols as u32,
-            src_cols_start: src_cols_start as u32,
-            bf_args_start: bf_args_start as u32,
-            e4_args_start: e4_args_start as u32,
-        }
-    }
-}
 
 #[derive(Clone, Default)]
 #[repr(C)]
@@ -199,6 +118,128 @@ pub fn get_delegation_metadata(
             DelegationRequestMetadata::default(),
             DelegationProcessingMetadata::default(),
         )
+    }
+}
+
+#[derive(Clone, Default)]
+#[repr(C)]
+pub struct LookupChallenges {
+    pub linearization_challenges: [E4; NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1],
+    pub gamma: E4,
+}
+
+impl LookupChallenges {
+    #[allow(dead_code)]
+    pub fn new(challenges: &[E4], gamma: E4) -> Self {
+        // ensures size matches corresponding cuda struct
+        assert_eq!(NUM_LOOKUP_ARGUMENT_KEY_PARTS, 4);
+        assert_eq!(challenges.len(), NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1);
+        let linearization_challenges: [E4; NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1] =
+            std::array::from_fn(|i| challenges[i]);
+        Self {
+            linearization_challenges,
+            gamma,
+        }
+    }
+}
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct RangeCheck16ArgsLayout {
+    pub num_dst_cols: u32,
+    pub src_cols_start: u32,
+    pub bf_args_start: u32,
+    pub e4_args_start: u32,
+    // to be used if num_src_cols is odd, currently not supported on CPU
+    // pub maybe_e4_arg_remainder_col: u32,
+}
+
+impl RangeCheck16ArgsLayout {
+    pub fn new<F: Fn(usize) -> usize>(
+        circuit: &CompiledCircuitArtifact<BF>,
+        range_check_16_width_1_lookups_access: &Vec<LookupWidth1SourceDestInformation>,
+        range_check_16_width_1_lookups_access_via_expressions: &Vec<
+            LookupWidth1SourceDestInformationForExpressions<BF>,
+        >,
+        translate_e4_offset: &F,
+    ) -> Self {
+        let num_src_cols = circuit.witness_layout.range_check_16_columns.num_elements();
+        assert_eq!(num_src_cols % 2, 0);
+        let num_dst_cols = num_src_cols / 2;
+        let src_cols_start = circuit.witness_layout.range_check_16_columns.start();
+        let args_metadata = &circuit.stage_2_layout.intermediate_polys_for_range_check_16;
+        assert_eq!(
+            num_dst_cols + range_check_16_width_1_lookups_access_via_expressions.len(),
+            args_metadata.base_field_oracles.num_elements()
+        );
+        assert_eq!(
+            args_metadata.base_field_oracles.num_elements(),
+            args_metadata.ext_4_field_oracles.num_elements()
+        );
+        let bf_args_start = args_metadata.base_field_oracles.start();
+        let e4_args_start = translate_e4_offset(args_metadata.ext_4_field_oracles.start());
+        // double-check that expected layout is consistent with layout in CachedData
+        assert_eq!(range_check_16_width_1_lookups_access.len(), num_dst_cols);
+        for (i, lookup_set) in range_check_16_width_1_lookups_access.iter().enumerate() {
+            assert_eq!(lookup_set.a_col, src_cols_start + 2 * i);
+            assert_eq!(lookup_set.b_col, src_cols_start + 2 * i + 1);
+            assert_eq!(
+                lookup_set.base_field_quadratic_oracle_col,
+                bf_args_start + i
+            );
+            assert_eq!(
+                translate_e4_offset(lookup_set.ext4_field_inverses_columns_start),
+                e4_args_start + i,
+            );
+        }
+        Self {
+            num_dst_cols: num_dst_cols as u32,
+            src_cols_start: src_cols_start as u32,
+            bf_args_start: bf_args_start as u32,
+            e4_args_start: e4_args_start as u32,
+        }
+    }
+}
+
+const NUM_STATE_LINKAGE_CONSTRAINTS: usize = 2;
+
+#[derive(Clone)]
+#[repr(C)]
+pub(crate) struct StateLinkageConstraints {
+    pub srcs: [u32; NUM_STATE_LINKAGE_CONSTRAINTS],
+    pub dsts: [u32; NUM_STATE_LINKAGE_CONSTRAINTS],
+    pub num_constraints: u32,
+}
+
+impl StateLinkageConstraints {
+    pub fn new(circuit: &CompiledCircuitArtifact<BF>) -> Self {
+        let num_constraints = circuit.state_linkage_constraints.len();
+        if circuit
+            .memory_layout
+            .shuffle_ram_inits_and_teardowns
+            .is_empty()
+        {
+            assert_eq!(num_constraints, 0);
+        } else {
+            assert_eq!(num_constraints, NUM_STATE_LINKAGE_CONSTRAINTS);
+        }
+        let mut srcs = [0; NUM_STATE_LINKAGE_CONSTRAINTS];
+        let mut dsts = [0; NUM_STATE_LINKAGE_CONSTRAINTS];
+        for (i, (src, dst)) in circuit.state_linkage_constraints.iter().enumerate() {
+            let ColumnAddress::WitnessSubtree(col) = *src else {
+                panic!()
+            };
+            srcs[i] = col as u32;
+            let ColumnAddress::WitnessSubtree(col) = *dst else {
+                panic!()
+            };
+            dsts[i] = col as u32;
+        }
+        Self {
+            srcs,
+            dsts,
+            num_constraints: num_constraints as u32,
+        }
     }
 }
 
@@ -498,7 +539,7 @@ impl Default for FlattenedLookupExpressionsForShuffleRamLayout {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[repr(C)]
 pub struct LazyInitTeardownLayout {
     pub init_address_start: u32,
@@ -510,10 +551,19 @@ pub struct LazyInitTeardownLayout {
     pub init_address_final_borrow: u32,
     pub bf_arg_col: u32,
     pub e4_arg_col: u32,
+}
+
+const MAX_LAZY_INIT_TEARDOWN_SETS: usize = 1;
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct LazyInitTeardownLayouts {
+    pub layouts: [LazyInitTeardownLayout; MAX_LAZY_INIT_TEARDOWN_SETS],
+    pub num_lazy_init_teardown_sets: u32,
     pub process_shuffle_ram_init: bool,
 }
 
-impl LazyInitTeardownLayout {
+impl LazyInitTeardownLayouts {
     fn unpack_witness_column_address(column_address: ColumnAddress) -> usize {
         if let ColumnAddress::WitnessSubtree(col) = column_address {
             col
@@ -525,55 +575,76 @@ impl LazyInitTeardownLayout {
     pub fn new<F: Fn(usize) -> usize>(
         circuit: &CompiledCircuitArtifact<BF>,
         lookup_set: &OptimizedOraclesForLookupWidth1,
-        shuffle_ram_inits_and_teardowns: &ShuffleRamInitAndTeardownLayout,
+        shuffle_ram_inits_and_teardowns: &Vec<ShuffleRamInitAndTeardownLayout>,
         translate_e4_offset: &F,
     ) -> Self {
-        let init_address_start = shuffle_ram_inits_and_teardowns
-            .lazy_init_addresses_columns
-            .start();
-        let teardown_value_start = shuffle_ram_inits_and_teardowns
-            .lazy_teardown_values_columns
-            .start();
-        let teardown_timestamp_start = shuffle_ram_inits_and_teardowns
-            .lazy_teardown_timestamps_columns
-            .start();
-        let lazy_init_address_aux_vars = circuit.lazy_init_address_aux_vars.expect("should exist");
-        let ShuffleRamAuxComparisonSet {
-            aux_low_high: [address_aux_low, address_aux_high],
-            intermediate_borrow,
-            final_borrow,
-        } = lazy_init_address_aux_vars;
-        let init_address_aux_low = Self::unpack_witness_column_address(address_aux_low);
-        let init_address_aux_high = Self::unpack_witness_column_address(address_aux_high);
-        let intermediate_borrow = Self::unpack_witness_column_address(intermediate_borrow);
-        let final_borrow = Self::unpack_witness_column_address(final_borrow);
+        let lazy_init_address_aux_vars = &circuit.lazy_init_address_aux_vars;
+        let num_lazy_init_teardown_sets = shuffle_ram_inits_and_teardowns.len();
+        assert!(num_lazy_init_teardown_sets <= MAX_LAZY_INIT_TEARDOWN_SETS);
+        assert_eq!(
+            num_lazy_init_teardown_sets,
+            lazy_init_address_aux_vars.len()
+        );
+        assert_eq!(
+            num_lazy_init_teardown_sets,
+            lookup_set.base_field_oracles.num_elements()
+        );
+        assert_eq!(
+            num_lazy_init_teardown_sets,
+            lookup_set.ext_4_field_oracles.num_elements()
+        );
+        assert_eq!(
+            num_lazy_init_teardown_sets,
+            circuit
+                .stage_2_layout
+                .intermediate_polys_for_memory_init_teardown
+                .num_elements()
+        );
+        let mut layouts = [LazyInitTeardownLayout::default(); MAX_LAZY_INIT_TEARDOWN_SETS];
+        for (i, (init_and_teardown, aux_vars)) in shuffle_ram_inits_and_teardowns
+            .iter()
+            .zip(lazy_init_address_aux_vars.iter())
+            .enumerate()
+        {
+            let init_address_start = init_and_teardown.lazy_init_addresses_columns.start();
+            let teardown_value_start = init_and_teardown.lazy_teardown_values_columns.start();
+            let teardown_timestamp_start =
+                init_and_teardown.lazy_teardown_timestamps_columns.start();
+            let ShuffleRamAuxComparisonSet {
+                aux_low_high: [address_aux_low, address_aux_high],
+                intermediate_borrow,
+                final_borrow,
+            } = aux_vars;
+            let init_address_aux_low = Self::unpack_witness_column_address(*address_aux_low);
+            let init_address_aux_high = Self::unpack_witness_column_address(*address_aux_high);
+            let intermediate_borrow = Self::unpack_witness_column_address(*intermediate_borrow);
+            let final_borrow = Self::unpack_witness_column_address(*final_borrow);
+            layouts[i] = LazyInitTeardownLayout {
+                init_address_start: init_address_start as u32,
+                teardown_value_start: teardown_value_start as u32,
+                teardown_timestamp_start: teardown_timestamp_start as u32,
+                init_address_aux_low: init_address_aux_low as u32,
+                init_address_aux_high: init_address_aux_high as u32,
+                init_address_intermediate_borrow: intermediate_borrow as u32,
+                init_address_final_borrow: final_borrow as u32,
+                bf_arg_col: (lookup_set.base_field_oracles.start() + i) as u32,
+                e4_arg_col: translate_e4_offset(lookup_set.ext_4_field_oracles.start() + 4 * i)
+                    as u32,
+            }
+        }
         Self {
-            init_address_start: init_address_start as u32,
-            teardown_value_start: teardown_value_start as u32,
-            teardown_timestamp_start: teardown_timestamp_start as u32,
-            init_address_aux_low: init_address_aux_low as u32,
-            init_address_aux_high: init_address_aux_high as u32,
-            init_address_intermediate_borrow: intermediate_borrow as u32,
-            init_address_final_borrow: final_borrow as u32,
-            bf_arg_col: lookup_set.base_field_oracles.start() as u32,
-            e4_arg_col: translate_e4_offset(lookup_set.ext_4_field_oracles.start()) as u32,
+            layouts,
+            num_lazy_init_teardown_sets: num_lazy_init_teardown_sets as u32,
             process_shuffle_ram_init: true,
         }
     }
 }
 
-impl Default for LazyInitTeardownLayout {
+impl Default for LazyInitTeardownLayouts {
     fn default() -> Self {
         Self {
-            init_address_start: 0,
-            teardown_value_start: 0,
-            teardown_timestamp_start: 0,
-            init_address_aux_low: 0,
-            init_address_aux_high: 0,
-            init_address_intermediate_borrow: 0,
-            init_address_final_borrow: 0,
-            bf_arg_col: 0,
-            e4_arg_col: 0,
+            layouts: [LazyInitTeardownLayout::default(); MAX_LAZY_INIT_TEARDOWN_SETS],
+            num_lazy_init_teardown_sets: 0,
             process_shuffle_ram_init: false,
         }
     }
@@ -678,94 +749,6 @@ impl Default for ShuffleRamAccesses {
 
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
-pub struct BatchedRamAccess {
-    pub gamma_plus_address_low_contribution: E4,
-    pub read_timestamp_col: u32,
-    pub read_value_col: u32,
-    pub maybe_write_value_col: u32,
-    pub is_write: bool,
-}
-
-pub const MAX_BATCHED_RAM_ACCESSES: usize = 36;
-
-#[derive(Clone)]
-#[repr(C)]
-pub struct BatchedRamAccesses {
-    pub accesses: [BatchedRamAccess; MAX_BATCHED_RAM_ACCESSES],
-    pub num_accesses: u32,
-    pub write_timestamp_col: u32,
-    pub abi_mem_offset_high_col: u32,
-}
-
-impl BatchedRamAccesses {
-    pub fn new(
-        challenges: &MemoryChallenges,
-        batched_ram_accesses: &Vec<BatchedRamAccessColumns>,
-        write_timestamp_col: usize,
-        abi_mem_offset_high_col: usize,
-    ) -> Self {
-        let mut accesses = [BatchedRamAccess::default(); MAX_BATCHED_RAM_ACCESSES];
-        let num_accesses = batched_ram_accesses.len();
-        assert!(num_accesses <= MAX_BATCHED_RAM_ACCESSES);
-        // imitates zksync_airbender's stage2.rs
-        for (i, memory_access_columns) in batched_ram_accesses.iter().enumerate() {
-            let offset = i * std::mem::size_of::<u32>();
-            let address_low = BF::from_u64_unchecked(offset as u64);
-            let mut gamma_plus_address_low_contribution = challenges.address_low_challenge.clone();
-            gamma_plus_address_low_contribution.mul_assign_by_base(&address_low);
-            gamma_plus_address_low_contribution.add_assign(&challenges.gamma);
-            match memory_access_columns {
-                BatchedRamAccessColumns::ReadAccess {
-                    read_timestamp,
-                    read_value,
-                } => {
-                    accesses[i] = BatchedRamAccess {
-                        gamma_plus_address_low_contribution,
-                        read_timestamp_col: read_timestamp.start() as u32,
-                        read_value_col: read_value.start() as u32,
-                        maybe_write_value_col: 0,
-                        is_write: false,
-                    };
-                }
-                BatchedRamAccessColumns::WriteAccess {
-                    read_timestamp,
-                    read_value,
-                    write_value,
-                } => {
-                    accesses[i] = BatchedRamAccess {
-                        gamma_plus_address_low_contribution,
-                        read_timestamp_col: read_timestamp.start() as u32,
-                        read_value_col: read_value.start() as u32,
-                        maybe_write_value_col: write_value.start() as u32,
-                        is_write: true,
-                    };
-                }
-                #[allow(unreachable_patterns)]
-                _ => unreachable!("Unexpected BatchedRamAccessColumns variant"),
-            }
-        }
-        Self {
-            accesses,
-            num_accesses: num_accesses as u32,
-            write_timestamp_col: write_timestamp_col as u32,
-            abi_mem_offset_high_col: abi_mem_offset_high_col as u32,
-        }
-    }
-}
-
-impl Default for BatchedRamAccesses {
-    fn default() -> Self {
-        Self {
-            accesses: [BatchedRamAccess::default(); MAX_BATCHED_RAM_ACCESSES],
-            num_accesses: 0,
-            write_timestamp_col: 0,
-            abi_mem_offset_high_col: 0,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-#[repr(C)]
 pub struct RegisterAccess {
     pub gamma_plus_one_plus_address_low_contribution: E4,
     pub read_timestamp_col: u32,
@@ -777,13 +760,16 @@ pub struct RegisterAccess {
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct IndirectAccess {
-    pub offset: u32,
     pub read_timestamp_col: u32,
     pub read_value_col: u32,
     pub maybe_write_value_col: u32,
-    pub address_derivation_carry_bit_col: u32,
-    pub address_derivation_carry_bit_num_elements: u32,
-    pub is_write: bool,
+    pub maybe_address_derivation_carry_bit_col: u32,
+    pub maybe_variable_dependent_coeff: u32,
+    pub maybe_variable_dependent_col: u32,
+    pub offset_constant: u32,
+    pub has_address_derivation_carry_bit: bool,
+    pub has_variable_dependent: bool,
+    pub has_write: bool,
 }
 
 pub const MAX_REGISTER_ACCESSES: usize = 4;
@@ -812,7 +798,6 @@ impl RegisterAndIndirectAccesses {
         let mut indirect_accesses_per_register_access = [0; MAX_REGISTER_ACCESSES];
         let num_register_accesses = register_and_indirect_accesses.len();
         assert!(num_register_accesses <= MAX_REGISTER_ACCESSES);
-        // imitates zksync_airbender's stage2.rs
         let mut flat_indirect_idx = 0;
         for (i, register_access_columns) in register_and_indirect_accesses.iter().enumerate() {
             match register_access_columns.register_access {
@@ -865,46 +850,104 @@ impl RegisterAndIndirectAccesses {
             {
                 match indirect_access_columns {
                     IndirectAccessColumns::ReadAccess {
-                        offset,
                         read_timestamp,
                         read_value,
                         address_derivation_carry_bit,
-                        ..
+                        variable_dependent,
+                        offset_constant,
                     } => {
-                        assert_eq!(j == 0, *offset == 0);
+                        let has_address_derivation_carry_bit =
+                            address_derivation_carry_bit.num_elements() > 0;
+                        if has_address_derivation_carry_bit {
+                            assert_eq!(address_derivation_carry_bit.num_elements(), 1);
+                        }
+                        // The following asserts are sanity checks
+                        // based on our known circuit geometries
+                        // (slightly different from WriteAccess arm below).
+                        assert_eq!(j == 0, *offset_constant == 0);
+                        if j == 0 {
+                            assert!(!has_address_derivation_carry_bit);
+                        }
+                        if has_address_derivation_carry_bit {
+                            assert!(variable_dependent.is_none());
+                        }
+                        let maybe_address_derivation_carry_bit_col =
+                            if has_address_derivation_carry_bit {
+                                address_derivation_carry_bit.start() as u32
+                            } else {
+                                0
+                            };
+                        let (
+                            maybe_variable_dependent_coeff,
+                            maybe_variable_dependent_col,
+                            has_variable_dependent,
+                        ) = if let Some((coeff, col, _)) = variable_dependent {
+                            (*coeff, col.start() as u32, true)
+                        } else {
+                            (0, 0, false)
+                        };
                         indirect_accesses[flat_indirect_idx] = IndirectAccess {
-                            offset: *offset,
                             read_timestamp_col: read_timestamp.start() as u32,
                             read_value_col: read_value.start() as u32,
                             maybe_write_value_col: 0,
-                            address_derivation_carry_bit_col: address_derivation_carry_bit.start()
-                                as u32,
-                            address_derivation_carry_bit_num_elements: address_derivation_carry_bit
-                                .num_elements()
-                                as u32,
-                            is_write: false,
+                            maybe_address_derivation_carry_bit_col,
+                            maybe_variable_dependent_coeff,
+                            maybe_variable_dependent_col,
+                            offset_constant: *offset_constant,
+                            has_address_derivation_carry_bit,
+                            has_variable_dependent,
+                            has_write: false,
                         };
                     }
                     IndirectAccessColumns::WriteAccess {
-                        offset,
                         read_timestamp,
                         read_value,
                         write_value,
                         address_derivation_carry_bit,
-                        ..
+                        variable_dependent,
+                        offset_constant,
                     } => {
-                        assert_eq!(j == 0, *offset == 0);
+                        let has_address_derivation_carry_bit =
+                            address_derivation_carry_bit.num_elements() > 0;
+                        if has_address_derivation_carry_bit {
+                            assert_eq!(address_derivation_carry_bit.num_elements(), 1);
+                        }
+                        // The following asserts are sanity checks
+                        // based on our known circuit geometries
+                        // (slightly different from ReadAccess arm above).
+                        if j == 0 {
+                            assert!(!has_address_derivation_carry_bit);
+                            assert_eq!(*offset_constant, 0);
+                        }
+                        if has_address_derivation_carry_bit {
+                            assert!(variable_dependent.is_none());
+                        }
+                        let maybe_address_derivation_carry_bit_col =
+                            if has_address_derivation_carry_bit {
+                                address_derivation_carry_bit.start() as u32
+                            } else {
+                                0
+                            };
+                        let (
+                            maybe_variable_dependent_coeff,
+                            maybe_variable_dependent_col,
+                            has_variable_dependent,
+                        ) = if let Some((coeff, col, _)) = variable_dependent {
+                            (*coeff, col.start() as u32, true)
+                        } else {
+                            (0, 0, false)
+                        };
                         indirect_accesses[flat_indirect_idx] = IndirectAccess {
-                            offset: *offset,
                             read_timestamp_col: read_timestamp.start() as u32,
                             read_value_col: read_value.start() as u32,
                             maybe_write_value_col: write_value.start() as u32,
-                            address_derivation_carry_bit_col: address_derivation_carry_bit.start()
-                                as u32,
-                            address_derivation_carry_bit_num_elements: address_derivation_carry_bit
-                                .num_elements()
-                                as u32,
-                            is_write: true,
+                            maybe_address_derivation_carry_bit_col,
+                            maybe_variable_dependent_coeff,
+                            maybe_variable_dependent_col,
+                            offset_constant: *offset_constant,
+                            has_address_derivation_carry_bit,
+                            has_variable_dependent,
+                            has_write: true,
                         };
                     }
                     #[allow(unreachable_patterns)]
@@ -941,10 +984,7 @@ pub fn print_size<T>(name: &str) -> usize {
     size
 }
 
-pub fn get_grand_product_col(
-    circuit: &CompiledCircuitArtifact<BF>,
-    cached_data: &ProverCachedData,
-) -> usize {
+pub fn get_grand_product_col(circuit: &CompiledCircuitArtifact<BF>) -> usize {
     // Get storage offset for grand product in stage_2_e4_cols
     // It's a little tricky because afaict zksync_airbender regards
     // bf and e4 stage 2 cols as chunks of a unified allocation,
@@ -953,13 +993,11 @@ pub fn get_grand_product_col(
     // We need to translate zksync_airbender's offset in its unified allocation
     // to the offset we need in the separate stage_2_e4_cols allocation.
     // The following code is copied from zksync_airbender's stage4.rs:
-    // TODO: this offset may need to change for batched-ram circuits.
     // Now translate zksync_airbender's offset into the offset we need:
     let raw_offset_for_grand_product_poly = circuit
         .stage_2_layout
-        .intermediate_polys_for_memory_argument
-        .get_range(cached_data.offset_for_grand_product_accumulation_poly)
-        .start;
+        .intermediate_poly_for_grand_product
+        .start();
     assert!(raw_offset_for_grand_product_poly >= circuit.stage_2_layout.ext4_polys_offset);
     assert_eq!(raw_offset_for_grand_product_poly % 4, 0);
     assert_eq!(circuit.stage_2_layout.ext4_polys_offset % 4, 0);
@@ -984,7 +1022,5 @@ pub fn print_sizes() {
     print_size::<LazyInitTeardownLayout>("LazyInitTeardownLayout");
     print_size::<ShuffleRamAccess>("ShuffleRamAccess");
     print_size::<ShuffleRamAccesses>("ShuffleRamAccesses");
-    print_size::<BatchedRamAccess>("BatchedRamAccess");
-    print_size::<BatchedRamAccesses>("BatchedRamAccesses");
     print_size::<RegisterAndIndirectAccesses>("RegisterAndIndirectAccesses");
 }

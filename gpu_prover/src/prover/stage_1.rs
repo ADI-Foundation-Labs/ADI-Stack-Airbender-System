@@ -132,7 +132,7 @@ impl StageOneOutput {
                     memory_subtree,
                     &circuit.memory_queries_timestamp_comparison_aux_vars,
                     &setup_and_teardown,
-                    circuit.lazy_init_address_aux_vars.as_ref().unwrap(),
+                    circuit.lazy_init_address_aux_vars.get(0).unwrap(),
                     &trace,
                     timestamp_high_from_circuit_sequence,
                     &mut DeviceMatrixMut::new(memory_holder.get_evaluations_mut(), trace_len),

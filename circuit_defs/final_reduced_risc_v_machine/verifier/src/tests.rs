@@ -41,9 +41,10 @@ fn test_unified_cycle_or_delegation() {
     let mut oracle_data = vec![];
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        &compiled_circuit
+        compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns,
+            .shuffle_ram_inits_and_teardowns
+            .len(),
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
@@ -168,9 +169,10 @@ fn test_full_machine_verifier_out_of_simulator() {
 
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        &compiled_circuit
+        compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns,
+            .shuffle_ram_inits_and_teardowns
+            .len(),
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
@@ -212,9 +214,10 @@ fn test_reduced_machine_verifier_out_of_simulator() {
 
     oracle_data.extend(flatten_proof_for_skeleton(
         &proof,
-        &compiled_circuit
+        compiled_circuit
             .memory_layout
-            .shuffle_ram_inits_and_teardowns,
+            .shuffle_ram_inits_and_teardowns
+            .len(),
     ));
     for query in proof.queries.iter() {
         oracle_data.extend(flatten_query(query));
@@ -261,9 +264,10 @@ fn test_verifier_in_simulator() {
     {
         oracle_data.extend(flatten_proof_for_skeleton(
             &proof,
-            &compiled_circuit
+            compiled_circuit
                 .memory_layout
-                .shuffle_ram_inits_and_teardowns,
+                .shuffle_ram_inits_and_teardowns
+                .len(),
         ));
         for query in proof.queries.iter() {
             oracle_data.extend(flatten_query(query));

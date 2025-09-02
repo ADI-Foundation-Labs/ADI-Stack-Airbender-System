@@ -1,6 +1,7 @@
 #pragma once
 
 #include "column.cuh"
+#include "option.cuh"
 
 using namespace ::airbender::witness::column;
 
@@ -120,19 +121,27 @@ struct RegisterAccessColumns {
   RegisterAccessColumnsPayload payload;
 };
 
-struct IndirectAccessColumnsReadAccess {
+struct IndirectAccessVariableDependency {
   u32 offset;
+  ColumnSet<1> variable;
+  u32 index;
+};
+
+struct IndirectAccessColumnsReadAccess {
   ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM> read_timestamp;
   ColumnSet<REGISTER_SIZE> read_value;
   ColumnSet<1> address_derivation_carry_bit;
+  Option<IndirectAccessVariableDependency> variable_dependent;
+  u32 offset_constant;
 };
 
 struct IndirectAccessColumnsWriteAccess {
-  u32 offset;
   ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM> read_timestamp;
   ColumnSet<REGISTER_SIZE> read_value;
   ColumnSet<REGISTER_SIZE> write_value;
   ColumnSet<1> address_derivation_carry_bit;
+  Option<IndirectAccessVariableDependency> variable_dependent;
+  u32 offset_constant;
 };
 
 enum IndirectAccessColumnsTag : u32 {

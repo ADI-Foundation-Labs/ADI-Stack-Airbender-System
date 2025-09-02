@@ -126,6 +126,60 @@ fn test_prove_hashed_fibonacci() -> CudaResult<()> {
 }
 
 #[test]
+fn test_prove_keccak_simple() -> CudaResult<()> {
+    let instant = std::time::Instant::now();
+    ProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
+    let mut prover_context_config = ProverContextConfig::default();
+    prover_context_config.allocation_block_log_size = 22;
+    let prover_context = ProverContext::new(&prover_context_config)?;
+    println!("prover_context created in {:?}", instant.elapsed());
+
+    let instant = std::time::Instant::now();
+
+    let worker = Worker::new();
+
+    let mut binary = vec![];
+    std::fs::File::open("../prover/app_keccak_simple.bin")
+        .unwrap()
+        .read_to_end(&mut binary)
+        .unwrap();
+
+    let expected_final_pc = find_binary_exit_point(&binary);
+    println!(
+        "Expected final PC for base program is 0x{:08x}",
+        expected_final_pc
+    );
+
+    let binary = get_padded_binary(&binary);
+    let non_determinism_source = QuasiUARTSource::new_with_reads(vec![1 << 16, 1 << 14]);
+    let main_circuit_precomputations = setups::get_main_riscv_circuit_setup(&binary, &worker);
+    // let _end_params = compute_end_parameters(expected_final_pc, &main_circuit_precomputations);
+    let delegation_precomputations = setups::all_delegation_circuits_precomputations(&worker);
+
+    println!("precomputations created in {:?}", instant.elapsed());
+
+    let (main_proofs, delegation_proofs, _register_values) =
+        prove_image_execution_for_machine_with_gpu_tracers(
+            10,
+            &binary,
+            non_determinism_source,
+            &main_circuit_precomputations,
+            &delegation_precomputations,
+            &prover_context,
+            &worker,
+        )?;
+
+    let total_delegation_proofs: usize = delegation_proofs.iter().map(|(_, x)| x.len()).sum();
+
+    println!(
+        "Created {} basic proofs and {} delegation proofs.",
+        main_proofs.len(),
+        total_delegation_proofs
+    );
+    Ok(())
+}
+
+#[test]
 fn bench_prove_hashed_fibonacci() -> CudaResult<()> {
     init_logger();
     let instant = std::time::Instant::now();
@@ -416,19 +470,17 @@ fn prove_image_execution_for_machine_with_gpu_tracers<
         // and prove
         let mut public_inputs = witness_trace.aux_data.first_row_public_inputs.clone();
         public_inputs.extend_from_slice(&witness_trace.aux_data.one_before_last_row_public_inputs);
-
+        let aux_boundary_data = witness_trace.aux_data.aux_boundary_data[0];
         let external_values = ExternalValues {
             challenges: external_challenges,
             aux_boundary_values: AuxArgumentsBoundaryValues {
-                lazy_init_first_row: witness_trace.aux_data.lazy_init_first_row,
-                teardown_value_first_row: witness_trace.aux_data.teardown_value_first_row,
-                teardown_timestamp_first_row: witness_trace.aux_data.teardown_timestamp_first_row,
-                lazy_init_one_before_last_row: witness_trace.aux_data.lazy_init_one_before_last_row,
-                teardown_value_one_before_last_row: witness_trace
-                    .aux_data
+                lazy_init_first_row: aux_boundary_data.lazy_init_first_row,
+                teardown_value_first_row: aux_boundary_data.teardown_value_first_row,
+                teardown_timestamp_first_row: aux_boundary_data.teardown_timestamp_first_row,
+                lazy_init_one_before_last_row: aux_boundary_data.lazy_init_one_before_last_row,
+                teardown_value_one_before_last_row: aux_boundary_data
                     .teardown_value_one_before_last_row,
-                teardown_timestamp_one_before_last_row: witness_trace
-                    .aux_data
+                teardown_timestamp_one_before_last_row: aux_boundary_data
                     .teardown_timestamp_one_before_last_row,
             },
         };

@@ -186,10 +186,7 @@ impl StageTwoOutput {
         let last_row_accessor = last_row.get_mut_accessor();
         memory_copy_async(unsafe { last_row_accessor.get_mut() }, &d_last_row, stream)?;
         self.last_row = Some(last_row);
-        let offset_for_grand_product_poly = layout
-            .intermediate_polys_for_memory_argument
-            .get_range(cached_data.offset_for_grand_product_accumulation_poly)
-            .start;
+        let offset_for_grand_product_poly = layout.intermediate_poly_for_grand_product.start();
         self.offset_for_grand_product_poly = offset_for_grand_product_poly;
         let offset_for_sum_over_delegation_poly =
             if cached_data.handle_delegation_requests || cached_data.process_delegations {

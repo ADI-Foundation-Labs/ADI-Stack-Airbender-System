@@ -23,6 +23,7 @@ cuda_kernel!(GenerateWitnessDelegationKernel,
 
 generate_witness_delegation_kernel!(ab_generate_bigint_with_control_witness_kernel);
 generate_witness_delegation_kernel!(ab_generate_blake2_with_compression_witness_kernel);
+generate_witness_delegation_kernel!(ab_generate_keccak_special5_witness_kernel);
 
 pub fn generate_witness_values_delegation(
     circuit_type: DelegationCircuitType,
@@ -63,6 +64,7 @@ pub fn generate_witness_values_delegation(
         DelegationCircuitType::Blake2WithCompression => {
             ab_generate_blake2_with_compression_witness_kernel
         }
+        DelegationCircuitType::KeccakSpecial5 => ab_generate_keccak_special5_witness_kernel,
     };
     GenerateWitnessDelegationKernelFunction(kernel).launch(&config, &args)
 }

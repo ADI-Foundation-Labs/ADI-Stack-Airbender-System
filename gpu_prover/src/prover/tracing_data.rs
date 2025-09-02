@@ -68,12 +68,18 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
                     context.alloc(trace.indirect_reads.len(), AllocationPlacement::Top)?;
                 let d_indirect_writes =
                     context.alloc(trace.indirect_writes.len(), AllocationPlacement::Top)?;
+                let d_indirect_offset_variables = context.alloc(
+                    trace.indirect_offset_variables.len(),
+                    AllocationPlacement::Top,
+                )?;
                 let trace = DelegationTraceDevice {
                     num_requests: trace.num_requests,
                     num_register_accesses_per_delegation: trace
                         .num_register_accesses_per_delegation,
                     num_indirect_reads_per_delegation: trace.num_indirect_reads_per_delegation,
                     num_indirect_writes_per_delegation: trace.num_indirect_writes_per_delegation,
+                    num_indirect_access_variable_offsets_per_delegation: trace
+                        .num_indirect_access_variable_offsets_per_delegation,
                     base_register_index: trace.base_register_index,
                     delegation_type: trace.delegation_type,
                     indirect_accesses_properties: trace.indirect_accesses_properties.clone(),
@@ -81,6 +87,7 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
                     register_accesses: d_register_accesses,
                     indirect_reads: d_indirect_reads,
                     indirect_writes: d_indirect_writes,
+                    indirect_offset_variables: d_indirect_offset_variables,
                 };
                 TracingDataDevice::Delegation(trace)
             }
@@ -147,6 +154,11 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
                     self.transfer.schedule(
                         h_witness.indirect_writes.clone(),
                         &mut d_trace.indirect_writes,
+                        context,
+                    )?;
+                    self.transfer.schedule(
+                        h_witness.indirect_offset_variables.clone(),
+                        &mut d_trace.indirect_offset_variables,
                         context,
                     )?;
                 }
