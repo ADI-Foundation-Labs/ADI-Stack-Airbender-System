@@ -228,7 +228,7 @@ template <unsigned K, unsigned V> struct TableDriver {
   }
 
   DEVICE_FORCEINLINE u32 and_not(const bf keys[K], bf *values) const {
-    auto op = [](const u32 a, const u32 b) { return a & !b; };
+    auto op = [](const u32 a, const u32 b) { return a & ~b; };
     return binary_op<AndNot, 8>(keys, values, op);
   }
 
@@ -644,7 +644,7 @@ template <unsigned K, unsigned V> struct TableDriver {
     if (V != 0) {
       const u32 a = binary_keys[0];
       const u32 b = binary_keys[1];
-      const u32 result = !a & b;
+      const u32 result = ~a & b;
       values[0] = bf(result);
     }
     return get_absolute_index<AndN>(index);

@@ -65,7 +65,7 @@ pub fn generate_witness_values_delegation<C: ProverContext>(
         DelegationCircuitType::Blake2WithCompression => {
             generate_blake2_with_compression_witness_kernel
         }
-        DelegationCircuitType::KeccakSpecial5 => generate_bigint_with_control_witness_kernel,
+        DelegationCircuitType::KeccakSpecial5 => generate_keccak_special5_witness_kernel,
     };
     GenerateWitnessDelegationKernelFunction(kernel).launch(&config, &args)
 }
