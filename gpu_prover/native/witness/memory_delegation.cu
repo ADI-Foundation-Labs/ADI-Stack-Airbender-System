@@ -141,7 +141,7 @@ DEVICE_FORCEINLINE void process_indirect_memory_accesses(const DelegationMemoryS
         const auto dependency = variable_dependent.value;
         const u16 offset = trace.get_witness_from_placeholder<u16>({DelegationIndirectAccessVariableOffset, dependency.index}, index);
         write_u16_value(dependency.variable, offset, memory);
-        PRINT_U16(M, v, offset);
+        PRINT_U16(M, dependency.variable, offset);
       }
       if (!COMPUTE_WITNESS)
         continue;
