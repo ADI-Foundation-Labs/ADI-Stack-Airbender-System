@@ -126,7 +126,7 @@ pub(crate) unsafe fn accumulate_over_row_for_consistency_check(
     for leaf_el in query.stage_2_leaf[VERIFIER_COMPILED_LAYOUT.stage_2_layout.ext4_polys_offset..]
         .as_chunks::<4>()
         .0
-        .into_iter()
+        .iter()
     {
         let mut t = *powers_of_deep_quotient_challenge.get_unchecked(i);
         let leaf_el = Mersenne31Quartic::from_array_of_base(*leaf_el);
@@ -182,7 +182,7 @@ pub(crate) unsafe fn accumulate_over_row_for_consistency_check(
                     * 4..]
                 .as_chunks::<4>()
                 .0
-                .into_iter()
+                .iter()
                 .next()
                 .unwrap_unchecked();
         let leaf_el = Mersenne31Quartic::from_array_of_base(*leaf_el);
@@ -298,7 +298,7 @@ pub(crate) unsafe fn accumulate_over_row_for_consistency_check_with_fma(
                     * 4..]
                 .as_chunks::<4>()
                 .0
-                .into_iter()
+                .iter()
                 .next()
                 .unwrap_unchecked();
         accumulated_at_z_omega = Mersenne31Quartic::from_array_of_base(*leaf_el);

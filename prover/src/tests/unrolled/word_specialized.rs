@@ -245,8 +245,9 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         if delegation_type == BLAKE2_ROUND_FUNCTION_WITH_EXTENDED_CONTROL_ACCESS_ID {
             let num_requests_per_circuit = (1 << 20) - 1;
             let delegation_type = delegation_type as u16;
-            let factory_fn =
-                move || blake2_with_control_factory_fn(delegation_type, num_requests_per_circuit);
+            let factory_fn = move || {
+                blake2_with_control_factory_fn(delegation_type, num_requests_per_circuit, Global)
+            };
             factories.insert(
                 delegation_type,
                 Box::new(factory_fn) as Box<(dyn Fn() -> DelegationWitness)>,
@@ -254,8 +255,9 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         } else if delegation_type == U256_OPS_WITH_CONTROL_ACCESS_ID {
             let num_requests_per_circuit = (1 << 21) - 1;
             let delegation_type = delegation_type as u16;
-            let factory_fn =
-                move || bigint_with_control_factory_fn(delegation_type, num_requests_per_circuit);
+            let factory_fn = move || {
+                bigint_with_control_factory_fn(delegation_type, num_requests_per_circuit, Global)
+            };
             factories.insert(
                 delegation_type,
                 Box::new(factory_fn) as Box<(dyn Fn() -> DelegationWitness)>,

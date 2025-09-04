@@ -118,7 +118,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         &mut transcript_challenges,
     );
 
-    let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+    let mut it = transcript_challenges.as_chunks::<4>().0.iter();
     let lookup_argument_linearization_challenges: [Mersenne31Quartic;
         NUM_LOOKUP_ARGUMENT_LINEARIZATION_CHALLENGES] = core::array::from_fn(|_| {
         Mersenne31Quartic::from_array_of_base(
@@ -163,11 +163,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             )
         };
 
-    dbg!(lookup_argument_linearization_challenges);
-    dbg!(lookup_argument_gamma);
-    dbg!(decoder_lookup_linearization_challenges);
-    dbg!(decoder_lookup_gamma);
-
     // commit stage 2 artifacts - tree and memory grand product / delegation set accumulator
     Blake2sTranscript::commit_with_seed_using_hasher(
         &mut transcript_hasher,
@@ -186,7 +181,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         &mut transcript_challenges,
     );
 
-    let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+    let mut it = transcript_challenges.as_chunks::<4>().0.iter();
     let quotient_alpha = Mersenne31Quartic::from_array_of_base(
         it.next()
             .unwrap_unchecked()
@@ -198,9 +193,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .unwrap_unchecked()
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
-
-    dbg!(quotient_alpha);
-    dbg!(quotient_beta);
 
     let quotient_alpha = Mersenne31Quartic::ONE;
 
@@ -222,14 +214,12 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         &mut transcript_challenges,
     );
 
-    let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+    let mut it = transcript_challenges.as_chunks::<4>().0.iter();
     let z = Mersenne31Quartic::from_array_of_base(
         it.next()
             .unwrap_unchecked()
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
-
-    dbg!(z);
 
     // commit evaluations
     Blake2sTranscript::commit_with_seed_using_hasher(
@@ -249,7 +239,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         &mut transcript_challenges,
     );
 
-    let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+    let mut it = transcript_challenges.as_chunks::<4>().0.iter();
     let deep_poly_alpha = Mersenne31Quartic::from_array_of_base(
         it.next()
             .unwrap_unchecked()
@@ -278,7 +268,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             &mut transcript_challenges,
         );
 
-        let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+        let mut it = transcript_challenges.as_chunks::<4>().0.iter();
         *challenge = Mersenne31Quartic::from_array_of_base(
             it.next()
                 .unwrap_unchecked()
@@ -304,7 +294,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             &mut transcript_challenges,
         );
 
-        let mut it = transcript_challenges.as_chunks::<4>().0.into_iter();
+        let mut it = transcript_challenges.as_chunks::<4>().0.iter();
         *dst = Mersenne31Quartic::from_array_of_base(
             it.next()
                 .unwrap_unchecked()
@@ -985,7 +975,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .public_inputs
             .as_chunks::<NUM_STATE_ELEMENTS>()
             .0
-            .into_iter();
+            .iter();
         proof_input_dst.input_state_variables = *it.next().unwrap_unchecked();
         proof_input_dst.output_state_variables = *it.next().unwrap_unchecked();
     }

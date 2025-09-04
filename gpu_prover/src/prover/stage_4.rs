@@ -216,7 +216,7 @@ impl StageFourOutput {
             unsafe { context.alloc_host_uninit::<ChallengesTimesEvalsSums>() };
         let h_challenges_times_evals_accessor = h_challenges_times_evals.get_mut_accessor();
         let omega_inv = PRECOMPUTATIONS.omegas_inv[log_domain_size as usize];
-        let get_challenges = move || {
+        let get_challenges = move || unsafe {
             prepare_challenges_for_gpu_transfer(
                 values_at_z_accessor.get(),
                 *alpha_accessor.get(),

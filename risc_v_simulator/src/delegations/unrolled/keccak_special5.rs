@@ -13,8 +13,8 @@ pub fn keccak_special5_over_unrolled_state<M: MemorySource, TR: Tracer<C>, C: Ma
     tracer: &mut TR,
 ) {
     // read registers first
-    let x10 = machine_state.registers[10];
-    let x11 = machine_state.registers[11];
+    let x10 = machine_state.observable.registers[10];
+    let x11 = machine_state.observable.registers[11];
     let control = x10 >> 16;
     assert!(
         x10 % (1 << 16) == 0,

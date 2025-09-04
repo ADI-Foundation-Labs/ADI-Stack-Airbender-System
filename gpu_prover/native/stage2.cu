@@ -160,17 +160,17 @@ EXTERN __launch_bounds__(128, 8) __global__
 
 EXTERN __launch_bounds__(128, 8) __global__
     void ab_lookup_args_kernel(__grid_constant__ const RangeCheckArgsLayout range_check_16_layout,
-                            __grid_constant__ const FlattenedLookupExpressionsLayout expressions,
-                            __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
-                            __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts, matrix_getter<bf, ld_modifier::cs> setup_cols,
-                            matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
-                            vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
-                            vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_timestamp_range_checks,
-                            vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups, const unsigned generic_args_start,
-                            const unsigned num_generic_args, matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
-                            matrix_setter<bf, st_modifier::cs> stage_2_bf_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                            const bf memory_timestamp_high_from_circuit_idx, const unsigned num_stage_2_bf_cols, const unsigned num_stage_2_e4_cols,
-                            const unsigned log_n) {
+                               __grid_constant__ const FlattenedLookupExpressionsLayout expressions,
+                               __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
+                               __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts, matrix_getter<bf, ld_modifier::cs> setup_cols,
+                               matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_timestamp_range_checks,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups, const unsigned generic_args_start,
+                               const unsigned num_generic_args, matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const bf memory_timestamp_high_from_circuit_idx, const unsigned num_stage_2_bf_cols, const unsigned num_stage_2_e4_cols,
+                               const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= n)
@@ -277,11 +277,11 @@ EXTERN __launch_bounds__(128, 8) __global__
 
 EXTERN __launch_bounds__(128, 8) __global__
     void ab_shuffle_ram_memory_args_kernel(__grid_constant__ const MemoryChallenges challenges, __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
-                                        matrix_getter<bf, ld_modifier::cs> setup_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
-                                        vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                        __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
-                                        const bf memory_timestamp_high_from_circuit_idx, const unsigned lazy_init_teardown_args_start,
-                                        const unsigned memory_args_start, const unsigned log_n) {
+                                           matrix_getter<bf, ld_modifier::cs> setup_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
+                                           vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                           __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
+                                           const bf memory_timestamp_high_from_circuit_idx, const unsigned lazy_init_teardown_args_start,
+                                           const unsigned memory_args_start, const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.

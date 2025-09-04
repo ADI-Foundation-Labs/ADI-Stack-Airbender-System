@@ -127,8 +127,9 @@ fn test_prove_hashed_fibonacci() -> CudaResult<()> {
 
 #[test]
 fn test_prove_keccak_simple() -> CudaResult<()> {
+    init_logger();
     let instant = std::time::Instant::now();
-    ProverContext::initialize_host_allocator(4, 1 << 8, 22)?;
+    ProverContext::initialize_global_host_allocator(4, 1 << 8, 22)?;
     let mut prover_context_config = ProverContextConfig::default();
     prover_context_config.allocation_block_log_size = 22;
     let prover_context = ProverContext::new(&prover_context_config)?;

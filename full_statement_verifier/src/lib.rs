@@ -290,7 +290,7 @@ unsafe fn verify_full_statement<const BASE_LAYER: bool>(
         expected_input_pc = end_pc;
 
         // update accumulators
-        memory_grand_product_accumulator.mul_assign(&current.memory_grand_product_accumulator);
+        memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
         if NUM_DELEGATION_CHALLENGES > 0 {
             delegation_set_accumulator.add_assign(&current.delegation_argument_accumulator[0]);
         }
@@ -350,7 +350,7 @@ unsafe fn verify_full_statement<const BASE_LAYER: bool>(
 
                 // update accumulators
                 memory_grand_product_accumulator
-                    .mul_assign(&delegation_proof_output.memory_grand_product_accumulator);
+                    .mul_assign(&delegation_proof_output.grand_product_accumulator);
                 delegation_set_accumulator
                     .sub_assign(&delegation_proof_output.delegation_argument_accumulator[0]);
 

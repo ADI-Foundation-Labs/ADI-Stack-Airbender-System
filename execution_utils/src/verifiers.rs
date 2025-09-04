@@ -66,7 +66,7 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
         for i in 0..metadata.basic_proof_count {
             let proof = &proofs.basic_proofs[i];
             oracle_data
-                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, true));
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, 1));
             for query in proof.queries.iter() {
                 oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
             }
@@ -80,7 +80,7 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
         for i in 0..metadata.reduced_proof_count {
             let proof = &proofs.reduced_proofs[i];
             oracle_data
-                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, true));
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, 1));
             for query in proof.queries.iter() {
                 oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
             }
@@ -94,7 +94,7 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
         for i in 0..metadata.reduced_log_23_proof_count {
             let proof = &proofs.reduced_log_23_proofs[i];
             oracle_data
-                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, true));
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, 1));
             for query in proof.queries.iter() {
                 oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
             }
@@ -107,7 +107,7 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
         for i in 0..metadata.final_proof_count {
             let proof = &proofs.final_proofs[i];
             oracle_data
-                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(proof, true));
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(proof, 1));
             for query in proof.queries.iter() {
                 oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
             }
@@ -133,9 +133,8 @@ pub fn generate_oracle_data_from_metadata_and_proof_list(
 
         for proof in delegation_proofs {
             // Notice, that apply_shuffle is assumed false for delegation proofs.
-            oracle_data.extend(
-                verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, false),
-            );
+            oracle_data
+                .extend(verifier_common::proof_flattener::flatten_proof_for_skeleton(&proof, 0));
             for query in proof.queries.iter() {
                 oracle_data.extend(verifier_common::proof_flattener::flatten_query(query));
             }

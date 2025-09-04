@@ -201,7 +201,7 @@ struct LazyInitTeardownLayout {
 
 constexpr unsigned MAX_LAZY_INIT_TEARDOWN_SETS = 1;
 
-extern "C" struct LazyInitTeardownLayouts {
+struct LazyInitTeardownLayouts {
   const LazyInitTeardownLayout layouts[MAX_LAZY_INIT_TEARDOWN_SETS];
   const unsigned num_lazy_init_teardown_sets;
   const bool process_shuffle_ram_init;

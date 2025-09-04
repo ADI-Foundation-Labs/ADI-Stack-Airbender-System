@@ -13,7 +13,7 @@ use prover::risc_v_simulator::cycle::{
 use prover::trace_holder::RowMajorTrace;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
 use setups::{
-    bigint_with_control, blake2_with_compression, final_reduced_risc_v_machine,
+    bigint_with_control, blake2_with_compression, final_reduced_risc_v_machine, keccak_special5,
     machine_without_signed_mul_div, reduced_risc_v_log_23_machine, reduced_risc_v_machine,
     risc_v_cycles,
 };
@@ -110,6 +110,7 @@ pub fn get_main_circuit_precomputations(
         DefaultTreeConstructor,
     >::get_main_domain_trace(
         &table_driver,
+        &[],
         domain_size,
         &compiled_circuit.setup_layout,
         &worker,
@@ -126,16 +127,21 @@ pub fn get_delegation_circuit_precomputations(
     circuit_type: DelegationCircuitType,
     worker: &Worker,
 ) -> CircuitPrecomputations {
-    let (compiled_circuit, table_driver) = match circuit_type {
+    let (circuit, table_driver) = match circuit_type {
         DelegationCircuitType::BigIntWithControl => (
-            bigint_with_control::get_delegation_circuit().compiled_circuit,
+            bigint_with_control::get_delegation_circuit(),
             bigint_with_control::get_table_driver(),
         ),
         DelegationCircuitType::Blake2WithCompression => (
-            blake2_with_compression::get_delegation_circuit().compiled_circuit,
+            blake2_with_compression::get_delegation_circuit(),
             blake2_with_compression::get_table_driver(),
         ),
+        DelegationCircuitType::KeccakSpecial5 => (
+            keccak_special5::get_delegation_circuit(),
+            keccak_special5::get_table_driver(),
+        ),
     };
+    let compiled_circuit = circuit.compiled_circuit;
     let domain_size = circuit_type.get_domain_size();
     let lde_precomputations = LdePrecomputations::new(
         domain_size,
@@ -149,6 +155,7 @@ pub fn get_delegation_circuit_precomputations(
         DefaultTreeConstructor,
     >::get_main_domain_trace(
         &table_driver,
+        &[],
         domain_size,
         &compiled_circuit.setup_layout,
         &worker,

@@ -1,9 +1,10 @@
 use fft::GoodAllocator;
 use prover::tracers::delegation::{
-    bigint_with_control_factory_fn, blake2_with_control_factory_fn, DelegationWitness, keccak_special5
+    bigint_with_control_factory_fn, blake2_with_control_factory_fn, keccak_special5_factory_fn,
+    DelegationWitness,
 };
-use setups::{
-    bigint_with_control, blake2_with_compression, final_reduced_risc_v_machine,
+use trace_and_split::setups::{
+    bigint_with_control, blake2_with_compression, final_reduced_risc_v_machine, keccak_special5,
     machine_without_signed_mul_div, reduced_risc_v_log_23_machine, reduced_risc_v_machine,
     risc_v_cycles,
 };
@@ -193,6 +194,7 @@ impl DelegationCircuitType {
             DelegationCircuitType::Blake2WithCompression => {
                 blake2_with_compression::NUM_DELEGATION_CYCLES
             }
+            DelegationCircuitType::KeccakSpecial5 => keccak_special5::NUM_DELEGATION_CYCLES,
         }
     }
 
@@ -200,6 +202,7 @@ impl DelegationCircuitType {
         match self {
             DelegationCircuitType::BigIntWithControl => bigint_with_control::DOMAIN_SIZE,
             DelegationCircuitType::Blake2WithCompression => blake2_with_compression::DOMAIN_SIZE,
+            DelegationCircuitType::KeccakSpecial5 => keccak_special5::DOMAIN_SIZE,
         }
     }
 
@@ -207,6 +210,7 @@ impl DelegationCircuitType {
         match self {
             DelegationCircuitType::BigIntWithControl => bigint_with_control::LDE_FACTOR,
             DelegationCircuitType::Blake2WithCompression => blake2_with_compression::LDE_FACTOR,
+            DelegationCircuitType::KeccakSpecial5 => keccak_special5::LDE_FACTOR,
         }
     }
 
@@ -216,6 +220,7 @@ impl DelegationCircuitType {
             DelegationCircuitType::Blake2WithCompression => {
                 blake2_with_compression::LDE_SOURCE_COSETS
             }
+            DelegationCircuitType::KeccakSpecial5 => keccak_special5::LDE_SOURCE_COSETS,
         }
     }
 
@@ -223,6 +228,7 @@ impl DelegationCircuitType {
         match self {
             DelegationCircuitType::BigIntWithControl => bigint_with_control::TREE_CAP_SIZE,
             DelegationCircuitType::Blake2WithCompression => blake2_with_compression::TREE_CAP_SIZE,
+            DelegationCircuitType::KeccakSpecial5 => keccak_special5::TREE_CAP_SIZE,
         }
     }
 

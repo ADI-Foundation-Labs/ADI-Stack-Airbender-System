@@ -23,8 +23,8 @@ pub fn keccak_special5<
     assert_eq!(rs1_value, 0, "aligned memory access is unused");
 
     // read registers first
-    let x10 = state.registers[10];
-    let x11 = state.registers[11];
+    let x10 = state.observable.registers[10];
+    let x11 = state.observable.registers[11];
     let control = x10 >> 16;
     assert!(
         x10 % (1 << 16) == 0,

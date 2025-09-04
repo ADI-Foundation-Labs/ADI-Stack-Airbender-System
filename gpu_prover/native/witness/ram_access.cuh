@@ -4,6 +4,7 @@
 #include "option.cuh"
 
 using namespace ::airbender::witness::column;
+using namespace ::airbender::witness::option;
 
 namespace airbender::witness::ram_access {
 

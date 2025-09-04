@@ -3,6 +3,7 @@
 #include "ops_complex.cuh"
 #include "vectorized.cuh"
 
+using namespace ::airbender::arg_utils;
 using namespace ::airbender::field;
 using namespace ::airbender::memory;
 using namespace ::airbender::ops_complex;
@@ -57,7 +58,7 @@ EXTERN __launch_bounds__(128, 8) __global__
       denom_at_z.set(g, per_elem_factors[i]);
 }
 
- struct ColIdxsToChallengeIdxsMap {
+struct ColIdxsToChallengeIdxsMap {
   const unsigned map[MAX_MEMORY_COLS];
 };
 
@@ -66,22 +67,20 @@ struct ChallengesTimesEvalsSums {
   const e4 at_z_omega_sum_neg;
 };
 
-EXTERN __launch_bounds__(512, 2) __global__
-    void ab_deep_quotient_kernel(matrix_getter<bf, ld_modifier::cs> setup_cols, matrix_getter<bf, ld_modifier::cs> witness_cols,
-                              matrix_getter<bf, ld_modifier::cs> memory_cols, matrix_getter<bf, ld_modifier::cs> stage_2_bf_cols,
-                              vectorized_e4_matrix_getter<ld_modifier::cs> stage_2_e4_cols, vectorized_e4_matrix_getter<ld_modifier::cs> composition_col,
-                              vector_getter<e4, ld_modifier::ca> denom_at_z, vector_getter<e4, ld_modifier::ca> setup_challenges_at_z,
-                              vector_getter<e4, ld_modifier::ca> witness_challenges_at_z, vector_getter<e4, ld_modifier::ca> memory_challenges_at_z,
-                              vector_getter<e4, ld_modifier::ca> stage_2_bf_challenges_at_z, vector_getter<e4, ld_modifier::ca> stage_2_e4_challenges_at_z,
-                              vector_getter<e4, ld_modifier::ca> composition_challenge_at_z,
-                              __grid_constant__ const StateLinkageConstraints state_linkage_constraints,
-                              __grid_constant__ const ColIdxsToChallengeIdxsMap memory_cols_to_challenges_at_z_omega_map,
-                              vector_getter<e4, ld_modifier::ca> witness_challenges_at_z_omega, vector_getter<e4, ld_modifier::ca> memory_challenges_at_z_omega,
-                              vector_getter<e4, ld_modifier::ca> grand_product_challenge_at_z_omega,
-                              const ChallengesTimesEvalsSums *challenges_times_evals_sums_ref, vectorized_e4_matrix_setter<st_modifier::cs> quotient,
-                              const unsigned num_setup_cols, const unsigned num_witness_cols, const unsigned num_memory_cols,
-                              const unsigned num_stage_2_bf_cols, const unsigned num_stage_2_e4_cols, const unsigned stage_2_memory_grand_product_offset,
-                              const unsigned log_n, const bool bit_reversed) {
+EXTERN __launch_bounds__(512, 2) __global__ void ab_deep_quotient_kernel(
+    matrix_getter<bf, ld_modifier::cs> setup_cols, matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
+    matrix_getter<bf, ld_modifier::cs> stage_2_bf_cols, vectorized_e4_matrix_getter<ld_modifier::cs> stage_2_e4_cols,
+    vectorized_e4_matrix_getter<ld_modifier::cs> composition_col, vector_getter<e4, ld_modifier::ca> denom_at_z,
+    vector_getter<e4, ld_modifier::ca> setup_challenges_at_z, vector_getter<e4, ld_modifier::ca> witness_challenges_at_z,
+    vector_getter<e4, ld_modifier::ca> memory_challenges_at_z, vector_getter<e4, ld_modifier::ca> stage_2_bf_challenges_at_z,
+    vector_getter<e4, ld_modifier::ca> stage_2_e4_challenges_at_z, vector_getter<e4, ld_modifier::ca> composition_challenge_at_z,
+    __grid_constant__ const StateLinkageConstraints state_linkage_constraints,
+    __grid_constant__ const ColIdxsToChallengeIdxsMap memory_cols_to_challenges_at_z_omega_map,
+    vector_getter<e4, ld_modifier::ca> witness_challenges_at_z_omega, vector_getter<e4, ld_modifier::ca> memory_challenges_at_z_omega,
+    vector_getter<e4, ld_modifier::ca> grand_product_challenge_at_z_omega, const ChallengesTimesEvalsSums *challenges_times_evals_sums_ref,
+    vectorized_e4_matrix_setter<st_modifier::cs> quotient, const unsigned num_setup_cols, const unsigned num_witness_cols, const unsigned num_memory_cols,
+    const unsigned num_stage_2_bf_cols, const unsigned num_stage_2_e4_cols, const unsigned stage_2_memory_grand_product_offset, const unsigned log_n,
+    const bool bit_reversed) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= n)

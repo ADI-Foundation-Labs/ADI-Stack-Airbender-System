@@ -96,6 +96,7 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                         keccak_special5_factory_fn(
                             keccak_special5::DELEGATION_TYPE_ID as u16,
                             keccak_special5::NUM_DELEGATION_CYCLES,
+                            A::default(),
                         )
                     })
                         as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,

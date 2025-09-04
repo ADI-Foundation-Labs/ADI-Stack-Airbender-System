@@ -77,7 +77,7 @@ impl ProgramProof {
         // basic ones
         responses.push(self.base_layer_proofs.len() as u32);
         for proof in self.base_layer_proofs.iter() {
-            let t = verifier_common::proof_flattener::flatten_full_proof(proof, true);
+            let t = verifier_common::proof_flattener::flatten_full_proof(proof, 1);
             responses.extend(t);
         }
         // then for every allowed delegation circuit
@@ -85,7 +85,7 @@ impl ProgramProof {
             if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
                 responses.push(proofs.len() as u32);
                 for proof in proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, false);
+                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, 0);
                     responses.extend(t);
                 }
             } else {

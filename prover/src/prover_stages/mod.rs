@@ -234,8 +234,13 @@ impl<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor> SetupPrecomputa
         let subtree_cap_size = (1 << optimal_folding.total_caps_size_log2) / lde_factor;
         assert!(subtree_cap_size > 0);
 
-        let mut main_domain_trace =
-            Self::get_main_domain_trace(table_driver, trace_len, setup_layout, worker);
+        let mut main_domain_trace = Self::get_main_domain_trace(
+            table_driver,
+            decoder_table_for_execution_circuit,
+            trace_len,
+            setup_layout,
+            worker,
+        );
 
         // NOTE: we do not use last row of the setup (and in general last of of circuit),
         // and we must adjust it to be c0 == 0
@@ -264,6 +269,8 @@ impl<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor> SetupPrecomputa
 
     pub fn get_main_domain_trace(
         table_driver: &TableDriver<Mersenne31Field>,
+        decoder_table_for_execution_circuit: &[[Mersenne31Field;
+              EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH]],
         trace_len: usize,
         setup_layout: &SetupLayout,
         worker: &Worker,

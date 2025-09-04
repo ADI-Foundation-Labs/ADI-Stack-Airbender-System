@@ -29,6 +29,7 @@ use prover::merkle_trees::MerkleTreeCapVarLength;
 use prover::prover_stages::Proof;
 use prover::risc_v_simulator::abstractions::tracer::{
     RegisterOrIndirectReadData, RegisterOrIndirectReadWriteData,
+    RegisterOrIndirectVariableOffsetData,
 };
 use prover::risc_v_simulator::cycle::{
     IMStandardIsaConfig, IMWithoutSignedMulDivIsaConfig, IWithoutByteAccessIsaConfig,
@@ -159,6 +160,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                     * size_of::<RegisterOrIndirectReadWriteData>()
                 + witness.indirect_reads.capacity() * size_of::<RegisterOrIndirectReadData>()
                 + witness.indirect_writes.capacity() * size_of::<RegisterOrIndirectReadWriteData>()
+                + witness.indirect_offset_variables.capacity()
+                    * size_of::<RegisterOrIndirectVariableOffsetData>()
         }
         let max_setups_and_teardowns_bytes = max_num_cycles * size_of::<LazyInitAndTeardown>();
         let max_cycles_tracing_data_bytes = max_num_cycles * size_of::<SingleCycleTracingData>();
