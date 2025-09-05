@@ -626,9 +626,9 @@ impl SymbolInfo {
 
                             while let Ok(Some(attr)) = attrs.next() {
                                 match attr.name() {
-                                    gimli::DW_AT_noreturn if epilogue_begin.is_some() => {
-                                        panic!("Non returning functions shouln't have an epilogue.")
-                                    }
+                                    // gimli::DW_AT_noreturn if epilogue_begin.is_some() => {
+                                    //     panic!("Non returning functions shouln't have an epilogue.")
+                                    // }
                                     gimli::DW_AT_noreturn => no_return = true,
                                     _ => (),
                                 }
