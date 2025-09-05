@@ -2588,7 +2588,7 @@ pub const ALL_DELEGATION_CIRCUITS_PARAMS: &[(u32, u32, [MerkleTreeCap<64usize>; 
         ],
     ),
     (
-        1001u32,
+        1995u32,
         2097152u32,
         [
             MerkleTreeCap::<64usize> {
