@@ -24,8 +24,8 @@ pub unsafe fn bigint_csr_trigger_delegation(
     unsafe {
         core::arch::asm!(
             "csrrw x0, 0x7CA, x0",
-            in("x10") mut_ptr,
-            in("x11") immut_ptr,
+            in("x10") mut_ptr.addr(),
+            in("x11") immut_ptr.addr(),
             inlateout("x12") mask,
             options(nostack, preserves_flags)
         );
