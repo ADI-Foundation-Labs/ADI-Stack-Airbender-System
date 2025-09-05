@@ -163,11 +163,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             )
         };
 
-    dbg!(lookup_argument_linearization_challenges);
-    dbg!(lookup_argument_gamma);
-    dbg!(decoder_lookup_linearization_challenges);
-    dbg!(decoder_lookup_gamma);
-
     // commit stage 2 artifacts - tree and memory grand product / delegation set accumulator
     Blake2sTranscript::commit_with_seed_using_hasher(
         &mut transcript_hasher,
@@ -199,11 +194,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
 
-    dbg!(quotient_alpha);
-    dbg!(quotient_beta);
-
-    let quotient_alpha = Mersenne31Quartic::ONE;
-
     // commit quotient tree
     Blake2sTranscript::commit_with_seed_using_hasher(
         &mut transcript_hasher,
@@ -228,8 +218,6 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
             .unwrap_unchecked()
             .map(|el| Mersenne31Field::from_nonreduced_u32(el)),
     );
-
-    dbg!(z);
 
     // commit evaluations
     Blake2sTranscript::commit_with_seed_using_hasher(

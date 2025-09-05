@@ -87,7 +87,8 @@ pub fn universal_circuit_no_delegation_verifier_vk() -> VerificationKey {
 pub fn get_padded_binary(binary: &[u8]) -> Vec<u32> {
     let mut bytecode = binary
         .as_chunks::<4>()
-        .0.into_iter()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
     trace_and_split::setups::pad_bytecode_for_proving(&mut bytecode);
@@ -260,7 +261,8 @@ pub fn find_binary_exit_point(binary: &[u8]) -> u32 {
 
     let binary: Vec<u32> = binary
         .as_chunks::<4>()
-        .0.into_iter()
+        .0
+        .into_iter()
         .map(|el| u32::from_le_bytes(*el))
         .collect();
 

@@ -431,7 +431,8 @@ mod test {
         assert!(binary.len() % 4 == 0);
         let binary: Vec<_> = binary
             .as_chunks::<4>()
-            .0.into_iter()
+            .0
+            .into_iter()
             .map(|el| u32::from_le_bytes(*el))
             .collect();
         let unsupported_places =

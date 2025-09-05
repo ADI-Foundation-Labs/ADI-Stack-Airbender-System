@@ -10,6 +10,7 @@ use crate::abstractions::{mem_read, mem_write};
 use crate::cycle::IMStandardIsaConfig;
 use crate::mmu::MMUImplementation;
 use crate::utils::*;
+use common_constants::NON_DETERMINISM_CSR;
 
 #[cfg(feature = "delegation")]
 use crate::delegations;
@@ -20,7 +21,7 @@ use rand::Rng;
 
 pub const NUM_REGISTERS: usize = 32;
 pub const MAX_MEMORY_OPS_PER_CYCLE: u32 = 3;
-pub const NON_DETERMINISM_CSR: u32 = 0x7c0;
+
 pub const MARKER_CSR: u32 = 0x7ff;
 
 // static CSR_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
