@@ -63,16 +63,16 @@ pub extern "C" fn machine_start_trap_rust(_trap_frame: *mut MachineTrapFrame) ->
 
 #[inline(always)]
 fn csr_trigger_delegation(
-    input_a: *const u32,
+    input_a: *mut u32,
     input_b: *const u32,
-    round_mask: *mut u32,
+    round_mask: &mut u32,
 ) {
     unsafe {
         core::arch::asm!(
             "csrrw x0, 0x7ca, x0",
             in("x10") input_a.addr(),
             in("x11") input_b.addr(),
-            inlateout("x12") round_mask,
+            inlateout("x12") *round_mask,
             options(nostack, preserves_flags)
         )
     }
@@ -80,20 +80,20 @@ fn csr_trigger_delegation(
 
 #[repr(C)]
 #[repr(align(32))]
-pub struct U256(pub [u32; 4]);
+pub struct U256(pub [u32; 8]);
 
 
 const MODULUS: u32 = 1_000_000_000;
 
 
 unsafe fn workload() -> ! {
-    let mut a = U256([1, 1, 1, 1]);
-    let b = U256([1, 1, 1, 1]);
+    let mut a = U256([1, 2, 3, 4, 0, 0, 0, 0]);
+    let b = U256([6, 1, 0, 0, 126, 0, 0, 0]);
     let mut round_mask = 1;
-    csr_trigger_delegation( a.0.as_ptr(), b.0.as_ptr(), round_mask );
+    csr_trigger_delegation( a.0.as_mut_ptr(), b.0.as_ptr(), &mut round_mask );
 
 
-    zksync_os_finish_success(&[round_mask, 0, 0, 0, 0, 0, 0, 0]);
+    zksync_os_finish_success(&[a.0[0], a.0[1], a.0[2], a.0[3], a.0[4], a.0[5], a.0[6], a.0[7]]);
 }
 
 #[inline(never)]
