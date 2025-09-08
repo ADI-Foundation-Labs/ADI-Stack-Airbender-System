@@ -58,6 +58,7 @@ members = [
     "circuit_defs/unrolled_circuits/shift_binary_csr",
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
+    "circuit_defs/unrolled_circuits/inits_and_teardowns",
 ]
 
 default-members = [
@@ -101,6 +102,7 @@ default-members = [
     "circuit_defs/unrolled_circuits/shift_binary_csr",
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
+    "circuit_defs/unrolled_circuits/inits_and_teardowns",
 ]
 
 [workspace.package]

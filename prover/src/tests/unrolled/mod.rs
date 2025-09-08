@@ -229,31 +229,6 @@ pub mod subword_load_store {
     }
 }
 
-pub mod inits_and_teardowns {
-    use crate::unrolled::MemoryCircuitOracle;
-    use crate::witness_evaluator::SimpleWitnessProxy;
-    use crate::witness_proxy::WitnessProxy;
-    use ::cs::cs::placeholder::Placeholder;
-    use ::cs::cs::witness_placer::WitnessTypeSet;
-    use ::cs::cs::witness_placer::{
-        WitnessComputationCore, WitnessComputationalField, WitnessComputationalI32,
-        WitnessComputationalInteger, WitnessComputationalU16, WitnessComputationalU32,
-        WitnessComputationalU8, WitnessMask,
-    };
-    use ::field::Mersenne31Field;
-    use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
-
-    include!("../../../inits_and_teardowns_preprocessed_generated.rs");
-
-    pub fn witness_eval_fn<'a, 'b>(proxy: &'_ mut SimpleWitnessProxy<'a, MemoryCircuitOracle<'b>>) {
-        let fn_ptr = evaluate_witness_fn::<
-            ScalarWitnessTypeSet<Mersenne31Field, true>,
-            SimpleWitnessProxy<'a, MemoryCircuitOracle<'b>>,
-        >;
-        (fn_ptr)(proxy);
-    }
-}
-
 const SUPPORT_SIGNED: bool = false;
 const INITIAL_PC: u32 = 0;
 
