@@ -587,6 +587,12 @@ fn apply_shift_binop_csrrw<F: PrimeField, CS: Circuit<F>>(
         // That constraint is enough - if it's csrrw and we execute delegation - then it's 0,
         // if it's CSRRW and it's not a delegation - we will use oracle value directly, because it's the only case
 
+        // And to avoid prover's possibility to set delegation to 1 when we actually do not execute on this row, check
+        // that we indeed execute
+        cs.add_constraint(
+            Term::from(execute_delegation) * (Term::from(1u64) - Term::from(inputs.execute)),
+        );
+
         let delegation_request = DelegatedComputationRequest {
             execute: execute_delegation,
             delegation_type,
