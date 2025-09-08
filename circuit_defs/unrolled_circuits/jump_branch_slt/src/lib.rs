@@ -4,18 +4,16 @@
 
 use std::alloc::Allocator;
 
-use common_constants::circuit_families::ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+use common_constants::circuit_families::JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
 use prover::cs::cs::oracle::ExecutorFamilyDecoderData;
-use prover::cs::machine::ops::unrolled::DecoderTableEntry;
-use prover::cs::machine::ops::unrolled::{
-    compile_unrolled_circuit_state_transition, AddSubLuiAuipcMopDecoder,
-};
+use prover::cs::machine::ops::unrolled::compile_unrolled_circuit_state_transition;
+use prover::cs::machine::ops::unrolled::{DecoderTableEntry, JumpSltBranchDecoder};
 use prover::cs::*;
 use prover::field::Mersenne31Field;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
 
-pub const FAMILY_IDX: u8 = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+pub const FAMILY_IDX: u8 = JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
 pub const TRACE_LEN_LOG2: u32 = 24;
 pub const DOMAIN_SIZE: usize = 1 << TRACE_LEN_LOG2;
 pub const NUM_CYCLES: usize = DOMAIN_SIZE - 1;
@@ -37,11 +35,11 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
     assert!(delegation_csrs.is_empty());
-    use prover::cs::machine::ops::unrolled::add_sub_lui_auipc_mop::*;
+    use prover::cs::machine::ops::unrolled::jump_branch_slt::*;
 
     compile_unrolled_circuit_state_transition(
-        &|cs| add_sub_lui_auipc_mop_table_addition_fn(cs),
-        &|cs| add_sub_lui_auipc_mop_circuit_with_preprocessed_bytecode(cs),
+        &|cs| jump_branch_slt_table_addition_fn(cs),
+        &|cs| jump_branch_slt_circuit_with_preprocessed_bytecode::<Mersenne31Field, _, true>(cs),
         num_bytecode_words,
         TRACE_LEN_LOG2 as usize,
     )
@@ -59,14 +57,14 @@ pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: 
     delegation_csrs: &[u32],
 ) -> prover::cs::tables::TableDriver<Mersenne31Field> {
     use crate::tables::TableDriver;
-    use prover::cs::machine::ops::unrolled::add_sub_lui_auipc_mop::*;
+    use prover::cs::machine::ops::unrolled::jump_branch_slt::*;
 
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
     assert!(delegation_csrs.is_empty());
 
     let mut table_driver = TableDriver::<Mersenne31Field>::new();
-    add_sub_lui_auipc_mop_table_driver_fn(&mut table_driver);
+    jump_branch_slt_table_driver_fn(&mut table_driver);
 
     table_driver
 }
@@ -100,7 +98,7 @@ pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     use crate::machine::ops::unrolled::process_binary_into_separate_tables_ext;
     let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
         bytecode,
-        &[Box::new(AddSubLuiAuipcMopDecoder)],
+        &[Box::new(JumpSltBranchDecoder::<true>)],
         num_bytecode_words,
         delegation_csrs,
     );
@@ -122,7 +120,7 @@ mod sealed {
     use prover::witness_proxy::WitnessProxy;
     use prover::SimpleWitnessProxy;
 
-    include!("../generated/add_sub_lui_auipc_mop_preprocessed_generated.rs");
+    include!("../generated/jump_branch_slt_preprocessed_generated.rs");
 
     pub fn witness_eval_fn<'a, 'b>(
         proxy: &'_ mut SimpleWitnessProxy<'a, NonMemoryCircuitOracle<'b>>,

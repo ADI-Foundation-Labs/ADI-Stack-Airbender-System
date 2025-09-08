@@ -1,5 +1,5 @@
 [package]
-name = "add_sub_lui_auipc_mop"
+name = "shift_binary_csr"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

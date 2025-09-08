@@ -188,7 +188,7 @@ fn main() {
     println!("Layout, quotient and witness eval fns were generated");
 
     // All delegations circuit params
-    let description = format_rust_code(&setups::generate_artifacts()).unwrap();
+    let description = format_rust_code(&setups::generate_delegation_circuits_artifacts()).unwrap();
 
     std::fs::write(
         Path::new(&output_dir).join("all_delegation_circuits_params.rs"),

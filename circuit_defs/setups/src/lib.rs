@@ -277,7 +277,7 @@ pub mod all_parameters {
 pub const CAP_SIZE: usize = 64;
 pub const NUM_COSETS: usize = 2;
 
-pub fn generate_artifacts() -> String {
+pub fn generate_delegation_circuits_artifacts() -> String {
     use prover::cap_holder::array_to_tokens;
     use prover::merkle_trees::MerkleTreeConstructor;
     use quote::quote;
@@ -334,7 +334,7 @@ mod test {
 
     #[test]
     fn generate_all() {
-        let description = generate_artifacts();
+        let description = generate_delegation_circuits_artifacts();
 
         let mut dst = std::fs::File::create("generated/all_delegation_circuits_params.rs").unwrap();
         use std::io::Write;

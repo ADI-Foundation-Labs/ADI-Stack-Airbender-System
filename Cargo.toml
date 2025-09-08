@@ -53,7 +53,9 @@ members = [
     "gpu_witness_eval_generator",
     "circuit_defs/machine_without_signed_mul_div",
     "circuit_defs/keccak_special5", "common_constants",
-    "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop"
+    "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
+    "circuit_defs/unrolled_circuits/jump_branch_slt",
+    "circuit_defs/unrolled_circuits/shift_binary_csr",
 ]
 
 default-members = [
@@ -92,7 +94,9 @@ default-members = [
     "worker",
     "witness_eval_generator",
     "gpu_witness_eval_generator",
-    "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop"
+    "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
+    "circuit_defs/unrolled_circuits/jump_branch_slt",
+    "circuit_defs/unrolled_circuits/shift_binary_csr",
 ]
 
 [workspace.package]

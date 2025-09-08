@@ -1,5 +1,5 @@
 [package]
-name = "add_sub_lui_auipc_mop"
+name = "jump_branch_slt"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
