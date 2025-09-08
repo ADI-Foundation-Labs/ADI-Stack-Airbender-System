@@ -5,14 +5,21 @@ use super::*;
 /// otherwise we only need to provide final PC
 #[allow(invalid_value)]
 #[inline(never)]
-unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool>(
-    main_risc_v_circuit_verifier: VerifierFunctionPointer<
-        CAP_SIZE,
-        NUM_COSETS,
-        NUM_DELEGATION_CHALLENGES,
-        1,
-        2,
-    >,
+unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, const NUM_INIT_AND_TEARDOWN_SETS: usize>(
+    // circuit type/delegation type, capacity, setup, verifier function
+    circuits_families_verifiers: &[(
+        u32,
+        u32,
+        &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
+        VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, 0, 0>,
+    )],
+    // capacity, setup, verifier function
+    inits_and_teardowns_verifier: &(
+        u32,
+        &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
+        VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_INIT_AND_TEARDOWN_SETS, 0>,
+    ),
+    // circuit type/delegation type, capacity, setup, verifier function
     delegation_circuits_verifiers: &[(
         u32,
         u32,

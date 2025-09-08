@@ -193,16 +193,19 @@ fn main() {
     let cli = Cli::parse();
 
     let output_dir = cli.output_dir;
+    let unrolled_outputs_dir = format!("{}/unrolled", output_dir);
 
     for (gen_fn, prefix) in ALL_LAYOUTS.iter() {
         create_all(*gen_fn, prefix, &output_dir);
     }
 
+    println!("Layout, quotient and witness eval fns were generated");
+
     for (gen_fn, prefix) in ALL_UNROLLED_LAYOUTS.iter() {
-        create_all(*gen_fn, prefix, &output_dir);
+        create_all(*gen_fn, prefix, &unrolled_outputs_dir);
     }
 
-    println!("Layout, quotient and witness eval fns were generated");
+    println!("Layout, quotient and witness eval fns for unrolled circuits were generated");
 
     // All delegations circuit params
     let description = format_rust_code(&setups::generate_delegation_circuits_artifacts()).unwrap();

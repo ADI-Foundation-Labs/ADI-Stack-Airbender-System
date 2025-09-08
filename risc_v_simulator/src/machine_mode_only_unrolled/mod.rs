@@ -407,7 +407,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         delegation_type: 0,
                     };
                     tracer
-                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX, tracing_data);
+                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_AUIPC => {
                     // U format
@@ -427,7 +427,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         delegation_type: 0,
                     };
                     tracer
-                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX, tracing_data);
+                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_JAL => {
                     report_opcode("JAL");
@@ -540,7 +540,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                     let rd_value = match funct3 {
                         0b000 => {
                             report_opcode("ADD");
-                            opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+                            opcode_family = ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
                             operand_1.wrapping_add(operand_2)
                         }
                         0b001 if funct7 == SLL_FUNCT7 => {
@@ -758,12 +758,12 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         let rd_value = match funct3 {
                             0b000 if funct7 == 0 => {
                                 report_opcode("ADD");
-                                opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+                                opcode_family = ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
                                 operand_1.wrapping_add(operand_2)
                             }
                             0b000 if funct7 == SUB_FUNCT7 => {
                                 report_opcode("SUB");
-                                opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+                                opcode_family = ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
                                 operand_1.wrapping_sub(operand_2)
                             }
                             0b001 if funct7 == SLL_FUNCT7 => {
@@ -1066,7 +1066,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                                 delegation_type: 0,
                             };
                             tracer.trace_non_mem_step(
-                                ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX,
+                                ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX,
                                 tracing_data,
                             );
                         }

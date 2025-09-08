@@ -1,5 +1,5 @@
 [package]
-name = "risc_v_cycles_verifier"
+name = "add_sub_lui_auipc_mop_verifier"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

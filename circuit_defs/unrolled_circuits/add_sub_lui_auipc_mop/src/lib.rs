@@ -4,7 +4,7 @@
 
 use std::alloc::Allocator;
 
-use common_constants::circuit_families::ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+use common_constants::circuit_families::ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
 use prover::cs::cs::oracle::ExecutorFamilyDecoderData;
 use prover::cs::machine::ops::unrolled::DecoderTableEntry;
 use prover::cs::machine::ops::unrolled::{
@@ -15,7 +15,7 @@ use prover::field::Mersenne31Field;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
 
-pub const FAMILY_IDX: u8 = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
+pub const FAMILY_IDX: u8 = ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
 pub const TRACE_LEN_LOG2: u32 = 24;
 pub const DOMAIN_SIZE: usize = 1 << TRACE_LEN_LOG2;
 pub const NUM_CYCLES: usize = DOMAIN_SIZE - 1;
