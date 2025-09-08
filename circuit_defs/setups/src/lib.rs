@@ -65,7 +65,7 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
     if is_default_machine_configuration::<C>()
         || is_machine_without_signed_mul_div_configuration::<C>()
     {
-        // blake and bigint
+        // blake, bigint and keccak
         HashMap::from_iter(
             [
                 (
@@ -232,10 +232,6 @@ pub fn all_delegation_circuits_precomputations<A: GoodAllocator, B: GoodAllocato
             keccak_special5::DELEGATION_TYPE_ID,
             get_keccak_special5_circuit_setup(worker),
         ),
-        // (
-        //     blake2_single_round::DELEGATION_TYPE_ID,
-        //     get_blake2_single_round_circuit_setup(worker),
-        // ),
         // (
         //     poseidon2_compression_with_witness::DELEGATION_TYPE_ID,
         //     get_poseidon2_compress_with_witness_circuit_setup(worker),

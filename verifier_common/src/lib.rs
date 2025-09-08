@@ -7,8 +7,6 @@
 
 #[cfg(any(
     all(feature = "security_80", feature = "security_100"),
-    all(feature = "security_80", feature = "security_128"),
-    all(feature = "security_100", feature = "security_128")
 ))]
 compiler_error!("multiple security levels selected same time");
 
@@ -17,9 +15,6 @@ pub const SECURITY_BITS: usize = 80;
 
 #[cfg(feature = "security_100")]
 pub const SECURITY_BITS: usize = 100;
-
-#[cfg(feature = "security_128")]
-pub const SECURITY_BITS: usize = 128;
 
 use core::mem::MaybeUninit;
 
