@@ -18,6 +18,7 @@ mod verifiers;
 
 use self::constants::*;
 pub use self::proofs::{ProgramProof, ProofList, ProofMetadata};
+pub use riscv_common::EXIT_SEQUENCE;
 
 pub use self::verifiers::{
     generate_oracle_data_for_universal_verifier, generate_oracle_data_from_metadata_and_proof_list,
@@ -143,6 +144,10 @@ pub const BASE_LAYER_DELEGATION_CIRCUITS_VERIFICATION_PARAMETERS: &[(
         ALL_DELEGATION_CIRCUITS_PARAMS[1].0,
         &ALL_DELEGATION_CIRCUITS_PARAMS[1].2,
     ),
+    (
+        ALL_DELEGATION_CIRCUITS_PARAMS[2].0,
+        &ALL_DELEGATION_CIRCUITS_PARAMS[2].2,
+    ),
 ];
 
 pub const RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS: &[(
@@ -157,26 +162,6 @@ pub const FINAL_RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS: &[(
     u32,
     &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
 )] = &[];
-
-pub const EXIT_SEQUENCE: &[u32] = &[
-    0x000d2503, //	lw	a0, 0x0(s10)
-    0x004d2583, //	lw	a1, 0x4(s10)
-    0x008d2603, //	lw	a2, 0x8(s10)
-    0x00cd2683, //	lw	a3, 0xc(s10)
-    0x010d2703, //	lw	a4, 0x10(s10)
-    0x014d2783, //	lw	a5, 0x14(s10)
-    0x018d2803, //	lw	a6, 0x18(s10)
-    0x01cd2883, //	lw	a7, 0x1c(s10)
-    0x020d2903, //	lw	s2, 0x20(s10)
-    0x024d2983, //	lw	s3, 0x24(s10)
-    0x028d2a03, //	lw	s4, 0x28(s10)
-    0x02cd2a83, //	lw	s5, 0x2c(s10)
-    0x030d2b03, //	lw	s6, 0x30(s10)
-    0x034d2b83, //	lw	s7, 0x34(s10)
-    0x038d2c03, //	lw	s8, 0x38(s10)
-    0x03cd2c83, //	lw	s9, 0x3c(s10)
-    0x0000006f, //	loop
-];
 
 #[derive(Clone, Debug, ValueEnum, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Machine {

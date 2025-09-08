@@ -107,6 +107,7 @@ categories = ["cryptography"]
 field = { path = "./field", default-features = false }
 blake2s_u32 = { path = "./blake2s_u32", default-features = false }
 common_constants = { path = "./common_constants" }
+riscv_common = { path = "./riscv_common" }
 trace_holder = { path = "./trace_holder" }
 worker = { path = "./worker" }
 fft = { path = "./fft" }
@@ -114,6 +115,7 @@ prover = { path = "./prover", default-features = false }
 cs = { path = "./cs", default-features = false }
 transcript = { path = "./transcript", default-features = false }
 verifier_generator = { path = "./verifier_generator" }
+verifier_common = { path = "./verifier_common", default-features = false }
 
 circuit_common = { path = "./circuit_defs/circuit_common" }
 blake2_with_compression = { path = "./circuit_defs/blake2_with_compression" }
@@ -129,7 +131,7 @@ trace_and_split = { path = "./circuit_defs/trace_and_split" }
 setups = { path = "./circuit_defs/setups" }
 
 # verifier = {path = "./verifier", default-features = false}
-verifier_common = { path = "./verifier_common", default-features = false }
+
 # full_statement_verifier  = { path = "./full_statement_verifier", default-features = false }
 
 poseidon2 = { path = "./poseidon2", default-features = false }

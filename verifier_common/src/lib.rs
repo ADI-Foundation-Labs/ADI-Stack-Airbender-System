@@ -5,9 +5,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-#[cfg(any(
-    all(feature = "security_80", feature = "security_100"),
-))]
+#[cfg(any(all(feature = "security_80", feature = "security_100"),))]
 compiler_error!("multiple security levels selected same time");
 
 #[cfg(feature = "security_80")]
