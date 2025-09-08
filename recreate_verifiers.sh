@@ -14,14 +14,14 @@ circuit_names=(
 
 unrolled_circuit_names=(
     "add_sub_lui_auipc_mop"
-    # "inits_and_teardowns"
-    # "jump_branch_slt"
-    # "load_store_subword_only"
-    # "load_store_word_only"
-    # "mul_div"
-    # "mul_div_unsigned"
-    # "shift_binary_csr_all_delegations"
-    # "shift_binary_csr_blake_only_delegation"
+    "inits_and_teardowns"
+    "jump_branch_slt"
+    "load_store_subword_only"
+    "load_store_word_only"
+    "mul_div"
+    "mul_div_unsigned"
+    "shift_binary_csr_all_delegations"
+    "shift_binary_csr_blake_only_delegation"
 )
 
 # update the generated files

@@ -5,7 +5,10 @@ use super::*;
 /// otherwise we only need to provide final PC
 #[allow(invalid_value)]
 #[inline(never)]
-unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, const NUM_INIT_AND_TEARDOWN_SETS: usize>(
+unsafe fn verify_full_statement_for_unrolled_circuits<
+    const BASE_LAYER: bool,
+    const NUM_INIT_AND_TEARDOWN_SETS: usize,
+>(
     // circuit type/delegation type, capacity, setup, verifier function
     circuits_families_verifiers: &[(
         u32,
@@ -17,7 +20,13 @@ unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, co
     inits_and_teardowns_verifier: &(
         u32,
         &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
-        VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_INIT_AND_TEARDOWN_SETS, 0>,
+        VerifierFunctionPointer<
+            CAP_SIZE,
+            NUM_COSETS,
+            NUM_DELEGATION_CHALLENGES,
+            NUM_INIT_AND_TEARDOWN_SETS,
+            0,
+        >,
     ),
     // circuit type/delegation type, capacity, setup, verifier function
     delegation_circuits_verifiers: &[(
@@ -132,12 +141,14 @@ unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, co
                     );
 
                     assert_eq!(
-                        previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[0]
+                        previous.lazy_init_boundary_values[0]
+                            .teardown_timestamp_one_before_last_row[0]
                             .to_reduced_u32(),
                         0
                     );
                     assert_eq!(
-                        previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[1]
+                        previous.lazy_init_boundary_values[0]
+                            .teardown_timestamp_one_before_last_row[1]
                             .to_reduced_u32(),
                         0
                     );
@@ -146,11 +157,13 @@ unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, co
             // then over state variables
 
             // check continuous PC
-            let start_pc =
-                parse_field_els_as_u32_from_u16_limbs_checked(state_variables.input_state_variables);
+            let start_pc = parse_field_els_as_u32_from_u16_limbs_checked(
+                state_variables.input_state_variables,
+            );
             assert_eq!(start_pc, expected_input_pc);
-            let end_pc =
-                parse_field_els_as_u32_from_u16_limbs_checked(state_variables.output_state_variables);
+            let end_pc = parse_field_els_as_u32_from_u16_limbs_checked(
+                state_variables.output_state_variables,
+            );
             expected_input_pc = end_pc;
 
             // update accumulators

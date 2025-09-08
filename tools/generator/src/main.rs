@@ -142,7 +142,13 @@ fn create_all(
 
 use all_layouts::*;
 
-use crate::unrolled_layouts::add_sub_lui_auipc_mop_circuit_layout;
+use crate::unrolled_layouts::{
+    add_sub_lui_auipc_mop_circuit_layout, inits_and_teardowns_circuit_layout,
+    jump_branch_slt_circuit_layout, load_store_subword_only_circuit_layout,
+    load_store_word_only_circuit_layout, mul_div_circuit_layout, mul_div_unsigned_circuit_layout,
+    shift_binary_csr_all_delegations_circuit_layout,
+    shift_binary_csr_blake_only_delegation_circuit_layout,
+};
 
 const ALL_LAYOUTS: &[(
     fn() -> (
@@ -186,7 +192,27 @@ const ALL_UNROLLED_LAYOUTS: &[(
     ),
     &str,
 )] = &[
-    (add_sub_lui_auipc_mop_circuit_layout, "add_sub_lui_auipc_mop"),
+    (
+        add_sub_lui_auipc_mop_circuit_layout,
+        "add_sub_lui_auipc_mop",
+    ),
+    (inits_and_teardowns_circuit_layout, "inits_and_teardowns"),
+    (jump_branch_slt_circuit_layout, "jump_branch_slt"),
+    (
+        load_store_subword_only_circuit_layout,
+        "load_store_subword_only",
+    ),
+    (load_store_word_only_circuit_layout, "load_store_word_only"),
+    (mul_div_circuit_layout, "mul_div"),
+    (mul_div_unsigned_circuit_layout, "mul_div_unsigned"),
+    (
+        shift_binary_csr_all_delegations_circuit_layout,
+        "shift_binary_csr_all_delegations",
+    ),
+    (
+        shift_binary_csr_blake_only_delegation_circuit_layout,
+        "shift_binary_csr_blake_only_delegation",
+    ),
 ];
 
 fn main() {

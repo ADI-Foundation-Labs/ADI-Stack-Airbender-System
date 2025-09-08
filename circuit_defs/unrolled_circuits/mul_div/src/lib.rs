@@ -153,7 +153,7 @@ mod sealed {
     use prover::witness_proxy::WitnessProxy;
     use prover::SimpleWitnessProxy;
 
-    include!("../generated/mul_div_preprocessed_generated.rs");
+    include!("../generated/witness_generation_fn.rs");
 
     pub fn witness_eval_fn<'a, 'b>(
         proxy: &'_ mut SimpleWitnessProxy<'a, NonMemoryCircuitOracle<'b>>,
