@@ -45,7 +45,8 @@ for CIRCUIT_NAME in "${circuit_names[@]}"; do
     rm -r $CIRCUIT_DIR/verifier
     cp -r verifier $DST_DIR
     rm $DST_DIR/src/generated/*
-    cp $CIRCUIT_DIR/generated/* $DST_DIR/src/generated/
+    cp tools/generator/output/${CIRCUIT_NAME}_circuit_layout.rs $DST_DIR/src/generated/circuit_layout.rs
+    cp tools/generator/output/${CIRCUIT_NAME}_quotient.rs $DST_DIR/src/generated/quotient.rs
     rm $DST_DIR/README.md
     rm $DST_DIR/expand.sh
     rm $DST_DIR/flamegraph.svg
@@ -70,7 +71,8 @@ for CIRCUIT_NAME in "${unrolled_circuit_names[@]}"; do
     rm -r $CIRCUIT_DIR/verifier
     cp -r verifier $DST_DIR
     rm $DST_DIR/src/generated/*
-    cp $CIRCUIT_DIR/generated/* $DST_DIR/src/generated/
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_circuit_layout.rs $DST_DIR/src/generated/circuit_layout.rs
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_quotient.rs $DST_DIR/src/generated/quotient.rs
     rm $DST_DIR/README.md
     rm $DST_DIR/expand.sh
     rm $DST_DIR/flamegraph.svg

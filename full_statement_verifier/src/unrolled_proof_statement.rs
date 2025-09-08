@@ -59,102 +59,105 @@ unsafe fn verify_full_statement_for_unrolled_circuits<const BASE_LAYER: bool, co
         MaybeUninit::uninit().assume_init();
     let mut state_variables = ProofPublicInputs::uninit();
 
-    let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
-    assert!(num_circuits > 0);
-    if BASE_LAYER {
-        assert!(num_circuits <= MAX_BASE_LAYER_CIRCUITS as u32);
-    } else {
-        assert!(num_circuits <= MAX_RECURSION_LAYER_CIRCUITS as u32);
-    }
-    for circuit_sequence in 0..num_circuits {
-        let (current, previous) = if circuit_sequence & 1 == 0 {
-            (&mut proof_output_0, &proof_output_1)
+    let mut current_circuit_family = 0;
+    for (circuit_family, capacity, setup, verifier_fn) in circuits_families_verifiers {
+        let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
+        assert!(num_circuits > 0);
+        if BASE_LAYER {
+            assert!(num_circuits <= MAX_BASE_LAYER_CIRCUITS as u32);
         } else {
-            (&mut proof_output_1, &proof_output_0)
-        };
-        // Note: this will make sure that all external challenges are the same as we progress,
-        // and so we will only need to save the result at the very end
-        (main_risc_v_circuit_verifier)(current, &mut state_variables);
-
-        assert_eq!(current.circuit_sequence, circuit_sequence);
-        assert_eq!(current.delegation_type, 0);
-
-        if circuit_sequence == 0 {
-            // commit setup into transcript
-            transcript.absorb(current.setup_caps_flattened());
+            assert!(num_circuits <= MAX_RECURSION_LAYER_CIRCUITS as u32);
         }
-        // and commit memory caps
-        transcript.absorb(current.memory_caps_flattened());
-
-        // now we should check all invariants about continuity
-
-        // first over ProofOutput
-        if circuit_sequence > 0 {
-            // and check equality of the setup
-            assert!(MerkleTreeCap::compare(
-                &previous.setup_caps,
-                &current.setup_caps
-            ));
-            // check that all challenges are the same
-            assert_eq!(previous.memory_challenges, current.memory_challenges);
-            assert_eq!(
-                previous.delegation_challenges,
-                current.delegation_challenges
-            );
-
-            // check lazy inits
-            let last_previous = parse_field_els_as_u32_from_u16_limbs_checked(
-                previous.lazy_init_boundary_values[0].lazy_init_one_before_last_row,
-            );
-            let first_current = parse_field_els_as_u32_from_u16_limbs_checked(
-                current.lazy_init_boundary_values[0].lazy_init_first_row,
-            );
-
-            // if it's
-            if first_current > last_previous {
-                // nothing, we are all good
+        for circuit_sequence in 0..num_circuits {
+            let (current, previous) = if circuit_sequence & 1 == 0 {
+                (&mut proof_output_0, &proof_output_1)
             } else {
-                // we require padding of 0 init address, and 0 teardown value and timestamp
-                assert_eq!(last_previous, 0);
+                (&mut proof_output_1, &proof_output_0)
+            };
+            // Note: this will make sure that all external challenges are the same as we progress,
+            // and so we will only need to save the result at the very end
+            (main_risc_v_circuit_verifier)(current, &mut state_variables);
 
-                // just compare to 0 after reduction to avoid parsing u16 or timestamp bits
-                assert_eq!(
-                    previous.lazy_init_boundary_values[0].teardown_value_one_before_last_row[0]
-                        .to_reduced_u32(),
-                    0
-                );
-                assert_eq!(
-                    previous.lazy_init_boundary_values[0].teardown_value_one_before_last_row[1]
-                        .to_reduced_u32(),
-                    0
-                );
+            assert_eq!(current.circuit_sequence, circuit_sequence);
+            assert_eq!(current.delegation_type, 0);
 
-                assert_eq!(
-                    previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[0]
-                        .to_reduced_u32(),
-                    0
-                );
-                assert_eq!(
-                    previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[1]
-                        .to_reduced_u32(),
-                    0
-                );
+            if circuit_sequence == 0 {
+                // commit setup into transcript
+                transcript.absorb(current.setup_caps_flattened());
             }
-        }
-        // then over state variables
+            // and commit memory caps
+            transcript.absorb(current.memory_caps_flattened());
 
-        // check continuous PC
-        let start_pc =
-            parse_field_els_as_u32_from_u16_limbs_checked(state_variables.input_state_variables);
-        assert_eq!(start_pc, expected_input_pc);
-        let end_pc =
-            parse_field_els_as_u32_from_u16_limbs_checked(state_variables.output_state_variables);
-        expected_input_pc = end_pc;
+            // now we should check all invariants about continuity
 
-        // update accumulators
-        memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
-        if NUM_DELEGATION_CHALLENGES > 0 {
-            delegation_set_accumulator.add_assign(&current.delegation_argument_accumulator[0]);
+            // first over ProofOutput
+            if circuit_sequence > 0 {
+                // and check equality of the setup
+                assert!(MerkleTreeCap::compare(
+                    &previous.setup_caps,
+                    &current.setup_caps
+                ));
+                // check that all challenges are the same
+                assert_eq!(previous.memory_challenges, current.memory_challenges);
+                assert_eq!(
+                    previous.delegation_challenges,
+                    current.delegation_challenges
+                );
+
+                // check lazy inits
+                let last_previous = parse_field_els_as_u32_from_u16_limbs_checked(
+                    previous.lazy_init_boundary_values[0].lazy_init_one_before_last_row,
+                );
+                let first_current = parse_field_els_as_u32_from_u16_limbs_checked(
+                    current.lazy_init_boundary_values[0].lazy_init_first_row,
+                );
+
+                // if it's
+                if first_current > last_previous {
+                    // nothing, we are all good
+                } else {
+                    // we require padding of 0 init address, and 0 teardown value and timestamp
+                    assert_eq!(last_previous, 0);
+
+                    // just compare to 0 after reduction to avoid parsing u16 or timestamp bits
+                    assert_eq!(
+                        previous.lazy_init_boundary_values[0].teardown_value_one_before_last_row[0]
+                            .to_reduced_u32(),
+                        0
+                    );
+                    assert_eq!(
+                        previous.lazy_init_boundary_values[0].teardown_value_one_before_last_row[1]
+                            .to_reduced_u32(),
+                        0
+                    );
+
+                    assert_eq!(
+                        previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[0]
+                            .to_reduced_u32(),
+                        0
+                    );
+                    assert_eq!(
+                        previous.lazy_init_boundary_values[0].teardown_timestamp_one_before_last_row[1]
+                            .to_reduced_u32(),
+                        0
+                    );
+                }
+            }
+            // then over state variables
+
+            // check continuous PC
+            let start_pc =
+                parse_field_els_as_u32_from_u16_limbs_checked(state_variables.input_state_variables);
+            assert_eq!(start_pc, expected_input_pc);
+            let end_pc =
+                parse_field_els_as_u32_from_u16_limbs_checked(state_variables.output_state_variables);
+            expected_input_pc = end_pc;
+
+            // update accumulators
+            memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
+            if NUM_DELEGATION_CHALLENGES > 0 {
+                delegation_set_accumulator.add_assign(&current.delegation_argument_accumulator[0]);
+            }
         }
     }
 
