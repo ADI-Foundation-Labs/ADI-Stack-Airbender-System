@@ -56,6 +56,8 @@ members = [
     "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
     "circuit_defs/unrolled_circuits/jump_branch_slt",
     "circuit_defs/unrolled_circuits/shift_binary_csr",
+    "circuit_defs/unrolled_circuits/mul_div_unsigned",
+    "circuit_defs/unrolled_circuits/mul_div",
 ]
 
 default-members = [
@@ -97,6 +99,8 @@ default-members = [
     "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
     "circuit_defs/unrolled_circuits/jump_branch_slt",
     "circuit_defs/unrolled_circuits/shift_binary_csr",
+    "circuit_defs/unrolled_circuits/mul_div_unsigned",
+    "circuit_defs/unrolled_circuits/mul_div",
 ]
 
 [workspace.package]
