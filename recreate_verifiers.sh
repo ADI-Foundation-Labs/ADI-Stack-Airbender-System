@@ -12,6 +12,17 @@ circuit_names=(
     "keccak_special5"
 )
 
+unrolled_circuit_names=(
+    "add_sub_lui_auipc_mop"
+    "inits_and_teardowns"
+    "jump_branch_slt"
+    "load_store_subword_only"
+    "load_store_word_only"
+    "mul_div"
+    "mul_div_unsigned"
+    "shift_binary_csr"
+)
+
 # update the generated files
 (cd tools/generator && cargo run )
 
@@ -40,5 +51,29 @@ for CIRCUIT_NAME in "${circuit_names[@]}"; do
 
     sed 's/^name = "verifier"$/name = "'"${CIRCUIT_NAME}_verifier"'"/' verifier/Cargo.toml > $DST_DIR/Cargo.toml
     echo "WARNING: this directory was created by the recreate_verifier.sh script. DO NOT MODIFY BY HAND" >> $DST_DIR/README.md
+
+for CIRCUIT_NAME in "${unrolled_circuit_names[@]}"; do
+    echo $CIRCUIT_NAME
+
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_layout.json circuit_defs/unrolled_circuits/$CIRCUIT_NAME/generated/layout
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_circuit_layout.rs circuit_defs/unrolled_circuits/$CIRCUIT_NAME/generated/circuit_layout.rs
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_quotient.rs circuit_defs/unrolled_circuits/$CIRCUIT_NAME/generated/quotient.rs
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_witness_generation_fn.rs circuit_defs/unrolled_circuits/$CIRCUIT_NAME/generated/witness_generation_fn.rs
+    cp tools/generator/output/unrolled/${CIRCUIT_NAME}_witness_generation_fn.cuh circuit_defs/unrolled_circuits/$CIRCUIT_NAME/generated/witness_generation_fn.cuh
+
+    CIRCUIT_DIR="circuit_defs/unrolled_circuits/$CIRCUIT_NAME"
+    DST_DIR="$CIRCUIT_DIR/verifier"
+
+    rm -r $CIRCUIT_DIR/verifier
+    cp -r verifier $DST_DIR
+    rm $DST_DIR/src/generated/*
+    cp $CIRCUIT_DIR/generated/* $DST_DIR/src/generated/
+    rm $DST_DIR/README.md
+    rm $DST_DIR/expand.sh
+    rm $DST_DIR/flamegraph.svg
+
+    sed 's/^name = "verifier"$/name = "'"${CIRCUIT_NAME}_verifier"'"/' verifier/Cargo.toml > $DST_DIR/Cargo.toml
+    echo "WARNING: this directory was created by the recreate_verifier.sh script. DO NOT MODIFY BY HAND" >> $DST_DIR/README.md
+
 
 done

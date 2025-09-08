@@ -59,6 +59,8 @@ members = [
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
     "circuit_defs/unrolled_circuits/inits_and_teardowns",
+    "circuit_defs/unrolled_circuits/load_store_word_only",
+    "circuit_defs/unrolled_circuits/load_store_subword_only",
 ]
 
 default-members = [
@@ -103,6 +105,8 @@ default-members = [
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
     "circuit_defs/unrolled_circuits/inits_and_teardowns",
+    "circuit_defs/unrolled_circuits/load_store_word_only",
+    "circuit_defs/unrolled_circuits/load_store_subword_only",
 ]
 
 [workspace.package]
