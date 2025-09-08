@@ -297,6 +297,26 @@ pub fn process_binary_into_separate_tables<F: PrimeField>(
         Vec<ExecutorFamilyDecoderData>,
     ),
 > {
+    process_binary_into_separate_tables_ext::<F, false>(
+        binary,
+        families,
+        max_bytecode_size_words,
+        supported_csrs,
+    )
+}
+
+pub fn process_binary_into_separate_tables_ext<F: PrimeField, const ALLOW_UNSUPPORTED: bool>(
+    binary: &[u32],
+    families: &[Box<dyn OpcodeFamilyDecoder>],
+    max_bytecode_size_words: usize,
+    supported_csrs: &[u16],
+) -> HashMap<
+    u8,
+    (
+        Vec<Option<DecoderTableEntry<F>>>,
+        Vec<ExecutorFamilyDecoderData>,
+    ),
+> {
     assert!(
         binary.len() <= max_bytecode_size_words,
         "bytecode is too long"
@@ -317,18 +337,20 @@ pub fn process_binary_into_separate_tables<F: PrimeField>(
         result.insert(family_type, (table, witness_eval_data));
     }
 
-    if pc_set.len() != binary.len() {
-        for i in 0..binary.len() {
-            if pc_set.contains(&i) == false {
-                println!(
-                    "PC = 0x{:08x}, opcode = 0x{:08x} is not supported",
-                    i << 2,
-                    binary[i]
-                );
+    if ALLOW_UNSUPPORTED == false {
+        if pc_set.len() != binary.len() {
+            for i in 0..binary.len() {
+                if pc_set.contains(&i) == false {
+                    println!(
+                        "PC = 0x{:08x}, opcode = 0x{:08x} is not supported",
+                        i << 2,
+                        binary[i]
+                    );
+                }
             }
-        }
 
-        panic!("Not all the opcodes are supported");
+            panic!("Not all the opcodes are supported");
+        }
     }
 
     result

@@ -21,6 +21,7 @@ use crate::cycle::status_registers::TrapReason;
 use crate::cycle::IMStandardIsaConfig;
 use crate::cycle::MachineConfig;
 use crate::mmu::MMUImplementation;
+use common_constants::circuit_families::*;
 use common_constants::NON_DETERMINISM_CSR;
 
 #[cfg(feature = "cycle_marker")]
@@ -405,7 +406,8 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         rd_old_value,
                         delegation_type: 0,
                     };
-                    tracer.trace_non_mem_step(1, tracing_data);
+                    tracer
+                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_AUIPC => {
                     // U format
@@ -424,7 +426,8 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         rd_old_value,
                         delegation_type: 0,
                     };
-                    tracer.trace_non_mem_step(1, tracing_data);
+                    tracer
+                        .trace_non_mem_step(ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_JAL => {
                     report_opcode("JAL");
@@ -452,7 +455,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         rd_old_value,
                         delegation_type: 0,
                     };
-                    tracer.trace_non_mem_step(2, tracing_data);
+                    tracer.trace_non_mem_step(JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_JALR => {
                     report_opcode("JALR");
@@ -483,7 +486,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         rd_old_value,
                         delegation_type: 0,
                     };
-                    tracer.trace_non_mem_step(2, tracing_data);
+                    tracer.trace_non_mem_step(JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OPCODE_BRANCH => {
                     report_opcode("BRANCH");
@@ -526,7 +529,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         rd_old_value,
                         delegation_type: 0,
                     };
-                    tracer.trace_non_mem_step(2, tracing_data);
+                    tracer.trace_non_mem_step(JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX, tracing_data);
                 }
                 OP_IMM_SUBMASK => {
                     let operand_1 = rs1_value;
@@ -537,24 +540,24 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                     let rd_value = match funct3 {
                         0b000 => {
                             report_opcode("ADD");
-                            opcode_family = 1;
+                            opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
                             operand_1.wrapping_add(operand_2)
                         }
                         0b001 if funct7 == SLL_FUNCT7 => {
                             report_opcode("SLL");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // shift is encoded in lowest 5 bits
                             operand_1 << (operand_2 & 0x1f)
                         }
                         0b101 if funct7 == SRL_FUNCT7 => {
                             report_opcode("SRL");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // shift is encoded in lowest 5 bits
                             operand_1 >> (operand_2 & 0x1f)
                         }
                         0b101 if funct7 == SRA_FUNCT7 => {
                             report_opcode("SRA");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // Arithmetic shift right
                             // shift is encoded in lowest 5 bits
 
@@ -566,7 +569,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         }
                         0b101 if funct7 == ROT_FUNCT7 => {
                             report_opcode("ROR");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // Arithmetic shift right
                             // shift is encoded in lowest 5 bits
 
@@ -578,31 +581,31 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                         }
                         0b010 => {
                             report_opcode("SLT");
-                            opcode_family = 2;
+                            opcode_family = JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
                             // Store less than
                             ((operand_1 as i32) < (operand_2 as i32)) as u32
                         }
                         0b011 => {
                             report_opcode("SLTU");
-                            opcode_family = 2;
+                            opcode_family = JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
                             // Store less than unsigned
                             (operand_1 < operand_2) as u32
                         }
                         0b100 => {
                             report_opcode("XOR");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // XOR
                             operand_1 ^ operand_2
                         }
                         0b110 => {
                             report_opcode("OR");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // OR
                             operand_1 | operand_2
                         }
                         0b111 => {
                             report_opcode("AND");
-                            opcode_family = 3;
+                            opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                             // AND
                             operand_1 & operand_2
                         }
@@ -748,30 +751,30 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             delegation_type: 0,
                         };
 
-                        tracer.trace_non_mem_step(4, tracing_data);
+                        tracer.trace_non_mem_step(MUL_DIV_CIRCUIT_FAMILY_IDX, tracing_data);
                     } else {
                         // basic set
                         let opcode_family;
                         let rd_value = match funct3 {
                             0b000 if funct7 == 0 => {
                                 report_opcode("ADD");
-                                opcode_family = 1;
+                                opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
                                 operand_1.wrapping_add(operand_2)
                             }
                             0b000 if funct7 == SUB_FUNCT7 => {
                                 report_opcode("SUB");
-                                opcode_family = 1;
+                                opcode_family = ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX;
                                 operand_1.wrapping_sub(operand_2)
                             }
                             0b001 if funct7 == SLL_FUNCT7 => {
                                 report_opcode("SLL");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // shift is encoded in lowest 5 bits
                                 operand_1 << (operand_2 & 0x1f)
                             }
                             0b001 if funct7 == ROT_FUNCT7 => {
                                 report_opcode("ROL");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // Arithmetic shift right
                                 // shift is encoded in lowest 5 bits
 
@@ -783,13 +786,13 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             }
                             0b101 if funct7 == SRL_FUNCT7 => {
                                 report_opcode("SRL");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // shift is encoded in lowest 5 bits
                                 operand_1 >> (operand_2 & 0x1f)
                             }
                             0b101 if funct7 == SRA_FUNCT7 => {
                                 report_opcode("SRA");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // Arithmetic shift right
                                 // shift is encoded in lowest 5 bits
 
@@ -801,7 +804,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             }
                             0b101 if funct7 == ROT_FUNCT7 => {
                                 report_opcode("ROR");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // Arithmetic shift right
                                 // shift is encoded in lowest 5 bits
 
@@ -813,31 +816,31 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             }
                             0b010 => {
                                 report_opcode("SLT");
-                                opcode_family = 2;
+                                opcode_family = JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
                                 // Store less than
                                 ((operand_1 as i32) < (operand_2 as i32)) as u32
                             }
                             0b011 => {
                                 report_opcode("SLTU");
-                                opcode_family = 2;
+                                opcode_family = JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
                                 // Store less than unsigned
                                 (operand_1 < operand_2) as u32
                             }
                             0b100 => {
                                 report_opcode("XOR");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // XOR
                                 operand_1 ^ operand_2
                             }
                             0b110 => {
                                 report_opcode("OR");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // OR
                                 operand_1 | operand_2
                             }
                             0b111 => {
                                 report_opcode("AND");
-                                opcode_family = 3;
+                                opcode_family = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
                                 // AND
                                 operand_1 & operand_2
                             }
@@ -1062,7 +1065,10 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                                 rd_old_value,
                                 delegation_type: 0,
                             };
-                            tracer.trace_non_mem_step(1, tracing_data);
+                            tracer.trace_non_mem_step(
+                                ADD_SUB_LUI_AUIPC_MOD_CIRCUIT_FAMILY_IDX,
+                                tracing_data,
+                            );
                         }
                     } else if funct3 & ZICSR_MASK != 0 {
                         // We do not support stanard CSRs yet
@@ -1167,7 +1173,8 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             rd_old_value,
                             delegation_type,
                         };
-                        tracer.trace_non_mem_step(3, tracing_data);
+                        tracer
+                            .trace_non_mem_step(SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX, tracing_data);
                     } else {
                         panic!("Unknown opcode 0x{:08x}", opcode);
                     }

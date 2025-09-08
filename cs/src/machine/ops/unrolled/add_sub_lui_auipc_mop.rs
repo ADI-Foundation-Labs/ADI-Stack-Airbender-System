@@ -4,8 +4,13 @@ use super::decoder::AddSubLuiAuipcMopDecoder;
 use super::*;
 
 pub fn add_sub_lui_auipc_mop_table_addition_fn<F: PrimeField, CS: Circuit<F>>(cs: &mut CS) {
-    // no table
+    // no tables
     let _ = cs;
+}
+
+pub fn add_sub_lui_auipc_mop_table_driver_fn<F: PrimeField>(table_driver: &mut TableDriver<F>) {
+    // no tables
+    let _ = table_driver;
 }
 
 fn apply_add_sub_lui_auipc_mop<F: PrimeField, CS: Circuit<F>>(
