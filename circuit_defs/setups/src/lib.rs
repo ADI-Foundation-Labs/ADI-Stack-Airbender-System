@@ -37,7 +37,9 @@ pub use reduced_risc_v_machine;
 pub use risc_v_cycles;
 
 pub mod circuits;
+pub mod unrolled_circuits;
 pub use self::circuits::*;
+pub use self::unrolled_circuits::*;
 
 pub fn pad_bytecode_for_proving(bytecode: &mut Vec<u32>) {
     pad_bytecode::<{ risc_v_cycles::MAX_ROM_SIZE as u32 }>(bytecode);

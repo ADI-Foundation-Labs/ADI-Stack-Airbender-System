@@ -31,6 +31,13 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     serde_json::to_writer_pretty(&mut dst, el).unwrap();
 }
 
+pub fn get_circuit(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
+    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+}
+
 pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
     delegation_csrs: &[u32],
@@ -61,6 +68,46 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
         },
         num_bytecode_words,
         TRACE_LEN_LOG2 as usize,
+    )
+}
+
+pub fn dump_ssa_form(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+}
+
+pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
+    assert!(bytecode.len() <= num_bytecode_words);
+    assert!(delegation_csrs.is_empty());
+    use crate::machine::ops::unrolled::dump_ssa_witness_eval_form_for_unrolled_circuit;
+    use crate::machine::ops::unrolled::load_store_word_only::create_word_only_load_store_special_tables;
+    use prover::cs::machine::ops::unrolled::load_store_word_only::*;
+
+    dump_ssa_witness_eval_form_for_unrolled_circuit::<Mersenne31Field>(
+        &|cs| {
+            word_only_load_store_table_addition_fn(cs);
+
+            let extra_tables = create_word_only_load_store_special_tables::<
+                _,
+                ROM_ADDRESS_SPACE_SECOND_WORD_BITS,
+            >(bytecode);
+            for (table_type, table) in extra_tables {
+                cs.add_table_with_content(table_type, table);
+            }
+        },
+        &|cs| {
+            word_only_load_store_circuit_with_preprocessed_bytecode::<
+                _,
+                _,
+                ROM_ADDRESS_SPACE_SECOND_WORD_BITS,
+            >(cs)
+        },
     )
 }
 
@@ -130,7 +177,8 @@ pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
         delegation_csrs,
     );
 
-    t.remove(&common_constants::circuit_families::LOAD_STORE_CIRCUIT_FAMILY_IDX).expect("decoder data")
+    t.remove(&common_constants::circuit_families::LOAD_STORE_CIRCUIT_FAMILY_IDX)
+        .expect("decoder data")
 }
 
 #[cfg(feature = "witness_eval_fn")]

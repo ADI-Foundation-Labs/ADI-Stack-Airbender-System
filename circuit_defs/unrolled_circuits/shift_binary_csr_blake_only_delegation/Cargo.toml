@@ -1,5 +1,5 @@
 [package]
-name = "shift_binary_csr"
+name = "shift_binary_csr_blake_only_delegation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -16,6 +16,7 @@ use prover::cs::machine::ops::unrolled::{
 };
 use prover::cs::*;
 use prover::field::Mersenne31Field;
+use prover::risc_v_simulator::cycle::MachineConfig;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
 
@@ -29,9 +30,19 @@ pub const TREE_CAP_SIZE: usize = 32;
 pub const MAX_ROM_SIZE: usize = 1 << 21; // bytes
 pub const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize = (MAX_ROM_SIZE.trailing_zeros() - 16) as usize;
 
+pub const ALLOWED_DELEGATION_CSRS: &[u32] =
+    prover::risc_v_simulator::cycle::IMStandardIsaConfig::ALLOWED_DELEGATION_CSRS;
+
 fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     let mut dst = std::fs::File::create(filename).unwrap();
     serde_json::to_writer_pretty(&mut dst, el).unwrap();
+}
+
+pub fn get_circuit(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
+    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
 }
 
 pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
@@ -59,6 +70,40 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
         &|cs| shift_binop_csrrw_circuit_with_preprocessed_bytecode(cs),
         num_bytecode_words,
         TRACE_LEN_LOG2 as usize,
+    )
+}
+
+pub fn dump_ssa_form(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+}
+
+pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
+    assert!(bytecode.len() <= num_bytecode_words);
+    use crate::machine::ops::unrolled::dump_ssa_witness_eval_form_for_unrolled_circuit;
+    use prover::cs::machine::ops::unrolled::shift_binary_csr::*;
+
+    let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
+        true,
+        delegation_csrs,
+        TableType::SpecialCSRProperties.to_table_id(),
+    );
+
+    dump_ssa_witness_eval_form_for_unrolled_circuit::<Mersenne31Field>(
+        &|cs| {
+            shift_binop_csrrw_table_addition_fn(cs);
+            cs.add_table_with_content(
+                TableType::SpecialCSRProperties,
+                LookupWrapper::Dimensional3(csr_table.clone()),
+            );
+        },
+        &|cs| shift_binop_csrrw_circuit_with_preprocessed_bytecode(cs),
     )
 }
 

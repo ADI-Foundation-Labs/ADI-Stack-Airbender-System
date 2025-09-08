@@ -4,18 +4,23 @@
 
 use std::alloc::Allocator;
 
-use common_constants::circuit_families::MUL_DIV_CIRCUIT_FAMILY_IDX;
+use crate::machine::machine_configurations::create_csr_table_for_delegation;
+use crate::tables::LookupWrapper;
+use crate::tables::TableType;
+use common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
+use prover::cs::cs::circuit::Circuit;
 use prover::cs::cs::oracle::ExecutorFamilyDecoderData;
 use prover::cs::machine::ops::unrolled::DecoderTableEntry;
 use prover::cs::machine::ops::unrolled::{
-    compile_unrolled_circuit_state_transition, DivMulDecoder,
+    compile_unrolled_circuit_state_transition, ShiftBinaryCsrrwDecoder,
 };
 use prover::cs::*;
 use prover::field::Mersenne31Field;
+use prover::risc_v_simulator::cycle::MachineConfig;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
 
-pub const FAMILY_IDX: u8 = MUL_DIV_CIRCUIT_FAMILY_IDX;
+pub const FAMILY_IDX: u8 = SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX;
 pub const TRACE_LEN_LOG2: u32 = 24;
 pub const DOMAIN_SIZE: usize = 1 << TRACE_LEN_LOG2;
 pub const NUM_CYCLES: usize = DOMAIN_SIZE - 1;
@@ -24,7 +29,9 @@ pub const LDE_SOURCE_COSETS: &[usize] = &[0, 1];
 pub const TREE_CAP_SIZE: usize = 32;
 pub const MAX_ROM_SIZE: usize = 1 << 21; // bytes
 pub const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize = (MAX_ROM_SIZE.trailing_zeros() - 16) as usize;
-const SUPPORT_SIGNED: bool = false;
+
+pub const ALLOWED_DELEGATION_CSRS: &[u32] =
+    prover::risc_v_simulator::cycle::IWithoutByteAccessIsaConfigWithDelegation::ALLOWED_DELEGATION_CSRS;
 
 fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     let mut dst = std::fs::File::create(filename).unwrap();
@@ -44,12 +51,23 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
-    use prover::cs::machine::ops::unrolled::mul_div::*;
+    use prover::cs::machine::ops::unrolled::shift_binary_csr::*;
 
-    compile_unrolled_circuit_state_transition(
-        &|cs| mul_div_table_addition_fn(cs),
-        &|cs| mul_div_circuit_with_preprocessed_bytecode::<_, _, SUPPORT_SIGNED>(cs),
+    let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
+        true,
+        delegation_csrs,
+        TableType::SpecialCSRProperties.to_table_id(),
+    );
+
+    compile_unrolled_circuit_state_transition::<Mersenne31Field>(
+        &|cs| {
+            shift_binop_csrrw_table_addition_fn(cs);
+            cs.add_table_with_content(
+                TableType::SpecialCSRProperties,
+                LookupWrapper::Dimensional3(csr_table.clone()),
+            );
+        },
+        &|cs| shift_binop_csrrw_circuit_with_preprocessed_bytecode(cs),
         num_bytecode_words,
         TRACE_LEN_LOG2 as usize,
     )
@@ -68,13 +86,24 @@ pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usi
 ) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
     use crate::machine::ops::unrolled::dump_ssa_witness_eval_form_for_unrolled_circuit;
-    use prover::cs::machine::ops::unrolled::mul_div::*;
+    use prover::cs::machine::ops::unrolled::shift_binary_csr::*;
+
+    let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
+        true,
+        delegation_csrs,
+        TableType::SpecialCSRProperties.to_table_id(),
+    );
 
     dump_ssa_witness_eval_form_for_unrolled_circuit::<Mersenne31Field>(
-        &|cs| mul_div_table_addition_fn(cs),
-        &|cs| mul_div_circuit_with_preprocessed_bytecode::<_, _, SUPPORT_SIGNED>(cs),
+        &|cs| {
+            shift_binop_csrrw_table_addition_fn(cs);
+            cs.add_table_with_content(
+                TableType::SpecialCSRProperties,
+                LookupWrapper::Dimensional3(csr_table.clone()),
+            );
+        },
+        &|cs| shift_binop_csrrw_circuit_with_preprocessed_bytecode(cs),
     )
 }
 
@@ -90,14 +119,23 @@ pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: 
     delegation_csrs: &[u32],
 ) -> prover::cs::tables::TableDriver<Mersenne31Field> {
     use crate::tables::TableDriver;
-    use prover::cs::machine::ops::unrolled::mul_div::*;
+    use prover::cs::machine::ops::unrolled::shift_binary_csr::*;
 
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
+
+    let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
+        true,
+        delegation_csrs,
+        TableType::SpecialCSRProperties.to_table_id(),
+    );
 
     let mut table_driver = TableDriver::<Mersenne31Field>::new();
-    mul_div_table_driver_fn(&mut table_driver);
+    shift_binop_csrrw_table_driver_fn(&mut table_driver);
+    table_driver.add_table_with_content(
+        TableType::SpecialCSRProperties,
+        LookupWrapper::Dimensional3(csr_table.clone()),
+    );
 
     table_driver
 }
@@ -131,7 +169,7 @@ pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     use crate::machine::ops::unrolled::process_binary_into_separate_tables_ext;
     let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
         bytecode,
-        &[Box::new(DivMulDecoder::<SUPPORT_SIGNED>)],
+        &[Box::new(ShiftBinaryCsrrwDecoder)],
         num_bytecode_words,
         delegation_csrs,
     );
@@ -153,7 +191,7 @@ mod sealed {
     use prover::witness_proxy::WitnessProxy;
     use prover::SimpleWitnessProxy;
 
-    include!("../generated/mul_div_unsigned_preprocessed_generated.rs");
+    include!("../generated/shift_binop_csrrw_preprocessed_generated.rs");
 
     pub fn witness_eval_fn<'a, 'b>(
         proxy: &'_ mut SimpleWitnessProxy<'a, NonMemoryCircuitOracle<'b>>,

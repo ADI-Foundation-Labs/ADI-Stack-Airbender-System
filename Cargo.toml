@@ -55,12 +55,13 @@ members = [
     "circuit_defs/keccak_special5", "common_constants",
     "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
     "circuit_defs/unrolled_circuits/jump_branch_slt",
-    "circuit_defs/unrolled_circuits/shift_binary_csr",
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
     "circuit_defs/unrolled_circuits/inits_and_teardowns",
     "circuit_defs/unrolled_circuits/load_store_word_only",
     "circuit_defs/unrolled_circuits/load_store_subword_only",
+    "circuit_defs/unrolled_circuits/shift_binary_csr_all_delegations",
+    "circuit_defs/unrolled_circuits/shift_binary_csr_blake_only_delegation",
 ]
 
 default-members = [
@@ -101,12 +102,13 @@ default-members = [
     "gpu_witness_eval_generator",
     "circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop",
     "circuit_defs/unrolled_circuits/jump_branch_slt",
-    "circuit_defs/unrolled_circuits/shift_binary_csr",
     "circuit_defs/unrolled_circuits/mul_div_unsigned",
     "circuit_defs/unrolled_circuits/mul_div",
     "circuit_defs/unrolled_circuits/inits_and_teardowns",
     "circuit_defs/unrolled_circuits/load_store_word_only",
     "circuit_defs/unrolled_circuits/load_store_subword_only",
+    "circuit_defs/unrolled_circuits/shift_binary_csr_all_delegations",
+    "circuit_defs/unrolled_circuits/shift_binary_csr_blake_only_delegation",
 ]
 
 [workspace.package]
@@ -134,14 +136,26 @@ verifier_generator = { path = "./verifier_generator" }
 verifier_common = { path = "./verifier_common", default-features = false }
 
 circuit_common = { path = "./circuit_defs/circuit_common" }
-blake2_with_compression = { path = "./circuit_defs/blake2_with_compression" }
-bigint_with_control = { path = "./circuit_defs/bigint_with_control" }
+
 risc_v_cycles = { path = "./circuit_defs/risc_v_cycles" }
 machine_without_signed_mul_div = { path = "./circuit_defs/machine_without_signed_mul_div" }
 reduced_risc_v_machine = { path = "./circuit_defs/reduced_risc_v_machine" }
 reduced_risc_v_log_23_machine = { path = "./circuit_defs/reduced_risc_v_log_23_machine" }
 final_reduced_risc_v_machine = {path = "./circuit_defs/final_reduced_risc_v_machine"}
+
+blake2_with_compression = { path = "./circuit_defs/blake2_with_compression" }
+bigint_with_control = { path = "./circuit_defs/bigint_with_control" }
 keccak_special5 = {path = "./circuit_defs/keccak_special5"}
+
+add_sub_lui_auipc_mop = { path = "./circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop" }
+inits_and_teardowns = { path = "./circuit_defs/unrolled_circuits/inits_and_teardowns" }
+jump_branch_slt = { path = "./circuit_defs/unrolled_circuits/jump_branch_slt" }
+load_store_subword_only = { path = "./circuit_defs/unrolled_circuits/load_store_subword_only" }
+load_store_word_only = { path = "./circuit_defs/unrolled_circuits/load_store_word_only" }
+mul_div = { path = "./circuit_defs/unrolled_circuits/mul_div" }
+mul_div_unsigned = { path = "./circuit_defs/unrolled_circuits/mul_div_unsigned" }
+shift_binary_csr_all_delegations = { path = "./circuit_defs/unrolled_circuits/shift_binary_csr_all_delegations" }
+shift_binary_csr_blake_only_delegation = { path = "./circuit_defs/unrolled_circuits/shift_binary_csr_blake_only_delegation" }
 
 trace_and_split = { path = "./circuit_defs/trace_and_split" }
 setups = { path = "./circuit_defs/setups" }

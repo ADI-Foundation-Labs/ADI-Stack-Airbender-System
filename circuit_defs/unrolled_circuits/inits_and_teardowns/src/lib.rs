@@ -22,6 +22,13 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     serde_json::to_writer_pretty(&mut dst, el).unwrap();
 }
 
+pub fn get_circuit(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
+    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+}
+
 pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
     delegation_csrs: &[u32],
@@ -33,6 +40,20 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 
     let compiler = OneRowCompiler::<Mersenne31Field>::default();
     compiler.compile_init_and_teardown_circuit(NUM_INIT_AND_TEARDOWN_SETS, TRACE_LEN_LOG2 as usize)
+}
+
+pub fn dump_ssa_form(
+    bytecode: &[u32],
+    delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+}
+
+pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
+    _bytecode: &[u32],
+    _delegation_csrs: &[u32],
+) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
+    vec![vec![]]
 }
 
 pub fn get_table_driver(

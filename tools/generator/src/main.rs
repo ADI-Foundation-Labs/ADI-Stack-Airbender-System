@@ -9,6 +9,7 @@ use std::{
 };
 
 mod all_layouts;
+mod unrolled_layouts;
 
 use prover::{
     cs::{
@@ -141,6 +142,8 @@ fn create_all(
 
 use all_layouts::*;
 
+use crate::unrolled_layouts::add_sub_lui_auipc_mop_circuit_layout;
+
 const ALL_LAYOUTS: &[(
     fn() -> (
         CompiledCircuitArtifact<Mersenne31Field>,
@@ -176,12 +179,26 @@ const ALL_LAYOUTS: &[(
     (create_keccak_special5_delegation_layout, "keccak_special5"),
 ];
 
+const ALL_UNROLLED_LAYOUTS: &[(
+    fn() -> (
+        CompiledCircuitArtifact<Mersenne31Field>,
+        Vec<Vec<RawExpression<Mersenne31Field>>>,
+    ),
+    &str,
+)] = &[
+    (add_sub_lui_auipc_mop_circuit_layout, "add_sub_lui_auipc_mop"),
+];
+
 fn main() {
     let cli = Cli::parse();
 
     let output_dir = cli.output_dir;
 
     for (gen_fn, prefix) in ALL_LAYOUTS.iter() {
+        create_all(*gen_fn, prefix, &output_dir);
+    }
+
+    for (gen_fn, prefix) in ALL_UNROLLED_LAYOUTS.iter() {
         create_all(*gen_fn, prefix, &output_dir);
     }
 
