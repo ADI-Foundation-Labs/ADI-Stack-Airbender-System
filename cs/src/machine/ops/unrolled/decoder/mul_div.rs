@@ -1,9 +1,6 @@
 use super::*;
 use crate::types::Boolean;
 
-pub const MUL_DIV_FAMILY_INDEX: u8 = 4;
-pub const MUL_DIV_FAMILY_NUM_FLAGS: usize = 4;
-
 const IS_DIVISION_BIT: usize = 0;
 const MUL_DIV_DIVU: usize = 1; // SIGNED
 const UNSIGNED_MUL_DIVU: usize = 1; // UNSIGNED
@@ -68,7 +65,7 @@ impl<const SUPPORT_SIGNED: bool> OpcodeFamilyDecoder for DivMulDecoder<SUPPORT_S
     type BitmaskCircuitParser = DivMulFamilyCircuitMask<SUPPORT_SIGNED>;
 
     fn instruction_family_index(&self) -> u8 {
-        MUL_DIV_FAMILY_INDEX
+        common_constants::circuit_families::MUL_DIV_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

@@ -149,7 +149,16 @@ pub fn get_tracer_factory<A: Allocator>(
     (FAMILY_IDX, factory as _)
 }
 
-pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
+pub fn get_decoder_table(
+    bytecode: &[u32],
+) -> (
+    Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
+    Vec<ExecutorFamilyDecoderData>,
+) {
+    get_decoder_table_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
+}
+
+pub fn get_decoder_table_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
 ) -> (
     Vec<Option<DecoderTableEntry<Mersenne31Field>>>,

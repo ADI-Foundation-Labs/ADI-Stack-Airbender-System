@@ -35,7 +35,7 @@ impl OpcodeFamilyDecoder for WordOnlyMemoryFamilyDecoder {
     type BitmaskCircuitParser = WordOnlyMemoryFamilyCircuitMask;
 
     fn instruction_family_index(&self) -> u8 {
-        WORD_ONLY_MEMORY_FAMILY_INDEX
+        common_constants::circuit_families::LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

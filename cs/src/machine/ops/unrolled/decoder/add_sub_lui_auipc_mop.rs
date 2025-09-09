@@ -1,7 +1,6 @@
 use super::*;
 use crate::types::Boolean;
 
-pub const ADD_SUB_LUI_AUIPC_MOP_FAMILY_INDEX: u8 = 1;
 pub const ADD_SUB_LUI_AUIPC_MOP_FAMILY_NUM_FLAGS: usize = 8;
 
 const ADD_OP_BIT: usize = 0;
@@ -70,7 +69,7 @@ impl OpcodeFamilyDecoder for AddSubLuiAuipcMopDecoder {
     type BitmaskCircuitParser = AddSubLuiAuipcMopFamilyCircuitMask;
 
     fn instruction_family_index(&self) -> u8 {
-        ADD_SUB_LUI_AUIPC_MOP_FAMILY_INDEX
+        common_constants::circuit_families::ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

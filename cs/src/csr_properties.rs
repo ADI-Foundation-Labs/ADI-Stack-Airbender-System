@@ -23,7 +23,9 @@ pub fn create_special_csr_properties_table<F: PrimeField>(
             let csr_index = input as u32;
             let is_nondeterminism_csr = csr_index == NON_DETERMINISM_CSR as u32;
             let is_allowed_for_delegation = supported_delegations.contains(&csr_index);
-            assert!(is_nondeterminism_csr & is_allowed_for_delegation == false);
+            if is_nondeterminism_csr && is_allowed_for_delegation {
+                assert!(support_non_determinism_csr);
+            }
             let is_supported =
                 (is_nondeterminism_csr & support_non_determinism_csr) | is_allowed_for_delegation;
 

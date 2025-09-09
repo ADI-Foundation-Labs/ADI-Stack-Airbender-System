@@ -57,7 +57,7 @@ impl OpcodeFamilyDecoder for ShiftBinaryCsrrwDecoder {
     type BitmaskCircuitParser = ShiftBinaryCsrrwFamilyCircuitMask;
 
     fn instruction_family_index(&self) -> u8 {
-        SHIFT_BINARY_CSRRW_FAMILY_INDEX
+        common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

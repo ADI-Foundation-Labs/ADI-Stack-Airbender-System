@@ -15,8 +15,9 @@ const _: () = const {
 // or provide separate function for comparison
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Hash)]
 pub struct MerkleTreeCap<const N: usize> {
-    #[serde(bound(deserialize = "[[u32; DIGEST_SIZE_U32_WORDS]; N]: serde::Deserialize<'de>"))]
-    #[serde(bound(serialize = "[[u32; DIGEST_SIZE_U32_WORDS]; N]: serde::Serialize"))]
+    #[serde(with = "serde_big_array::BigArray")]
+    // #[serde(bound(deserialize = "[[u32; DIGEST_SIZE_U32_WORDS]; N]: serde::Deserialize<'de>"))]
+    // #[serde(bound(serialize = "[[u32; DIGEST_SIZE_U32_WORDS]; N]: serde::Serialize"))]
     pub cap: [[u32; DIGEST_SIZE_U32_WORDS]; N],
 }
 

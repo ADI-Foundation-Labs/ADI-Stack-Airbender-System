@@ -35,7 +35,7 @@ impl OpcodeFamilyDecoder for SubwordOnlyMemoryFamilyDecoder {
     type BitmaskCircuitParser = SubwordOnlyMemoryFamilyCircuitMask;
 
     fn instruction_family_index(&self) -> u8 {
-        SUBWORD_ONLY_MEMORY_FAMILY_INDEX
+        common_constants::circuit_families::LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

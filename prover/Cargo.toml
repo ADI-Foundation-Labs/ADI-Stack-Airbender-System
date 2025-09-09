@@ -21,6 +21,7 @@ cs = { workspace = true, default-features = false }
 blake2s_u32 = { workspace = true, default-features = false }
 poseidon2 = { workspace = true, default-features = false }
 serde = { workspace = true }
+serde-big-array = "*"
 transcript = { workspace = true }
 non_determinism_source = { workspace = true }
 risc_v_simulator = { workspace = true, features = ["delegation"], optional = true }

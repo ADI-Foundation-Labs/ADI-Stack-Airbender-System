@@ -54,7 +54,7 @@ impl<const SUPPORT_SIGNED: bool> OpcodeFamilyDecoder for JumpSltBranchDecoder<SU
     type BitmaskCircuitParser = JumpSltBranchFamilyCircuitMask<SUPPORT_SIGNED>;
 
     fn instruction_family_index(&self) -> u8 {
-        JUMP_SLT_BRANCH_FAMILY_INDEX
+        common_constants::circuit_families::JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX
     }
 
     fn define_decoder_subspace(

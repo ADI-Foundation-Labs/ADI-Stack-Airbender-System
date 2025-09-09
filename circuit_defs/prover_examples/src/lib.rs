@@ -4,6 +4,7 @@
 
 use std::alloc::Global;
 use std::collections::HashMap;
+use std::path::Path;
 
 pub use prover;
 use prover::cs::utils::split_timestamp;
