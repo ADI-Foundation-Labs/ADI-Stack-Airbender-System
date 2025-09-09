@@ -2,6 +2,8 @@ use core::mem::MaybeUninit;
 
 // NOTE: here we need struct definition for external crates, but we will panic in implementations instead
 
+use crate::aligned_array::AlignedArray64;
+
 use super::*;
 
 // Here we try different approach to Blake round function, but placing extra burden
@@ -25,7 +27,7 @@ pub struct Blake2RoundFunctionEvaluator {
     // there is no input buffer, and we will use registers to actually pass control flow flags
     // there will be special buffer for witness to write into, that
     // we will take care to initialize, even though we will use only half of it
-    pub input_buffer: [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS],
+    pub input_buffer: AlignedArray64<u32, BLAKE2S_BLOCK_SIZE_U32_WORDS>,
     t: u32, // we limit ourselves to <4Gb inputs
 }
 
@@ -79,7 +81,7 @@ impl Blake2RoundFunctionEvaluator {
 
     #[inline(always)]
     pub const fn get_witness_buffer(&mut self) -> &mut [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS] {
-        &mut self.input_buffer
+        self.input_buffer.deref_mut_impl()
     }
 
     #[inline(always)]
@@ -100,7 +102,7 @@ impl Blake2RoundFunctionEvaluator {
     #[inline(always)]
     pub unsafe fn run_round_function_with_input<const REDUCED_ROUNDS: bool>(
         &mut self,
-        input_buffer: &[u32; BLAKE2S_BLOCK_SIZE_U32_WORDS],
+        input_buffer: &AlignedArray64<u32, BLAKE2S_BLOCK_SIZE_U32_WORDS>,
         input_size_words: usize,
         last_round: bool,
     ) {
@@ -115,7 +117,7 @@ impl Blake2RoundFunctionEvaluator {
     #[unroll::unroll_for_loops]
     pub unsafe fn run_round_function_with_input_and_byte_len<const REDUCED_ROUNDS: bool>(
         &mut self,
-        input_buffer: &[u32; BLAKE2S_BLOCK_SIZE_U32_WORDS],
+        input_buffer: &AlignedArray64<u32, BLAKE2S_BLOCK_SIZE_U32_WORDS>,
         input_size_bytes: usize,
         last_round: bool,
     ) {

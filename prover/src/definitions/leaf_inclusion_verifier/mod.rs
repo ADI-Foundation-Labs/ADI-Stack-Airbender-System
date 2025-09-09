@@ -1,5 +1,6 @@
 use crate::definitions::MerkleTreeCap;
 use core::fmt::Debug;
+use blake2s_u32::AlignedSlice64;
 use non_determinism_source::NonDeterminismSource;
 
 mod blake2s_leafs_and_poseidon2_nodes;
@@ -25,7 +26,7 @@ pub trait LeafInclusionVerifier: 'static + Send + Sync + Debug {
         coset_index: u32,
         leaf_index: u32,
         depth: usize,
-        leaf_encoding: &[u32],
+        leaf_encoding: &AlignedSlice64<u32>,
         merkle_cap: &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
     ) -> bool;
 }
