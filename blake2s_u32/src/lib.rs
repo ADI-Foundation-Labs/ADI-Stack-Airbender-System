@@ -8,10 +8,13 @@ mod asm_utils;
 pub(crate) mod baseline;
 mod mixing_function;
 pub mod vectorized_impls;
+mod aligned_array;
 
 pub use mixing_function::{
     mixing_function, round_function_full_rounds, round_function_reduced_rounds,
 };
+
+pub use aligned_array::{AlignedArray64, AlignedSlice64};
 
 #[cfg(test)]
 mod test;
