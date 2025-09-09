@@ -17,6 +17,7 @@ use core::mem::offset_of;
 use field::Mersenne31Field;
 use field::Mersenne31Quartic;
 use field::PrimeField;
+use verifier_common::blake2s_u32::AlignedSlice64;
 use verifier_common::non_determinism_source::NonDeterminismSource;
 use verifier_common::prover::definitions::LeafInclusionVerifier;
 use verifier_common::prover::definitions::MerkleTreeCap;
@@ -380,7 +381,7 @@ impl QueryValuesInstance {
             coset_index,
             tree_index,
             DEFAULT_MERKLE_PATH_LENGTH,
-            core::slice::from_raw_parts(
+            AlignedSlice64::from_raw_parts(
                 this.as_ref_unchecked().setup_leaf.as_ptr().cast::<u32>(),
                 LEAF_SIZE_SETUP,
             ),
@@ -392,7 +393,7 @@ impl QueryValuesInstance {
             coset_index,
             tree_index,
             DEFAULT_MERKLE_PATH_LENGTH,
-            core::slice::from_raw_parts(
+            AlignedSlice64::from_raw_parts(
                 this.as_ref_unchecked().witness_leaf.as_ptr().cast::<u32>(),
                 LEAF_SIZE_WITNESS_TREE,
             ),
@@ -404,7 +405,7 @@ impl QueryValuesInstance {
             coset_index,
             tree_index,
             DEFAULT_MERKLE_PATH_LENGTH,
-            core::slice::from_raw_parts(
+            AlignedSlice64::from_raw_parts(
                 this.as_ref_unchecked().memory_leaf.as_ptr().cast::<u32>(),
                 LEAF_SIZE_MEMORY_TREE,
             ),
@@ -416,7 +417,7 @@ impl QueryValuesInstance {
             coset_index,
             tree_index,
             DEFAULT_MERKLE_PATH_LENGTH,
-            core::slice::from_raw_parts(
+            AlignedSlice64::from_raw_parts(
                 this.as_ref_unchecked().stage_2_leaf.as_ptr().cast::<u32>(),
                 LEAF_SIZE_STAGE_2,
             ),
@@ -428,7 +429,7 @@ impl QueryValuesInstance {
             coset_index,
             tree_index,
             DEFAULT_MERKLE_PATH_LENGTH,
-            core::slice::from_raw_parts(
+            AlignedSlice64::from_raw_parts(
                 this.as_ref_unchecked().quotient_leaf.as_ptr().cast::<u32>(),
                 LEAF_SIZE_QUOTIENT,
             ),
@@ -448,7 +449,7 @@ impl QueryValuesInstance {
                 coset_index,
                 fri_tree_index,
                 fri_path_length,
-                core::slice::from_raw_parts(fri_leaf_start.cast::<u32>(), leaf_size),
+                AlignedSlice64::from_raw_parts(fri_leaf_start.cast::<u32>(), leaf_size),
                 caps,
             );
             assert!(fri_oracle_included);
