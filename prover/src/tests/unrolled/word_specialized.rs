@@ -534,10 +534,10 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             )
         };
 
-        let family_data = &family_circuits[&ADD_SUB_LUI_AUIPC_MOP_FAMILY_INDEX];
+        let family_data = &family_circuits[&ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX];
         assert_eq!(family_data.len(), 1);
         let (decoder_table_data, witness_gen_data) =
-            &preprocessing_data[&ADD_SUB_LUI_AUIPC_MOP_FAMILY_INDEX];
+            &preprocessing_data[&ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = NonMemoryCircuitOracle {
@@ -675,10 +675,10 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         let mut table_driver = TableDriver::<Mersenne31Field>::new();
         jump_branch_slt_table_driver_fn(&mut table_driver);
 
-        let family_data = &family_circuits[&JUMP_SLT_BRANCH_FAMILY_INDEX];
+        let family_data = &family_circuits[&JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX];
         assert_eq!(family_data.len(), 1);
         let (decoder_table_data, witness_gen_data) =
-            &preprocessing_data[&JUMP_SLT_BRANCH_FAMILY_INDEX];
+            &preprocessing_data[&JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = NonMemoryCircuitOracle {
@@ -823,10 +823,10 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             LookupWrapper::Dimensional3(csr_table),
         );
 
-        let family_data = &family_circuits[&SHIFT_BINARY_CSRRW_FAMILY_INDEX];
+        let family_data = &family_circuits[&SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX];
         assert_eq!(family_data.len(), 1);
         let (decoder_table_data, witness_gen_data) =
-            &preprocessing_data[&SHIFT_BINARY_CSRRW_FAMILY_INDEX];
+            &preprocessing_data[&SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = NonMemoryCircuitOracle {
@@ -967,9 +967,10 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         let mut table_driver = TableDriver::<Mersenne31Field>::new();
         mul_div_table_driver_fn(&mut table_driver);
 
-        let family_data = &family_circuits[&MUL_DIV_FAMILY_INDEX];
+        let family_data = &family_circuits[&MUL_DIV_CIRCUIT_FAMILY_IDX];
         assert_eq!(family_data.len(), 1);
-        let (decoder_table_data, witness_gen_data) = &preprocessing_data[&MUL_DIV_FAMILY_INDEX];
+        let (decoder_table_data, witness_gen_data) =
+            &preprocessing_data[&MUL_DIV_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = NonMemoryCircuitOracle {
@@ -1119,7 +1120,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         let family_data = &word_mem_circuits;
         assert_eq!(family_data.len(), 1);
         let (decoder_table_data, witness_gen_data) =
-            &preprocessing_data[&WORD_ONLY_MEMORY_FAMILY_INDEX];
+            &preprocessing_data[&LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = MemoryCircuitOracle {
@@ -1267,7 +1268,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         let family_data = &subword_mem_circuits;
         assert_eq!(family_data.len(), 1);
         let (decoder_table_data, witness_gen_data) =
-            &preprocessing_data[&SUBWORD_ONLY_MEMORY_FAMILY_INDEX];
+            &preprocessing_data[&LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX];
         let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
 
         let oracle = MemoryCircuitOracle {
