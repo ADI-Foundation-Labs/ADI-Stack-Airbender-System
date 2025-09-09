@@ -229,11 +229,16 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
     // transcript.absorb(setup_caps_flattened(&inits_and_teardowns_verifier.0));
 
     let mut total_cycles = 0u64;
-    for ((_circuit_family, capacity, verifier_fn), setup) in circuits_families_verifiers
+    for ((circuit_family, capacity, verifier_fn), setup) in circuits_families_verifiers
         .iter()
         .zip(circuits_families_setups.iter())
     {
         let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
+        if num_circuits > 0 {
+            let mut buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
+            buffer[0] = *circuit_family;
+            transcript.absorb(&buffer);
+        }
 
         for circuit_sequence in 0..num_circuits {
             total_cycles += *capacity as u64;
@@ -331,6 +336,14 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
         let mut state_variables = ProofPublicInputs::uninit();
 
         let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
+        if num_circuits > 0 {
+            let mut buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
+            buffer[0] =
+                common_constants::circuit_families::INITS_AND_TEARDOWNS_FORMAL_CIRCUIT_FAMILY_IDX
+                    as u32;
+            transcript.absorb(&buffer);
+        }
+
         let mut cells_initialized = 0;
         for circuit_sequence in 0..num_circuits {
             assert!(cells_initialized < MAX_MEMORY_CELLS_TO_INIT);
