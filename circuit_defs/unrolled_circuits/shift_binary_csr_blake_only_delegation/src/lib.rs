@@ -16,7 +16,6 @@ use prover::cs::machine::ops::unrolled::{
 };
 use prover::cs::*;
 use prover::field::Mersenne31Field;
-use prover::risc_v_simulator::cycle::MachineConfig;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
 
@@ -30,8 +29,9 @@ pub const TREE_CAP_SIZE: usize = 32;
 pub const MAX_ROM_SIZE: usize = 1 << 21; // bytes
 pub const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize = (MAX_ROM_SIZE.trailing_zeros() - 16) as usize;
 
-pub const ALLOWED_DELEGATION_CSRS: &[u32] =
-    prover::risc_v_simulator::cycle::IWithoutByteAccessIsaConfigWithDelegation::ALLOWED_DELEGATION_CSRS;
+pub const ALLOWED_DELEGATION_CSRS: &[u32] = &[common_constants::NON_DETERMINISM_CSR];
+
+pub const ALLOWED_DELEGATION_CSRS_U16: &[u16] = &[common_constants::NON_DETERMINISM_CSR as u16];
 
 fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     let mut dst = std::fs::File::create(filename).unwrap();
@@ -40,14 +40,12 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
 
 pub fn get_circuit(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
-    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
@@ -55,7 +53,7 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 
     let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
         true,
-        delegation_csrs,
+        ALLOWED_DELEGATION_CSRS,
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
@@ -75,14 +73,12 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 
 pub fn dump_ssa_form(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
-    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
@@ -91,7 +87,7 @@ pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usi
 
     let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
         true,
-        delegation_csrs,
+        ALLOWED_DELEGATION_CSRS,
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
@@ -107,16 +103,12 @@ pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usi
     )
 }
 
-pub fn get_table_driver(
-    bytecode: &[u32],
-    delegation_csrs: &[u32],
-) -> prover::cs::tables::TableDriver<Mersenne31Field> {
-    get_table_driver_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+pub fn get_table_driver(bytecode: &[u32]) -> prover::cs::tables::TableDriver<Mersenne31Field> {
+    get_table_driver_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> prover::cs::tables::TableDriver<Mersenne31Field> {
     use crate::tables::TableDriver;
     use prover::cs::machine::ops::unrolled::shift_binary_csr::*;
@@ -126,7 +118,7 @@ pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: 
 
     let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
         true,
-        delegation_csrs,
+        ALLOWED_DELEGATION_CSRS,
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
@@ -157,21 +149,19 @@ pub fn get_tracer_factory<A: Allocator>(
 
 pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u16],
 ) -> (
     Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
     Vec<ExecutorFamilyDecoderData>,
 ) {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
 
     use crate::machine::ops::unrolled::process_binary_into_separate_tables_ext;
     let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
         bytecode,
         &[Box::new(ShiftBinaryCsrrwDecoder)],
         num_bytecode_words,
-        delegation_csrs,
+        ALLOWED_DELEGATION_CSRS_U16,
     );
 
     t.remove(&FAMILY_IDX).expect("decoder data")
@@ -216,8 +206,7 @@ pub fn generate_artifacts() {
     use std::io::Write;
 
     // particular bytecode doesn't matter here - it only goes to special lookup tables in setup
-    let compiled_machine =
-        get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(&[], &[]);
+    let compiled_machine = get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(&[]);
     serialize_to_file(&compiled_machine, "generated/layout.json");
 
     let (layout, quotient) = verifier_generator::generate_for_description(compiled_machine);

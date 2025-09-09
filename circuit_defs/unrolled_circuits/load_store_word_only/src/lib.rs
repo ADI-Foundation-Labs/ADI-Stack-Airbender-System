@@ -33,18 +33,15 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
 
 pub fn get_circuit(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
-    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+    get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
     use prover::cs::machine::ops::unrolled::load_store_word_only::*;
 
     compile_unrolled_circuit_state_transition(
@@ -73,18 +70,15 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 
 pub fn dump_ssa_form(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
-    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+    dump_ssa_form_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> Vec<Vec<prover::cs::cs::witness_placer::graph_description::RawExpression<Mersenne31Field>>> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
     use crate::machine::ops::unrolled::dump_ssa_witness_eval_form_for_unrolled_circuit;
     use crate::machine::ops::unrolled::load_store_word_only::create_word_only_load_store_special_tables;
     use prover::cs::machine::ops::unrolled::load_store_word_only::*;
@@ -111,23 +105,18 @@ pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usi
     )
 }
 
-pub fn get_table_driver(
-    bytecode: &[u32],
-    delegation_csrs: &[u32],
-) -> prover::cs::tables::TableDriver<Mersenne31Field> {
-    get_table_driver_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode, delegation_csrs)
+pub fn get_table_driver(bytecode: &[u32]) -> prover::cs::tables::TableDriver<Mersenne31Field> {
+    get_table_driver_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
 pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u32],
 ) -> prover::cs::tables::TableDriver<Mersenne31Field> {
     use crate::tables::TableDriver;
     use prover::cs::machine::ops::unrolled::load_store_word_only::*;
 
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
 
     let mut table_driver = TableDriver::<Mersenne31Field>::new();
     word_only_load_store_table_driver_fn(&mut table_driver);
@@ -160,21 +149,19 @@ pub fn get_tracer_factory<A: Allocator>(
 
 pub fn get_decoder_table<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
-    delegation_csrs: &[u16],
 ) -> (
     Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
     Vec<ExecutorFamilyDecoderData>,
 ) {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    assert!(delegation_csrs.is_empty());
 
     use crate::machine::ops::unrolled::process_binary_into_separate_tables_ext;
     let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
         bytecode,
         &[Box::new(MemoryFamilyDecoder)],
         num_bytecode_words,
-        delegation_csrs,
+        &[],
     );
 
     t.remove(&common_constants::circuit_families::LOAD_STORE_CIRCUIT_FAMILY_IDX)
@@ -218,8 +205,7 @@ pub fn generate_artifacts() {
     use std::io::Write;
 
     // particular bytecode doesn't matter here - it only goes to special lookup tables in setup
-    let compiled_machine =
-        get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(&[], &[]);
+    let compiled_machine = get_circuit_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(&[]);
     serialize_to_file(&compiled_machine, "generated/layout.json");
 
     let (layout, quotient) = verifier_generator::generate_for_description(compiled_machine);

@@ -5,6 +5,7 @@
 use std::alloc::Global;
 use std::collections::HashMap;
 
+use cs::cs::oracle::ExecutorFamilyDecoderData;
 use cs::machine::machine_configurations::pad_bytecode;
 use cs::tables::TableDriver;
 use definitions::MerkleTreeCap;
@@ -17,6 +18,8 @@ use prover::tracers::delegation::blake2_with_control_factory_fn;
 use prover::tracers::delegation::keccak_special5_factory_fn;
 use prover::tracers::oracles::delegation_oracle::DelegationCircuitOracle;
 use prover::tracers::oracles::main_risc_v_circuit::MainRiscVOracle;
+use prover::unrolled::MemoryCircuitOracle;
+use prover::unrolled::NonMemoryCircuitOracle;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
 use prover::*;
 use risc_v_simulator::cycle::IMStandardIsaConfig;
@@ -137,6 +140,28 @@ pub struct MainCircuitPrecomputations<C: MachineConfig, A: GoodAllocator, B: Goo
     pub lde_precomputations: LdePrecomputations<A>,
     pub setup: SetupPrecomputations<DEFAULT_TRACE_PADDING_MULTIPLE, A, DefaultTreeConstructor>,
     pub witness_eval_fn_for_gpu_tracer: fn(&mut SimpleWitnessProxy<'_, MainRiscVOracle<'_, C, B>>),
+}
+
+pub enum UnrolledCircuitWitnessEvalFn {
+    NonMemory {
+        witness_fn: fn(&'_ mut SimpleWitnessProxy<'_, NonMemoryCircuitOracle<'_>>),
+        decoder_table: Vec<ExecutorFamilyDecoderData>,
+        default_pc_value_in_padding: u32,
+    },
+    Memory {
+        witness_fn: fn(&'_ mut SimpleWitnessProxy<'_, MemoryCircuitOracle<'_>>),
+        decoder_table: Vec<ExecutorFamilyDecoderData>,
+    },
+    InitsAndTeardowns,
+}
+
+pub struct UnrolledCircuitPrecomputations<A: GoodAllocator, B: GoodAllocator = Global> {
+    pub compiled_circuit: cs::one_row_compiler::CompiledCircuitArtifact<Mersenne31Field>,
+    pub table_driver: TableDriver<Mersenne31Field>,
+    pub twiddles: Twiddles<Mersenne31Complex, A>,
+    pub lde_precomputations: LdePrecomputations<A>,
+    pub setup: SetupPrecomputations<DEFAULT_TRACE_PADDING_MULTIPLE, A, DefaultTreeConstructor>,
+    pub witness_eval_fn_for_gpu_tracer: UnrolledCircuitWitnessEvalFn,
 }
 
 pub struct DelegationCircuitPrecomputations<A: GoodAllocator, B: GoodAllocator = Global> {

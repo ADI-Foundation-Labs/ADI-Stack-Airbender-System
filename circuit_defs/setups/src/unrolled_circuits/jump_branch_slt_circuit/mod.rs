@@ -1,36 +1,35 @@
 use super::*;
 
 #[cfg(feature = "witness_eval_fn")]
-pub fn add_sub_lui_auipc_mop_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
+pub fn jump_branch_slt_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
     bytecode: &[u32],
     worker: &Worker,
 ) -> UnrolledCircuitPrecomputations<A, B> {
-    let circuit = ::add_sub_lui_auipc_mop::get_circuit_for_rom_bound::<
-        { ::add_sub_lui_auipc_mop::ROM_ADDRESS_SPACE_SECOND_WORD_BITS },
+    let circuit = ::jump_branch_slt::get_circuit_for_rom_bound::<
+        { ::jump_branch_slt::ROM_ADDRESS_SPACE_SECOND_WORD_BITS },
     >(bytecode);
-    let table_driver = ::add_sub_lui_auipc_mop::get_table_driver(bytecode);
-    let (decoder_table_data, witness_gen_data) =
-        ::add_sub_lui_auipc_mop::get_decoder_table(bytecode);
+    let table_driver = ::jump_branch_slt::get_table_driver(bytecode);
+    let (decoder_table_data, witness_gen_data) = ::jump_branch_slt::get_decoder_table(bytecode);
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 
-    let twiddles: Twiddles<_, A> = Twiddles::new(::add_sub_lui_auipc_mop::DOMAIN_SIZE, &worker);
+    let twiddles: Twiddles<_, A> = Twiddles::new(::jump_branch_slt::DOMAIN_SIZE, &worker);
     let lde_precomputations = LdePrecomputations::new(
-        ::add_sub_lui_auipc_mop::DOMAIN_SIZE,
-        ::add_sub_lui_auipc_mop::LDE_FACTOR,
-        ::add_sub_lui_auipc_mop::LDE_SOURCE_COSETS,
+        ::jump_branch_slt::DOMAIN_SIZE,
+        ::jump_branch_slt::LDE_FACTOR,
+        ::jump_branch_slt::LDE_SOURCE_COSETS,
         &worker,
     );
     let setup =
         SetupPrecomputations::<DEFAULT_TRACE_PADDING_MULTIPLE, A, DefaultTreeConstructor>::from_tables_and_trace_len_with_decoder_table(
             &table_driver,
             &decoder_table,
-            ::add_sub_lui_auipc_mop::DOMAIN_SIZE,
+            ::jump_branch_slt::DOMAIN_SIZE,
             &circuit.setup_layout,
             &twiddles,
             &lde_precomputations,
-            ::add_sub_lui_auipc_mop::LDE_FACTOR,
-            ::add_sub_lui_auipc_mop::TREE_CAP_SIZE,
+            ::jump_branch_slt::LDE_FACTOR,
+            ::jump_branch_slt::TREE_CAP_SIZE,
             &worker,
         );
 
@@ -41,9 +40,9 @@ pub fn add_sub_lui_auipc_mop_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
         lde_precomputations,
         setup,
         witness_eval_fn_for_gpu_tracer: UnrolledCircuitWitnessEvalFn::NonMemory {
-            witness_fn: ::add_sub_lui_auipc_mop::witness_eval_fn_for_gpu_tracer,
+            witness_fn: ::jump_branch_slt::witness_eval_fn_for_gpu_tracer,
             decoder_table: witness_gen_data,
-            default_pc_value_in_padding: 4,
+            default_pc_value_in_padding: 0,
         },
     }
 }
