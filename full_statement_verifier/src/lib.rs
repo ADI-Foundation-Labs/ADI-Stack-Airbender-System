@@ -1,4 +1,5 @@
 #![cfg_attr(not(any(test, feature = "replace_csr")), no_std)]
+#![feature(slice_from_ptr_range)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -14,7 +15,7 @@ use verifier_common::field::{Field, Mersenne31Field, Mersenne31Quartic, PrimeFie
 use verifier_common::prover::definitions::MerkleTreeCap;
 
 mod constants;
-mod unrolled_proof_statement;
+pub mod unrolled_proof_statement;
 
 use self::constants::*;
 
@@ -25,12 +26,17 @@ use verifier_common::VerifierFunctionPointer;
 use verifier_common::{parse_field_els_as_u32_from_u16_limbs_checked, ProofPublicInputs};
 use verifier_common::{prover, ProofOutput};
 
-pub const MAX_BASE_LAYER_CIRCUITS: usize = const {
+pub const MAX_CYCLES: u64 = const {
     let max_unique_timestamps =
         1u64 << (TIMESTAMP_COLUMNS_NUM_BITS as usize * NUM_TIMESTAMP_COLUMNS_FOR_RAM);
     let max_cycles = max_unique_timestamps >> NUM_EMPTY_BITS_FOR_RAM_TIMESTAMP;
+
+    max_cycles
+};
+
+pub const MAX_BASE_LAYER_CIRCUITS: usize = const {
     let max_circuits =
-        max_cycles / ((risc_v_cycles_verifier::concrete::size_constants::TRACE_LEN as u64) - 1);
+        MAX_CYCLES / ((risc_v_cycles_verifier::concrete::size_constants::TRACE_LEN as u64) - 1);
 
     max_circuits as usize
 };

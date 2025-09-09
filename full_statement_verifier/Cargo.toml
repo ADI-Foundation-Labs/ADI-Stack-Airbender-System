@@ -10,7 +10,8 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-verifier_common = { workspace = true, default-features = false}
+common_constants = { workspace = true }
+verifier_common = { workspace = true, default-features = false }
 
 risc_v_cycles_verifier = {path = "../circuit_defs/risc_v_cycles/verifier", default-features = false}
 reduced_risc_v_machine_verifier = {path = "../circuit_defs/reduced_risc_v_machine/verifier", default-features = false}
@@ -22,6 +23,14 @@ bigint_with_control_verifier = {path = "../circuit_defs/bigint_with_control/veri
 keccak_special5_verifier = {path = "../circuit_defs/keccak_special5/verifier", default-features = false}
 
 add_sub_lui_auipc_mop_verifier = {path = "../circuit_defs/unrolled_circuits/add_sub_lui_auipc_mop/verifier", default-features = false}
+inits_and_teardowns_verifier = {path = "../circuit_defs/unrolled_circuits/inits_and_teardowns/verifier", default-features = false}
+jump_branch_slt_verifier = {path = "../circuit_defs/unrolled_circuits/jump_branch_slt/verifier", default-features = false}
+load_store_subword_only_verifier = {path = "../circuit_defs/unrolled_circuits/load_store_subword_only/verifier", default-features = false}
+load_store_word_only_verifier = {path = "../circuit_defs/unrolled_circuits/load_store_word_only/verifier", default-features = false}
+mul_div_verifier = {path = "../circuit_defs/unrolled_circuits/mul_div/verifier", default-features = false}
+mul_div_unsigned_verifier = {path = "../circuit_defs/unrolled_circuits/mul_div_unsigned/verifier", default-features = false}
+shift_binary_csr_all_delegations_verifier = {path = "../circuit_defs/unrolled_circuits/shift_binary_csr_all_delegations/verifier", default-features = false}
+shift_binary_csr_blake_only_delegation_verifier = {path = "../circuit_defs/unrolled_circuits/shift_binary_csr_blake_only_delegation/verifier", default-features = false}
 
 # poseidon2_compression_with_witness_verifier = {path = "../circuit_defs/poseidon2_compression_with_witness/verifier", default-features = false}
 
