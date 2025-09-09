@@ -1,8 +1,7 @@
-
-use core::ops::{Deref, DerefMut, Index, IndexMut};
-use core::slice::SliceIndex;
 use core::fmt;
 use core::hash::Hash;
+use core::ops::{Deref, DerefMut, Index, IndexMut};
+use core::slice::SliceIndex;
 
 #[repr(C)]
 pub struct AlignedArray<T, A, const N: usize> {
@@ -25,10 +24,7 @@ pub type AlignedSlice64<T> = AlignedSlice<T, A64>;
 
 impl<T, A, const N: usize> AlignedArray<T, A, N> {
     pub const fn new(data: [T; N]) -> Self {
-        Self {
-            _aligner: [],
-            data,
-        }
+        Self { _aligner: [], data }
     }
 
     pub const fn as_array(&self) -> &[T; N] {
@@ -81,16 +77,16 @@ impl<T, A, const N: usize> AlignedArray<T, A, N> {
 }
 
 impl<T, A> AlignedSlice<T, A> {
-    /// # SAFETY 
-    /// Same as `core::slice::from_raw_parts`, 
+    /// # SAFETY
+    /// Same as `core::slice::from_raw_parts`,
     /// but caller should also ensure data is aligned for type `A` (not just `T`!)
     pub const unsafe fn from_raw_parts<'a>(data: *const T, len: usize) -> &'a Self {
         let slice = core::slice::from_raw_parts(data, len);
         &*(slice as *const [T] as *const Self)
     }
 
-    /// # SAFETY 
-    /// Same as `core::slice::from_raw_parts_mut`, 
+    /// # SAFETY
+    /// Same as `core::slice::from_raw_parts_mut`,
     /// but caller should also ensure data is aligned for type `A` (not just `T`!)
     pub unsafe fn from_raw_parts_mut<'a>(data: *mut T, len: usize) -> &'a mut Self {
         let slice = core::slice::from_raw_parts_mut(data, len);
@@ -234,7 +230,7 @@ impl<T, A, const N: usize> AsRef<AlignedSlice<T, A>> for AlignedArray<T, A, N> {
 
 impl<T, A, const N: usize> AsMut<AlignedSlice<T, A>> for AlignedArray<T, A, N> {
     fn as_mut(&mut self) -> &mut AlignedSlice<T, A> {
-        // SAFETY: AlignedArray and AlignedSlice have same alignment requirements  
+        // SAFETY: AlignedArray and AlignedSlice have same alignment requirements
         unsafe { &mut *(self.data.as_mut_slice() as *mut [T] as *mut AlignedSlice<T, A>) }
     }
 }
@@ -349,7 +345,7 @@ mod tests {
     fn test_aligned_array_basic() {
         let data = [1u32, 2, 3, 4];
         let aligned = AlignedArray::<u32, u64, 4>::new(data);
-        
+
         assert_eq!(aligned.len(), 4);
         assert_eq!(aligned[0], 1);
         assert_eq!(aligned.as_slice(), &[1, 2, 3, 4]);
@@ -359,7 +355,7 @@ mod tests {
     fn test_deref_coercion() {
         let data = [1u32, 2, 3, 4];
         let aligned = AlignedArray64::new(data);
-        
+
         // Should work seamlessly with functions expecting &[T]
         assert_eq!(takes_slice(&aligned), 4);
         assert_eq!(takes_slice(aligned.as_ref()), 4);
@@ -369,10 +365,10 @@ mod tests {
     fn test_mutable_operations() {
         let data = [1u32, 2, 3, 4];
         let mut aligned = AlignedArray64::new(data);
-        
+
         takes_mut_slice(&mut aligned);
         assert_eq!(aligned[0], 42);
-        
+
         aligned[1] = 100;
         assert_eq!(aligned[1], 100);
     }
@@ -381,10 +377,10 @@ mod tests {
     fn test_iteration() {
         let data = [1u32, 2, 3, 4];
         let aligned = AlignedArray64::new(data);
-        
+
         let sum: u32 = aligned.iter().sum();
         assert_eq!(sum, 10);
-        
+
         let sum2: u32 = (&aligned).into_iter().sum();
         assert_eq!(sum2, 10);
     }
@@ -393,7 +389,7 @@ mod tests {
     fn test_alignment() {
         let data = [1u32, 2, 3, 4];
         let aligned = AlignedArray64::new(data);
-        
+
         let ptr = aligned.as_ptr();
         assert_eq!(ptr as usize % 64, 0);
     }
@@ -402,16 +398,16 @@ mod tests {
     fn test_as_ref_aligned_slice() {
         let data = [1u32, 2, 3, 4];
         let aligned_array = AlignedArray64::new(data);
-        
+
         // Test AsRef<AlignedSlice<T, A>>
         let aligned_slice: &AlignedSlice64<u32> = aligned_array.as_ref();
         assert_eq!(aligned_slice.len(), 4);
         assert_eq!(aligned_slice[0], 1);
-        
+
         // Test that it maintains alignment
         let ptr = aligned_slice.as_ptr();
         assert_eq!(ptr as usize % 64, 0);
-        
+
         // Test AsMut
         let mut aligned_array = AlignedArray64::new(data);
         let aligned_slice_mut: &mut AlignedSlice64<u32> = aligned_array.as_mut();

@@ -1,6 +1,6 @@
 use crate::definitions::MerkleTreeCap;
-use core::fmt::Debug;
 use blake2s_u32::AlignedSlice64;
+use core::fmt::Debug;
 use non_determinism_source::NonDeterminismSource;
 
 mod blake2s_leafs_and_poseidon2_nodes;

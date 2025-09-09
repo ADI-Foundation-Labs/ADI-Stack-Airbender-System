@@ -4,11 +4,11 @@
 // special purpose designated blake2s implementaition, that has no internal buffer,
 // and operates on u32 basis. Has options for reduced number of rounds
 
+mod aligned_array;
 mod asm_utils;
 pub(crate) mod baseline;
 mod mixing_function;
 pub mod vectorized_impls;
-mod aligned_array;
 
 pub use mixing_function::{
     mixing_function, round_function_full_rounds, round_function_reduced_rounds,
