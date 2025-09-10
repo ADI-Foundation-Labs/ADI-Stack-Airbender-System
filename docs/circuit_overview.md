@@ -252,7 +252,7 @@ Design notes and assumptions:
 
 These choices make lazy‑init/teardown columns easy to split and merge across segments while preserving a simple, globally consistent ordering that the prover enforces locally and the verifier checks at boundaries.
 
-See also a visual overview in the Boojum 2.0 slides: [memory layout slide](https://docs.google.com/presentation/d/1mCCsz5uQQEjlf2BI5vPZ0Gf5Sex6f0oKDkrvdaE-tXY/edit?slide=id.g3315c18d5c8_0_19#slide=id.g3315c18d5c8_0_19).
+See also a visual overview in the ZKsync Airbender slides: [memory layout slide](https://docs.google.com/presentation/d/1mCCsz5uQQEjlf2BI5vPZ0Gf5Sex6f0oKDkrvdaE-tXY/edit?slide=id.g3315c18d5c8_0_19#slide=id.g3315c18d5c8_0_19).
 
 ---
 
