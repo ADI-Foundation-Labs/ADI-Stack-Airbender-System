@@ -20,12 +20,16 @@ use prover::tracers::delegation::DelegationWitness;
 use prover::tracers::oracles::delegation_oracle::DelegationCircuitOracle;
 use prover::tracers::unrolled::tracer::MemTracingFamilyChunk;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
+use prover::unrolled::evaluate_init_and_teardown_witness;
 use prover::unrolled::MemoryCircuitOracle;
 use prover::unrolled::NonMemoryCircuitOracle;
 use prover::witness_evaluator::unrolled::run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization;
 use prover::worker;
+use prover::ExecutorFamilyWitnessEvaluationAuxData;
 use prover::ShuffleRamSetupAndTeardown;
 use prover::VectorMemoryImplWithRom;
+use prover::WitnessEvaluationData;
+use prover::WitnessEvaluationDataForExecutionFamily;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
 use risc_v_simulator::cycle::IMStandardIsaConfig;
 use risc_v_simulator::cycle::IMStandardIsaConfigWithUnsignedMulDiv;
@@ -223,6 +227,7 @@ pub fn run_and_split_unrolled<
 
     let num_inits_per_circuit = setups::inits_and_teardowns::NUM_INIT_AND_TEARDOWN_SETS
         * (setups::inits_and_teardowns::DOMAIN_SIZE - 1);
+
     let total_input_len: usize = shuffle_ram_touched_addresses
         .iter()
         .map(|el| el.len())
@@ -606,7 +611,7 @@ pub fn prove_unrolled_execution<
 
     // now prove one by one
     let mut main_proofs = BTreeMap::new();
-    for (family_idx, witness_chunks) in family_circuits.iter() {
+    for (family_idx, witness_chunks) in family_circuits.into_iter() {
         if witness_chunks.is_empty() {
             continue;
         }
@@ -618,7 +623,7 @@ pub fn prove_unrolled_execution<
         let mut family_caps = vec![];
         let mut family_proofs = vec![];
 
-        let precomputation = &unrolled_circuits_precomputations[family_idx];
+        let precomputation = &unrolled_circuits_precomputations[&family_idx];
         let UnrolledCircuitWitnessEvalFn::NonMemory {
             decoder_table,
             default_pc_value_in_padding,
@@ -631,7 +636,7 @@ pub fn prove_unrolled_execution<
             unreachable!()
         };
 
-        for chunk in witness_chunks.iter() {
+        for chunk in witness_chunks.into_iter() {
             let oracle = NonMemoryCircuitOracle {
                 inner: &chunk.data,
                 decoder_table,
@@ -706,8 +711,277 @@ pub fn prove_unrolled_execution<
             family_caps.push(proof.memory_tree_caps.clone());
             family_proofs.push(proof);
         }
-        aux_memory_trees.push((*family_idx as u32, family_caps));
-        main_proofs.insert(*family_idx, family_proofs);
+        aux_memory_trees.push((family_idx as u32, family_caps));
+        main_proofs.insert(family_idx, family_proofs);
+    }
+
+    for (family_idx, witness_chunks) in mem_circuits.into_iter() {
+        if witness_chunks.is_empty() {
+            continue;
+        }
+
+        if should_dump_witness {
+            // TODO
+        }
+
+        let mut family_caps = vec![];
+        let mut family_proofs = vec![];
+
+        let precomputation = &unrolled_circuits_precomputations[&family_idx];
+        let UnrolledCircuitWitnessEvalFn::Memory {
+            decoder_table,
+            witness_fn,
+        } = precomputation
+            .witness_eval_fn_for_gpu_tracer
+            .as_ref()
+            .unwrap()
+        else {
+            unreachable!()
+        };
+
+        for chunk in witness_chunks.into_iter() {
+            let oracle = MemoryCircuitOracle {
+                inner: &chunk.data[..],
+                decoder_table,
+            };
+
+            let now = std::time::Instant::now();
+            let witness_trace = prover::unrolled::evaluate_witness_for_executor_family::<_, A>(
+                &precomputation.compiled_circuit,
+                *witness_fn,
+                precomputation.trace_len - 1,
+                &oracle,
+                &precomputation.table_driver,
+                &worker,
+                A::default(),
+            );
+            #[cfg(feature = "timing_logs")]
+            println!(
+                "Witness generation for unrolled circuit type {} took {:?}",
+                family_idx,
+                now.elapsed()
+            );
+
+            if crate::PRECHECK_SATISFIED {
+                println!("Will evaluate basic satisfiability checks for main circuit");
+
+                assert!(check_satisfied(
+                    &precomputation.compiled_circuit,
+                    &witness_trace.exec_trace,
+                    witness_trace.num_witness_columns
+                ));
+            }
+
+            let now = std::time::Instant::now();
+            let (prover_data, proof) =
+                prover::prover_stages::unrolled_prover::prove_configured_for_unrolled_circuits::<
+                    DEFAULT_TRACE_PADDING_MULTIPLE,
+                    A,
+                    DefaultTreeConstructor,
+                >(
+                    &precomputation.compiled_circuit,
+                    &[],
+                    &external_challenges,
+                    witness_trace,
+                    &[],
+                    &precomputation.setup,
+                    &precomputation.twiddles,
+                    &precomputation.lde_precomputations,
+                    None,
+                    precomputation.lde_factor,
+                    precomputation.tree_cap_size,
+                    crate::NUM_QUERIES,
+                    verifier_common::POW_BITS as u32,
+                    &worker,
+                );
+            println!(
+                "Proving time for unrolled circuit type {} is {:?}",
+                family_idx,
+                now.elapsed()
+            );
+
+            // {
+            //     serialize_to_file(&proof, &format!("riscv_proof_{}", circuit_sequence));
+            // }
+
+            permutation_argument_grand_product
+                .mul_assign(&proof.permutation_grand_product_accumulator);
+            delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
+
+            // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
+
+            family_caps.push(proof.memory_tree_caps.clone());
+            family_proofs.push(proof);
+        }
+        aux_memory_trees.push((family_idx as u32, family_caps));
+        main_proofs.insert(family_idx, family_proofs);
+    }
+
+    // for (family_idx, witness_chunks) in mem_circuits.into_iter() {
+    //     if witness_chunks.is_empty() {
+    //         continue;
+    //     }
+
+    //     if should_dump_witness {
+    //         // TODO
+    //     }
+
+    //     let mut family_caps = vec![];
+    //     let mut family_proofs = vec![];
+
+    //     let precomputation = &unrolled_circuits_precomputations[&family_idx];
+    //     let UnrolledCircuitWitnessEvalFn::Memory {
+    //         decoder_table,
+    //         witness_fn,
+    //     } = precomputation
+    //         .witness_eval_fn_for_gpu_tracer
+    //         .as_ref()
+    //         .unwrap()
+    //     else {
+    //         unreachable!()
+    //     };
+
+    //     for chunk in witness_chunks.into_iter() {
+    //         let oracle = MemoryCircuitOracle {
+    //             inner: &chunk.data[..],
+    //             decoder_table,
+    //         };
+
+    //         let now = std::time::Instant::now();
+    //         let witness_trace = prover::unrolled::evaluate_witness_for_executor_family::<_, A>(
+    //             &precomputation.compiled_circuit,
+    //             *witness_fn,
+    //             precomputation.trace_len - 1,
+    //             &oracle,
+    //             &precomputation.table_driver,
+    //             &worker,
+    //             A::default(),
+    //         );
+    //         #[cfg(feature = "timing_logs")]
+    //         println!(
+    //             "Witness generation for unrolled circuit type {} took {:?}",
+    //             family_idx,
+    //             now.elapsed()
+    //         );
+
+    //         if crate::PRECHECK_SATISFIED {
+    //             println!("Will evaluate basic satisfiability checks for main circuit");
+
+    //             assert!(check_satisfied(
+    //                 &precomputation.compiled_circuit,
+    //                 &witness_trace.exec_trace,
+    //                 witness_trace.num_witness_columns
+    //             ));
+    //         }
+
+    //         let now = std::time::Instant::now();
+    //         let (prover_data, proof) =
+    //             prover::prover_stages::unrolled_prover::prove_configured_for_unrolled_circuits::<
+    //                 DEFAULT_TRACE_PADDING_MULTIPLE,
+    //                 A,
+    //                 DefaultTreeConstructor,
+    //             >(
+    //                 &precomputation.compiled_circuit,
+    //                 &[],
+    //                 &external_challenges,
+    //                 witness_trace,
+    //                 &[],
+    //                 &precomputation.setup,
+    //                 &precomputation.twiddles,
+    //                 &precomputation.lde_precomputations,
+    //                 None,
+    //                 precomputation.lde_factor,
+    //                 precomputation.tree_cap_size,
+    //                 crate::NUM_QUERIES,
+    //                 verifier_common::POW_BITS as u32,
+    //                 &worker,
+    //             );
+    //         println!(
+    //             "Proving time for unrolled circuit type {} is {:?}",
+    //             family_idx,
+    //             now.elapsed()
+    //         );
+
+    //         // {
+    //         //     serialize_to_file(&proof, &format!("riscv_proof_{}", circuit_sequence));
+    //         // }
+
+    //         permutation_argument_grand_product
+    //             .mul_assign(&proof.permutation_grand_product_accumulator);
+    //         delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
+
+    //         // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
+
+    //         family_caps.push(proof.memory_tree_caps.clone());
+    //         family_proofs.push(proof);
+    //     }
+    //     aux_memory_trees.push((family_idx as u32, family_caps));
+    //     main_proofs.insert(family_idx, family_proofs);
+    // }
+
+    // inits and teardowns
+    let mut aux_inits_and_teardown_trees = vec![];
+    let mut inits_and_teardowns_proofs = vec![];
+    for witness_chunk in inits_and_teardowns.into_iter() {
+        let now = std::time::Instant::now();
+        let witness_trace = evaluate_init_and_teardown_witness::<A>(
+            &inits_and_teardowns_precomputation.compiled_circuit,
+            inits_and_teardowns_precomputation.trace_len - 1,
+            &witness_chunk.lazy_init_data,
+            &worker,
+            A::default(),
+        );
+        #[cfg(feature = "timing_logs")]
+        println!(
+            "Witness generation for inits and teardowns circuit took {:?}",
+            now.elapsed()
+        );
+
+        let WitnessEvaluationData {
+            aux_data,
+            exec_trace,
+            num_witness_columns,
+            lookup_mapping,
+        } = witness_trace;
+        let witness_trace = WitnessEvaluationDataForExecutionFamily {
+            aux_data: ExecutorFamilyWitnessEvaluationAuxData {},
+            exec_trace,
+            num_witness_columns,
+            lookup_mapping,
+        };
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) =
+            prover::prover_stages::unrolled_prover::prove_configured_for_unrolled_circuits::<
+                DEFAULT_TRACE_PADDING_MULTIPLE,
+                A,
+                DefaultTreeConstructor,
+            >(
+                &inits_and_teardowns_precomputation.compiled_circuit,
+                &[],
+                &external_challenges,
+                witness_trace,
+                &aux_data.aux_boundary_data,
+                &inits_and_teardowns_precomputation.setup,
+                &inits_and_teardowns_precomputation.twiddles,
+                &inits_and_teardowns_precomputation.lde_precomputations,
+                None,
+                inits_and_teardowns_precomputation.lde_factor,
+                inits_and_teardowns_precomputation.tree_cap_size,
+                crate::NUM_QUERIES,
+                verifier_common::POW_BITS as u32,
+                &worker,
+            );
+        #[cfg(feature = "timing_logs")]
+        println!(
+            "Proving time for inits and teardowns circuit is {:?}",
+            now.elapsed()
+        );
+
+        permutation_argument_grand_product.mul_assign(&proof.permutation_grand_product_accumulator);
+
+        aux_inits_and_teardown_trees.push(proof.memory_tree_caps.clone());
+        inits_and_teardowns_proofs.push(proof);
     }
 
     // all the same for delegation circuit
@@ -716,7 +990,7 @@ pub fn prove_unrolled_execution<
     let delegation_proving_start = std::time::Instant::now();
     let mut delegation_proofs_count = 0u32;
     // commit memory trees
-    for (delegation_type, els) in delegation_circuits.iter() {
+    for (delegation_type, els) in delegation_circuits.into_iter() {
         if els.is_empty() {
             continue;
         }
@@ -729,7 +1003,7 @@ pub fn prove_unrolled_execution<
 
         let idx = delegation_circuits_precomputations
             .iter()
-            .position(|el| el.0 == *delegation_type as u32)
+            .position(|el| el.0 == delegation_type as u32)
             .unwrap();
         let prec = &delegation_circuits_precomputations[idx].1;
         let mut per_tree_set = vec![];
@@ -796,7 +1070,7 @@ pub fn prove_unrolled_execution<
 
             #[cfg(feature = "timing_logs")]
             let now = std::time::Instant::now();
-            assert!(*delegation_type < 1 << 12);
+            assert!(delegation_type < 1 << 12);
             let (_, proof) = prover::prover_stages::prove(
                 &prec.compiled_circuit.compiled_circuit,
                 &[],
@@ -806,7 +1080,7 @@ pub fn prove_unrolled_execution<
                 &prec.twiddles,
                 &prec.lde_precomputations,
                 0,
-                Some(*delegation_type as u16),
+                Some(delegation_type as u16),
                 prec.lde_factor,
                 prec.tree_cap_size,
                 crate::NUM_QUERIES,
@@ -828,8 +1102,8 @@ pub fn prove_unrolled_execution<
             per_delegation_type_proofs.push(proof);
         }
 
-        aux_delegation_memory_trees.push((*delegation_type as u32, per_tree_set));
-        delegation_proofs.push((*delegation_type as u32, per_delegation_type_proofs));
+        aux_delegation_memory_trees.push((delegation_type as u32, per_tree_set));
+        delegation_proofs.push((delegation_type as u32, per_delegation_type_proofs));
     }
 
     if delegation_proofs_count > 0 {
@@ -844,20 +1118,22 @@ pub fn prove_unrolled_execution<
     assert_eq!(permutation_argument_grand_product, Mersenne31Quartic::ONE);
     assert_eq!(delegation_argument_sum, Mersenne31Quartic::ZERO);
 
-    // assert_eq!(&aux_memory_trees, &memory_trees);
-    // assert_eq!(&aux_delegation_memory_trees, &delegation_memory_trees);
+    assert_eq!(&aux_memory_trees, &memory_trees);
+    assert_eq!(&aux_inits_and_teardown_trees, &inits_and_teardown_trees);
+    assert_eq!(&aux_delegation_memory_trees, &delegation_memory_trees);
 
-    // // compare challenge
-    // let aux_all_challenges_seed =
-    //     fs_transform_for_memory_and_delegation_arguments_for_unrolled_circuits(
-    //         &register_final_state,
-    //         final_pc,
-    //         final_timestamp,
-    //         &aux_memory_trees,
-    //         &aux_delegation_memory_trees,
-    //     );
+    // compare challenge
+    let aux_all_challenges_seed =
+        fs_transform_for_memory_and_delegation_arguments_for_unrolled_circuits(
+            &register_final_state,
+            final_pc,
+            final_timestamp,
+            &aux_memory_trees,
+            &aux_inits_and_teardown_trees,
+            &aux_delegation_memory_trees,
+        );
 
-    // assert_eq!(aux_all_challenges_seed, all_challenges_seed);
+    assert_eq!(aux_all_challenges_seed, all_challenges_seed);
 
     (
         main_proofs,
