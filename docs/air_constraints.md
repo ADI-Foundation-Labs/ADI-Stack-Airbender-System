@@ -8,6 +8,9 @@ Term<F>:   Algebraic Intermediate Representation for a single base-field monomia
     - Constant(F): a constant field element.
     - Expression { coeff: F, inner: [Variable; 4], degree: usize }: represents coeff * v0 * … * v{degree-1}.
   - Degrees up to 4 are allowed for Terms during intermediate algebra.
+  - Clarification:
+    - In `Expression`, variables are stored in `inner` and multiplied together with `coeff`.
+    - `degree` is the actual monomial degree (0–4), not always 4. Terms may be quartic internally for composition, but final constraints must normalize to ≤ quadratic (degree ≤ 2).
 
 Constraint<F>: A sum of Term<F> values. Conceptually represents a polynomial relation that must evaluate to zero (unless rearranged by helper methods that subtract a result variable). Constraints are normalized and must be at most quadratic (degree <=> 2) before being accepted by the circuit.
  
@@ -47,16 +50,19 @@ Substitutions/Linkage: some variables are marked with substitutions or linkages 
 
 ## Equality and zero-check gadgets
 
-equals_to(a, b) returns a Boolean using an inverse-or-zero trick:
-  - (a − b) · zero_flag = 0
-  - (a − b) · inv + zero_flag − 1 = 0
-- is_zero(var) uses equals_to(var, 0).
+- equals_to(a, b) returns a Boolean `zero_flag` (the output flag) using an inverse-or-zero trick:
+  - Constraints:
+    - (a − b) · zero_flag = 0
+    - (a − b) · inv + zero_flag − 1 = 0
+- is_zero(var) returns a Boolean and is implemented as equals_to(var, 0).
 - Variants exist for register tuples when parts are range-checked and sums can be used.
 
 ## Selection and masking patterns
 
-- choose(flag, if_true, if_false): builds either quadratic or linear constraints depending on operand constness:
-  - new = flag·a + (1 − flag)·b = flag·(a − b) + b, then constrain new and set its witness via value_fn.
+- choose(flag, a, b): selects between `a` and `b` using a Boolean `flag` and materializes a fresh output variable `out`.
+  - Definition/constraint: `out − (flag · (a − b) + b) = 0` (equivalently `out = flag·a + (1 − flag)·b`).
+  - Degree: linear if one of `a` or `b` is a constant, otherwise quadratic, always ≤ 2.
+  - Witnessing: set `out`'s value via `value_fn` to `a` when `flag=1`, else `b`.
 
 - choose_from_orthogonal_variants(flags, variants): sums masked terms under orthogonality and materializes a result variable, with a final ≤ quadratic constraint.
 

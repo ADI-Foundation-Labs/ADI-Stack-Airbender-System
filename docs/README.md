@@ -22,7 +22,6 @@ This directory contains documentation and descriptions of the logic and design b
 - [**AIR-style Constraints**](./air_constraints.md) - Algebraic Intermediate Representation constraints used in the codebase
 - [**Instruction Gadgets**](./instruction_gadgets.md) - RISC-V instruction implementations and constraint gadgets
 - [**Circuit Entry Points**](./circuit_entry_points.md) - How circuits are structured and connected
-- [**Custom Assumptions**](./custom_assumptions.md) - Security assumptions and trusted setup requirements
 - [**Subarguments Used**](./subarguments_used.md) - Mathematical subarguments and proof techniques
 
 ## Implementation

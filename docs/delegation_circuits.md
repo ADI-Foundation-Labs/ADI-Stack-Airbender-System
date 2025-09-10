@@ -44,7 +44,7 @@ Defined in `cs/src/delegation/bigint_with_control/mod.rs`.
  **Registers**
   - **x10**: pointer to U256 `a` (8×32-bit words). Creates 8 indirect [R/W] accesses with alignment 2^5.
   - **x11**: pointer to U256 `b` (8×32-bit words). Creates 8 indirect [R] accesses with alignment 2^5.
-  - **x12**: `control_mask` (read), boolean-split into 8 bits: `ADD`, `SUB`, `SUB_AND_NEGATE`, `MUL_LOW`, `MUL_HIGH`, `EQ`, `CARRY`, `MEMCOPY`. One-hot over ops `CARRY` may combine with add/sub.
+  - **x12**: `control_mask` (read), boolean-split into 8 bits: `ADD`, `SUB`, `SUB_AND_NEGATE`, `MUL_LOW`, `MUL_HIGH`, `EQ`, `CARRY`, `MEMCOPY`. Exactly one operation bit must be 1 at a time, `CARRY` is a separate flag that may be set together with `ADD` or `SUB`.
 
 **Tables used**: `U16SplitAsBytes`, `RangeCheck9x9`, `RangeCheck10x10`, `RangeCheck11`, `RangeCheck12`, `RangeCheck13`.
 
