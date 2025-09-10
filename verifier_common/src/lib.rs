@@ -6,10 +6,7 @@
 #![feature(generic_const_exprs)]
 
 #[cfg(any(all(feature = "security_80", feature = "security_100"),))]
-compiler_error!("multiple security levels selected same time");
-
-#[cfg(not(any(feature = "security_80", feature = "security_100"),))]
-compiler_error!("some security level must be selected");
+compile_error!("multiple security levels selected same time");
 
 #[cfg(feature = "security_80")]
 pub const SECURITY_BITS: usize = 80;
@@ -71,8 +68,15 @@ pub type VerifierFunctionPointer<
     const NUM_DELEGATION_CHALLENGES: usize,
     const NUM_AUX_BOUNDARY_VALUES: usize,
     const NUM_STATE_ELEMENTS: usize,
+    const NUM_MACHINE_STATE_CHALLENGES: usize = 0,
 > = unsafe fn(
-    &mut ProofOutput<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_AUX_BOUNDARY_VALUES>,
+    &mut ProofOutput<
+        CAP_SIZE,
+        NUM_COSETS,
+        NUM_DELEGATION_CHALLENGES,
+        NUM_AUX_BOUNDARY_VALUES,
+        NUM_MACHINE_STATE_CHALLENGES,
+    >,
     &mut ProofPublicInputs<NUM_STATE_ELEMENTS>,
 );
 
@@ -82,6 +86,7 @@ pub struct ProofOutput<
     const NUM_COSETS: usize,
     const NUM_DELEGATION_CHALLENGES: usize,
     const NUM_AUX_BOUNDARY_VALUES: usize,
+    const NUM_MACHINE_STATE_CHALLENGES: usize = 0,
 > {
     #[serde(bound(
         deserialize = "MerkleTreeCap<CAP_SIZE>: serde::Deserialize<'de>, [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]: serde::Deserialize<'de>"
@@ -99,6 +104,14 @@ pub struct ProofOutput<
         serialize = "[ExternalDelegationArgumentChallenges; NUM_DELEGATION_CHALLENGES]: serde::Serialize"
     ))]
     pub delegation_challenges: [ExternalDelegationArgumentChallenges; NUM_DELEGATION_CHALLENGES],
+    #[serde(bound(
+        deserialize = "[ExternalMachineStateArgumentChallenges; NUM_MACHINE_STATE_CHALLENGES]: serde::Deserialize<'de>"
+    ))]
+    #[serde(bound(
+        serialize = "[ExternalMachineStateArgumentChallenges; NUM_MACHINE_STATE_CHALLENGES]: serde::Serialize"
+    ))]
+    pub machine_state_permutation_challenges:
+        [ExternalMachineStateArgumentChallenges; NUM_MACHINE_STATE_CHALLENGES],
     #[serde(bound(
         deserialize = "[AuxArgumentsBoundaryValues; NUM_AUX_BOUNDARY_VALUES]: serde::Deserialize<'de>"
     ))]
@@ -123,7 +136,8 @@ impl<
         const NUM_COSETS: usize,
         const NUM_DELEGATION_CHALLENGES: usize,
         const NUM_AUX_BOUNDARY_VALUES: usize,
-    > ProofOutput<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_AUX_BOUNDARY_VALUES>
+        const NUM_MACHINE_STATE_CHALLENGES: usize,
+    > ProofOutput<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_AUX_BOUNDARY_VALUES, NUM_MACHINE_STATE_CHALLENGES>
 {
     pub fn setup_caps_flattened(&'_ self) -> &'_ [u32] {
         unsafe {

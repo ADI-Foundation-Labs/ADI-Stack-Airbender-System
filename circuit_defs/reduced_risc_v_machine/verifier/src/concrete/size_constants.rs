@@ -24,14 +24,16 @@ pub const FOLDING_PROPERTIES: verifier_common::prover::definitions::FoldingDescr
 pub const TREE_INDEX_MASK: u32 = (1u32 << TRACE_LEN_LOG2) - 1;
 pub const FRI_FACTOR_LOG2: usize = 1;
 pub const NUM_COSETS: usize = 1 << FRI_FACTOR_LOG2;
-pub const POW_BITS: usize = 28;
+pub const SECURITY_BITS: usize = verifier_common::SECURITY_BITS;
+pub const POW_BITS: usize = verifier_common::POW_BITS;
 pub const TOTAL_TREE_CAP_SIZE: usize = 1 << FOLDING_PROPERTIES.total_caps_size_log2;
 pub const TREE_CAP_SIZE: usize = TOTAL_TREE_CAP_SIZE / NUM_COSETS;
 pub const TREE_CAP_SIZE_LOG2: usize = TREE_CAP_SIZE.trailing_zeros() as usize;
 pub const DEFAULT_MERKLE_PATH_LENGTH: usize = TRACE_LEN_LOG2 - TREE_CAP_SIZE_LOG2;
-pub const SECURITY_BITS: usize = verifier_common::SECURITY_BITS;
-pub const SECURITY_BITS_PER_QUERY: usize = FRI_FACTOR_LOG2;
-pub const NUM_QUERIES: usize = (SECURITY_BITS - POW_BITS) / SECURITY_BITS_PER_QUERY + 1;
+
+pub const NUM_QUERIES: usize =
+    verifier_common::num_queries_for_security_params(SECURITY_BITS, POW_BITS, FRI_FACTOR_LOG2);
+
 pub const BITS_FOR_QUERY_INDEX: usize = TRACE_LEN_LOG2 + FRI_FACTOR_LOG2;
 pub const CAP_ELEMENT_INDEX_MASK: u32 = TREE_CAP_SIZE as u32 - 1;
 pub const CAP_INDEX_SHIFT: u32 = TREE_CAP_SIZE_LOG2 as u32;

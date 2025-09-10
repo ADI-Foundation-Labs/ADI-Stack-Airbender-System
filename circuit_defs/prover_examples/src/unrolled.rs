@@ -1111,5 +1111,15 @@ mod test {
                 1 << 32,
                 &worker,
             );
+
+        bincode_serialize_to_file(
+            &(
+                main_proofs,
+                delegation_proofs,
+                register_final_state,
+                (final_pc, final_timestamp),
+            ),
+            "tmp_proof.bin",
+        );
     }
 }

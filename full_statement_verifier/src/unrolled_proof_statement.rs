@@ -1,3 +1,6 @@
+use common_constants::{INITIAL_PC, INITIAL_TIMESTAMP};
+use verifier_common::cs::utils::split_timestamp;
+
 use super::*;
 
 pub fn setup_caps_flattened(caps: &'_ [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) -> &'_ [u32] {
@@ -12,8 +15,8 @@ pub const CAP_SIZE: usize = 64;
 
 #[repr(usize)]
 pub enum VerificationFunctionPointer {
-    UnrolledNoDelegation(VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, 0, 0, 0>),
-    UnrolledWithDelegation(VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, 1, 0, 0>),
+    UnrolledNoDelegation(VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, 0, 0, 0, 1>),
+    UnrolledWithDelegation(VerifierFunctionPointer<CAP_SIZE, NUM_COSETS, 1, 0, 0, 1>),
 }
 
 pub const INITS_AND_TEARDOWNS_CAPACITY_PER_SET: u32 =
@@ -154,7 +157,7 @@ pub const RECURSION_WORD_ONLY_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PA
 /// otherwise we only need to provide final PC
 #[allow(invalid_value)]
 #[inline(never)]
-unsafe fn verify_full_statement_for_unrolled_circuits<
+pub unsafe fn verify_full_statement_for_unrolled_circuits<
     const BASE_LAYER: bool,
     const NUM_INIT_AND_TEARDOWN_SETS: usize,
 >(
@@ -200,22 +203,26 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
 
     let mut final_pc_buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
     let final_pc = verifier_common::DefaultNonDeterminismSource::read_word();
+    let final_ts_low = verifier_common::DefaultNonDeterminismSource::read_word();
+    let final_ts_high = verifier_common::DefaultNonDeterminismSource::read_word();
     final_pc_buffer[0] = final_pc;
+    final_pc_buffer[1] = final_ts_low;
+    final_pc_buffer[2] = final_ts_high;
 
     transcript.absorb(&final_pc_buffer);
 
     // continue with main RISC-V cycles
-    let mut memory_grand_product_accumulator = Mersenne31Quartic::ONE;
+    let mut grand_product_accumulator = Mersenne31Quartic::ONE;
     let mut delegation_set_accumulator = Mersenne31Quartic::ZERO;
 
     // loop over main circuit type
-    let mut proof_output_0: ProofOutput<CAP_SIZE, NUM_COSETS, 0, 0> =
+    let mut proof_output_0: ProofOutput<CAP_SIZE, NUM_COSETS, 0, 0, 1> =
         MaybeUninit::uninit().assume_init();
-    let mut proof_output_1: ProofOutput<CAP_SIZE, NUM_COSETS, 0, 0> =
+    let mut proof_output_1: ProofOutput<CAP_SIZE, NUM_COSETS, 0, 0, 1> =
         MaybeUninit::uninit().assume_init();
-    let mut proof_output_with_delegation_0: ProofOutput<CAP_SIZE, NUM_COSETS, 1, 0> =
+    let mut proof_output_with_delegation_0: ProofOutput<CAP_SIZE, NUM_COSETS, 1, 0, 1> =
         MaybeUninit::uninit().assume_init();
-    let mut proof_output_with_delegation_1: ProofOutput<CAP_SIZE, NUM_COSETS, 1, 0> =
+    let mut proof_output_with_delegation_1: ProofOutput<CAP_SIZE, NUM_COSETS, 1, 0, 1> =
         MaybeUninit::uninit().assume_init();
     let mut state_variables = ProofPublicInputs::uninit();
 
@@ -277,7 +284,7 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
                     }
 
                     // update accumulators
-                    memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
+                    grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
                     // no update for delegation accumulator
                 }
                 VerificationFunctionPointer::UnrolledWithDelegation(verifier_fn) => {
@@ -319,7 +326,7 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
                     }
 
                     // update accumulators
-                    memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
+                    grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
                     delegation_set_accumulator
                         .add_assign(&current.delegation_argument_accumulator[0]);
                 }
@@ -380,7 +387,7 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
             }
 
             // update accumulators
-            memory_grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
+            grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
 
             let mut last_previous = if circuit_sequence == 0 {
                 0u32
@@ -492,7 +499,7 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
                 );
 
                 // update accumulators
-                memory_grand_product_accumulator
+                grand_product_accumulator
                     .mul_assign(&delegation_proof_output.grand_product_accumulator);
                 delegation_set_accumulator
                     .sub_assign(&delegation_proof_output.delegation_argument_accumulator[0]);
@@ -514,7 +521,7 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
     let memory_seed = transcript.finalize_reset();
 
     let expected_challenges =
-        ExternalChallenges::draw_from_transcript_seed(memory_seed, NUM_DELEGATION_CHALLENGES > 0);
+        ExternalChallenges::draw_from_transcript_seed_with_state_permutation(memory_seed);
     assert_eq!(
         expected_challenges.memory_argument,
         proof_output_0.memory_challenges
@@ -525,6 +532,10 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
             proof_output_0.delegation_challenges[0]
         );
     }
+    assert_eq!(
+        expected_challenges.machine_state_permutation_argument.unwrap_unchecked(),
+        proof_output_0.machine_state_permutation_challenges[0]
+    );
 
     // conclude that our memory argument is valid
     let register_contribution =
@@ -535,8 +546,20 @@ unsafe fn verify_full_statement_for_unrolled_circuits<
                 .memory_argument_linearization_challenges,
             proof_output_0.memory_challenges.memory_argument_gamma,
         );
-    memory_grand_product_accumulator.mul_assign(&register_contribution);
-    assert_eq!(memory_grand_product_accumulator, Mersenne31Quartic::ONE);
+    let machine_state_contribution = prover::definitions::produce_pc_into_permutation_accumulator_raw(
+        INITIAL_PC,
+        split_timestamp(INITIAL_TIMESTAMP),
+        final_pc,
+        (final_ts_low, final_ts_high),
+        &proof_output_0
+                .machine_state_permutation_challenges
+                [0].linearization_challenges,
+        &proof_output_0
+                .machine_state_permutation_challenges
+                [0].additive_term
+    );
+    grand_product_accumulator.mul_assign(&register_contribution);
+    assert_eq!(grand_product_accumulator, Mersenne31Quartic::ONE);
     assert_eq!(delegation_set_accumulator, Mersenne31Quartic::ZERO);
 
     // Now we only need to reason about "which program do we execute", and "did it finish successfully or not".

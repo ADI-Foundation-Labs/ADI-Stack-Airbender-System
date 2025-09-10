@@ -41,8 +41,13 @@ pub use verifier_common::transcript;
 use self::concrete::*;
 use self::utils::*;
 
-pub type ConcreteProofOutput =
-    ProofOutput<TREE_CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_AUX_BOUNDARY_VALUES>;
+pub type ConcreteProofOutput = ProofOutput<
+    TREE_CAP_SIZE,
+    NUM_COSETS,
+    NUM_DELEGATION_CHALLENGES,
+    NUM_AUX_BOUNDARY_VALUES,
+    NUM_MACHINE_STATE_PERMUTATION_CHALLENGES,
+>;
 pub type ConcreteProofPublicInputs = ProofPublicInputs<NUM_STATE_ELEMENTS>;
 
 #[cfg(test)]
@@ -57,6 +62,7 @@ pub unsafe fn verify(
         NUM_COSETS,
         NUM_DELEGATION_CHALLENGES,
         NUM_AUX_BOUNDARY_VALUES,
+        NUM_MACHINE_STATE_PERMUTATION_CHALLENGES,
     >,
     proof_input_dst: &mut ProofPublicInputs<NUM_STATE_ELEMENTS>,
 ) {
@@ -81,6 +87,7 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
         NUM_COSETS,
         NUM_DELEGATION_CHALLENGES,
         NUM_AUX_BOUNDARY_VALUES,
+        NUM_MACHINE_STATE_PERMUTATION_CHALLENGES,
     >,
     proof_input_dst: &mut ProofPublicInputs<NUM_STATE_ELEMENTS>,
 ) {
@@ -963,6 +970,10 @@ pub unsafe fn verify_with_configuration<I: NonDeterminismSource, V: LeafInclusio
     proof_state_dst.grand_product_accumulator = skeleton.grand_product_accumulator;
     if NUM_DELEGATION_CHALLENGES > 0 {
         proof_state_dst.delegation_argument_accumulator = skeleton.delegation_argument_accumulator;
+    }
+    if NUM_MACHINE_STATE_PERMUTATION_CHALLENGES > 0 {
+        proof_state_dst.machine_state_permutation_challenges =
+            skeleton.machine_state_permutation_challenges;
     }
     // sequence and delegation types
     proof_state_dst.circuit_sequence = skeleton.circuit_sequence_idx;
