@@ -1,6 +1,6 @@
 # Machine Configuration Documentation for Airbender
 
-zkSync Airbender is implemented with multiple machine configurations. These are distinct sets of RISC-V instruction support and parameters designed to optimize the proving circuit for different use cases.
+ZKsync Airbender is implemented with multiple machine configurations. These are distinct sets of RISC-V instruction support and parameters designed to optimize the proving circuit for different use cases.
 
 Each configuration is defined in the `cs/src/machine/machine_configurations`. Despite differences in supported features, all configurations share the same design: a 32-bit RISC-V execution model (RV32I base, with optional M extension for multiplication/division + precompiles) running in machine mode with a fixed fetch-decode-execute loop enforced every cycle.
 
