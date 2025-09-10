@@ -1,7 +1,7 @@
 pub const ALL_DELEGATION_CIRCUITS_PARAMS: &[(u32, u32, [MerkleTreeCap<64usize>; 2usize])] = &[
     (
         1991u32,
-        1048576u32,
+        1048575u32,
         [
             MerkleTreeCap::<64usize> {
                 cap: [
@@ -1295,7 +1295,7 @@ pub const ALL_DELEGATION_CIRCUITS_PARAMS: &[(u32, u32, [MerkleTreeCap<64usize>; 
     ),
     (
         1994u32,
-        2097152u32,
+        2097151u32,
         [
             MerkleTreeCap::<64usize> {
                 cap: [
@@ -2589,7 +2589,7 @@ pub const ALL_DELEGATION_CIRCUITS_PARAMS: &[(u32, u32, [MerkleTreeCap<64usize>; 
     ),
     (
         1995u32,
-        2097152u32,
+        2097151u32,
         [
             MerkleTreeCap::<64usize> {
                 cap: [

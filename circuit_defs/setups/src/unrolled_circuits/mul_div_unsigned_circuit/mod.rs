@@ -9,7 +9,8 @@ pub fn mul_div_unsigned_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
         { ::mul_div_unsigned::ROM_ADDRESS_SPACE_SECOND_WORD_BITS },
     >(binary_image);
     let table_driver = ::mul_div_unsigned::get_table_driver(binary_image);
-    let (decoder_table_data, witness_gen_data) = ::mul_div_unsigned::get_decoder_table(bytecode);
+    let (decoder_table_data, witness_gen_data) =
+        ::mul_div_unsigned::get_decoder_table::<B>(bytecode);
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 

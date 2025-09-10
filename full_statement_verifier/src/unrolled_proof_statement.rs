@@ -533,7 +533,9 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
         );
     }
     assert_eq!(
-        expected_challenges.machine_state_permutation_argument.unwrap_unchecked(),
+        expected_challenges
+            .machine_state_permutation_argument
+            .unwrap_unchecked(),
         proof_output_0.machine_state_permutation_challenges[0]
     );
 
@@ -546,19 +548,18 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
                 .memory_argument_linearization_challenges,
             proof_output_0.memory_challenges.memory_argument_gamma,
         );
-    let machine_state_contribution = prover::definitions::produce_pc_into_permutation_accumulator_raw(
-        INITIAL_PC,
-        split_timestamp(INITIAL_TIMESTAMP),
-        final_pc,
-        (final_ts_low, final_ts_high),
-        &proof_output_0
-                .machine_state_permutation_challenges
-                [0].linearization_challenges,
-        &proof_output_0
-                .machine_state_permutation_challenges
-                [0].additive_term
-    );
+    let machine_state_contribution =
+        prover::definitions::produce_pc_into_permutation_accumulator_raw(
+            INITIAL_PC,
+            split_timestamp(INITIAL_TIMESTAMP),
+            final_pc,
+            (final_ts_low, final_ts_high),
+            &proof_output_0.machine_state_permutation_challenges[0].linearization_challenges,
+            &proof_output_0.machine_state_permutation_challenges[0].additive_term,
+        );
     grand_product_accumulator.mul_assign(&register_contribution);
+    grand_product_accumulator.mul_assign(&machine_state_contribution);
+    
     assert_eq!(grand_product_accumulator, Mersenne31Quartic::ONE);
     assert_eq!(delegation_set_accumulator, Mersenne31Quartic::ZERO);
 

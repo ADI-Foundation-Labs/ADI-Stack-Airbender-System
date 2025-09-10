@@ -10,7 +10,7 @@ pub fn load_store_word_only_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
     >(binary_image);
     let table_driver = ::load_store_word_only::get_table_driver(binary_image);
     let (decoder_table_data, witness_gen_data) =
-        ::load_store_word_only::get_decoder_table(bytecode);
+        ::load_store_word_only::get_decoder_table::<B>(bytecode);
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 

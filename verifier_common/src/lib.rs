@@ -137,7 +137,14 @@ impl<
         const NUM_DELEGATION_CHALLENGES: usize,
         const NUM_AUX_BOUNDARY_VALUES: usize,
         const NUM_MACHINE_STATE_CHALLENGES: usize,
-    > ProofOutput<CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, NUM_AUX_BOUNDARY_VALUES, NUM_MACHINE_STATE_CHALLENGES>
+    >
+    ProofOutput<
+        CAP_SIZE,
+        NUM_COSETS,
+        NUM_DELEGATION_CHALLENGES,
+        NUM_AUX_BOUNDARY_VALUES,
+        NUM_MACHINE_STATE_CHALLENGES,
+    >
 {
     pub fn setup_caps_flattened(&'_ self) -> &'_ [u32] {
         unsafe {

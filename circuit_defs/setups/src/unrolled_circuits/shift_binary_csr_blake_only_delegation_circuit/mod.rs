@@ -10,7 +10,7 @@ pub fn shift_binary_csr_blake_only_delegation_circuit_setup<A: GoodAllocator, B:
     >(binary_image);
     let table_driver = ::shift_binary_csr_blake_only_delegation::get_table_driver(binary_image);
     let (decoder_table_data, witness_gen_data) =
-        ::shift_binary_csr_blake_only_delegation::get_decoder_table(bytecode);
+        ::shift_binary_csr_blake_only_delegation::get_decoder_table::<B>(bytecode);
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 
