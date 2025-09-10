@@ -44,7 +44,10 @@ pub fn run_till_end_for_gpu_for_machine_config<
     trace_size: usize,
     binary: &[u32],
     non_determinism: &mut ND,
-    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness<A>>>,
+    delegation_factories: HashMap<
+        u16,
+        Box<dyn Fn() -> DelegationWitness<A> + Send + Sync + 'static>,
+    >,
     worker: &Worker,
 ) -> (
     u32,
@@ -315,8 +318,8 @@ pub fn commit_memory_tree_for_riscv_circuit_using_gpu_tracer<C: MachineConfig, A
     compiled_machine: &setups::prover::cs::one_row_compiler::CompiledCircuitArtifact<
         Mersenne31Field,
     >,
-    witness_chunk: &CycleData<C>,
-    inits_and_teardowns: &ShuffleRamSetupAndTeardown,
+    witness_chunk: &CycleData<C, A>,
+    inits_and_teardowns: &ShuffleRamSetupAndTeardown<A>,
     _circuit_sequence: usize,
     twiddles: &Twiddles<Mersenne31Complex, A>,
     lde_precomputations: &LdePrecomputations<A>,
@@ -405,7 +408,7 @@ pub fn commit_memory_tree_for_delegation_circuit_with_gpu_tracer<A: GoodAllocato
     compiled_machine: &setups::prover::cs::one_row_compiler::CompiledCircuitArtifact<
         Mersenne31Field,
     >,
-    witness_chunk: &DelegationWitness,
+    witness_chunk: &DelegationWitness<A>,
     twiddles: &Twiddles<Mersenne31Complex, A>,
     lde_precomputations: &LdePrecomputations<A>,
     lde_factor: usize,
@@ -421,7 +424,7 @@ pub fn commit_memory_tree_for_delegation_circuit_with_gpu_tracer<A: GoodAllocato
 
     let num_cycles_in_chunk = trace_len - 1;
     let now = std::time::Instant::now();
-    let oracle = DelegationCircuitOracle {
+    let oracle = DelegationCircuitOracle::<A> {
         cycle_data: witness_chunk,
     };
     let memory_chunk = evaluate_delegation_memory_witness(
@@ -485,10 +488,7 @@ pub fn commit_memory_tree_for_delegation_circuit_with_gpu_tracer<A: GoodAllocato
     (caps, witness_chunk.delegation_type as u32)
 }
 
-pub fn commit_memory_tree_for_unrolled_nonmem_circuits_using_gpu_tracer<
-    C: MachineConfig,
-    A: GoodAllocator,
->(
+pub fn commit_memory_tree_for_unrolled_nonmem_circuits<A: GoodAllocator>(
     circuit: &setups::prover::cs::one_row_compiler::CompiledCircuitArtifact<Mersenne31Field>,
     witness_chunk: &[NonMemoryOpcodeTracingDataWithTimestamp],
     twiddles: &Twiddles<Mersenne31Complex, A>,
@@ -577,10 +577,7 @@ pub fn commit_memory_tree_for_unrolled_nonmem_circuits_using_gpu_tracer<
     caps
 }
 
-pub fn commit_memory_tree_for_unrolled_mem_circuits_using_gpu_tracer<
-    C: MachineConfig,
-    A: GoodAllocator,
->(
+pub fn commit_memory_tree_for_unrolled_mem_circuits<A: GoodAllocator>(
     circuit: &setups::prover::cs::one_row_compiler::CompiledCircuitArtifact<Mersenne31Field>,
     witness_chunk: &[MemoryOpcodeTracingDataWithTimestamp],
     twiddles: &Twiddles<Mersenne31Complex, A>,
@@ -667,10 +664,7 @@ pub fn commit_memory_tree_for_unrolled_mem_circuits_using_gpu_tracer<
     caps
 }
 
-pub fn commit_memory_tree_for_inits_and_teardowns_unrolled_circuit_using_gpu_tracer<
-    C: MachineConfig,
-    A: GoodAllocator,
->(
+pub fn commit_memory_tree_for_inits_and_teardowns_unrolled_circuit<A: GoodAllocator>(
     circuit: &setups::prover::cs::one_row_compiler::CompiledCircuitArtifact<Mersenne31Field>,
     lazy_init_data: &[LazyInitAndTeardown],
     twiddles: &Twiddles<Mersenne31Complex, A>,
@@ -840,6 +834,7 @@ pub fn fs_transform_for_memory_and_delegation_arguments(
 pub fn fs_transform_for_memory_and_delegation_arguments_for_unrolled_circuits(
     final_register_values: &[FinalRegisterValue],
     final_pc: u32,
+    final_timestamp: TimestampScalar,
     circuit_families_memory_caps: &[(u32, Vec<Vec<MerkleTreeCapVarLength>>)],
     inits_and_teardowns_memory_caps: &[Vec<MerkleTreeCapVarLength>],
     delegation_circuits_memory_caps: &[(u32, Vec<Vec<MerkleTreeCapVarLength>>)],
@@ -860,9 +855,11 @@ pub fn fs_transform_for_memory_and_delegation_arguments_for_unrolled_circuits(
     memory_trace_transcript.absorb(&register_values_and_timestamps);
 
     // then final PC
-
+    let (ts_low, ts_high) = split_timestamp(final_timestamp);
     let mut final_pc_buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
     final_pc_buffer[0] = final_pc;
+    final_pc_buffer[1] = ts_low;
+    final_pc_buffer[2] = ts_high;
 
     memory_trace_transcript.absorb(&final_pc_buffer);
 
@@ -935,7 +932,10 @@ pub fn run_and_split_for_gpu<
     domain_size: usize,
     binary: &[u32],
     non_determinism: &mut ND,
-    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness<A>>>,
+    delegation_factories: HashMap<
+        u16,
+        Box<dyn Fn() -> DelegationWitness<A> + Send + Sync + 'static>,
+    >,
     worker: &Worker,
 ) -> (
     u32,

@@ -250,7 +250,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else if delegation_type == BIGINT_OPS_WITH_CONTROL_CSR_REGISTER {
             let num_requests_per_circuit = (1 << 21) - 1;
@@ -260,7 +260,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else {
             panic!(
@@ -280,37 +280,43 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         register_final_state,
         shuffle_ram_touched_addresses,
     ) = if SUPPORT_SIGNED {
+        let mut non_determinism = QuasiUARTSource::new_with_reads(vec![15, 1]); // 1000 steps of fibonacci, and 1 round of hashing
         run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization::<
             _,
             IMStandardIsaConfig,
+            Global,
         >(
             NUM_CYCLES_PER_CHUNK,
             INITIAL_PC,
             csr_processor,
             &mut memory,
             1 << 21,
-            vec![15, 1], // 1000 steps of fibonacci, and 1 round of hashing
+            &mut non_determinism,
             opcode_family_factories,
             word_mem_factory,
             subword_mem_factory,
             factories,
+            1 << 32,
             &worker,
         )
     } else {
+        let mut non_determinism = QuasiUARTSource::new_with_reads(vec![15, 1]); // 1000 steps of fibonacci, and 1 round of hashing
         run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization::<
             _,
             IMStandardIsaConfigWithUnsignedMulDiv,
+            Global,
         >(
             NUM_CYCLES_PER_CHUNK,
             INITIAL_PC,
             csr_processor,
             &mut memory,
             1 << 21,
-            vec![15, 1], // 1000 steps of fibonacci, and 1 round of hashing
+            &mut non_determinism,
             opcode_family_factories,
             word_mem_factory,
             subword_mem_factory,
             factories,
+            1 << 32,
             &worker,
         )
     };
@@ -326,7 +332,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         .map(|el| el.len())
         .sum();
 
-    let (num_trivial, inits_and_teardowns) = chunk_lazy_init_and_teardown::<Global>(
+    let (num_trivial, inits_and_teardowns) = chunk_lazy_init_and_teardown::<Global, _>(
         1,
         NUM_CYCLES_PER_CHUNK * NUM_INIT_AND_TEARDOWN_SETS,
         &shuffle_ram_touched_addresses,

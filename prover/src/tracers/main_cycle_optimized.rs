@@ -230,7 +230,8 @@ pub struct DelegationTracingData<A: GoodAllocator = Global> {
     pub mem_reads_offset: usize,
     pub mem_writes_offset: usize,
     pub all_per_type_logs: HashMap<u16, Vec<DelegationWitness<A>>>,
-    pub delegation_witness_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness<A>>>,
+    pub delegation_witness_factories:
+        HashMap<u16, Box<dyn Fn() -> DelegationWitness<A> + Send + Sync + 'static>>,
 }
 
 pub struct GPUFriendlyTracer<

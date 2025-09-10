@@ -12,6 +12,7 @@ use common_constants::delegation_types::keccak_special5::KECCAK_SPECIAL5_CSR_REG
 use cs::cs::circuit::Circuit;
 use cs::machine::ops::unrolled::*;
 use cs::machine::NON_DETERMINISM_CSR;
+use risc_v_simulator::abstractions::non_determinism::QuasiUARTSource;
 use risc_v_simulator::{cycle::*, delegations::DelegationsCSRProcessor};
 
 use crate::prover_stages::unrolled_prover::prove_configured_for_unrolled_circuits;
@@ -303,7 +304,7 @@ pub fn run_basic_unrolled_test_impl(
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else if delegation_type == BIGINT_OPS_WITH_CONTROL_CSR_REGISTER {
             let num_requests_per_circuit = (1 << 21) - 1;
@@ -313,7 +314,7 @@ pub fn run_basic_unrolled_test_impl(
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<(dyn Fn() -> DelegationWitness)>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else {
             panic!(
@@ -331,29 +332,33 @@ pub fn run_basic_unrolled_test_impl(
         register_final_state,
         shuffle_ram_touched_addresses,
     ) = if SUPPORT_SIGNED {
-        run_unrolled_machine_for_num_cycles::<_, IMStandardIsaConfig>(
+        let mut non_determinism = QuasiUARTSource::new_with_reads(vec![15, 1]); // 1000 steps of fibonacci, and 1 round of hashing
+        run_unrolled_machine_for_num_cycles::<_, IMStandardIsaConfig, Global>(
             NUM_CYCLES_PER_CHUNK,
             INITIAL_PC,
             csr_processor,
             &mut memory,
             1 << 21,
-            vec![15, 1], // 1000 steps of fibonacci, and 1 round of hashing
+            &mut non_determinism,
             opcode_family_factories,
             mem_factory,
             factories,
+            1 << 32,
             &worker,
         )
     } else {
-        run_unrolled_machine_for_num_cycles::<_, IMStandardIsaConfigWithUnsignedMulDiv>(
+        let mut non_determinism = QuasiUARTSource::new_with_reads(vec![15, 1]); // 1000 steps of fibonacci, and 1 round of hashing
+        run_unrolled_machine_for_num_cycles::<_, IMStandardIsaConfigWithUnsignedMulDiv, Global>(
             NUM_CYCLES_PER_CHUNK,
             INITIAL_PC,
             csr_processor,
             &mut memory,
             1 << 21,
-            vec![15, 1], // 1000 steps of fibonacci, and 1 round of hashing
+            &mut non_determinism,
             opcode_family_factories,
             mem_factory,
             factories,
+            1 << 32,
             &worker,
         )
     };

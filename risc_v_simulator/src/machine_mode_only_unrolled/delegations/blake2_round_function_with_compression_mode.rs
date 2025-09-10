@@ -1,5 +1,4 @@
 use super::*;
-use super::*;
 use crate::cycle::status_registers::TrapReason;
 use blake2s_u32::state_with_extended_control_flags::*;
 use blake2s_u32::{

@@ -37,8 +37,14 @@ use trace_and_split::*;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
-pub const NUM_QUERIES: usize = 53;
-pub const POW_BITS: u32 = 28;
+pub mod unrolled;
+
+pub const LDE_FACTOR_LOG2: usize = 1;
+pub const NUM_QUERIES: usize = verifier_common::num_queries_for_security_params(
+    verifier_common::SECURITY_BITS,
+    verifier_common::POW_BITS,
+    LDE_FACTOR_LOG2,
+);
 
 #[cfg(not(feature = "precheck_satisfied"))]
 const PRECHECK_SATISFIED: bool = false;
@@ -91,8 +97,8 @@ pub fn prove_image_execution<
     num_instances_upper_bound: usize,
     bytecode: &[u32],
     non_determinism: ND,
-    risc_v_circuit_precomputations: &MainCircuitPrecomputations<IMStandardIsaConfig, A>,
-    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A>)],
+    risc_v_circuit_precomputations: &MainCircuitPrecomputations<IMStandardIsaConfig, A, A>,
+    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A, A>)],
     worker: &worker::Worker,
 ) -> (Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>) {
     prove_image_execution_for_machine_with_gpu_tracers::<ND, IMStandardIsaConfig, A>(
@@ -115,8 +121,9 @@ pub fn prove_image_execution_on_reduced_machine<
     risc_v_circuit_precomputations: &MainCircuitPrecomputations<
         IWithoutByteAccessIsaConfigWithDelegation,
         A,
+        A,
     >,
-    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A>)],
+    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A, A>)],
     worker: &worker::Worker,
 ) -> (Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>) {
     prove_image_execution_for_machine_with_gpu_tracers::<
@@ -140,8 +147,8 @@ pub fn prove_image_execution_on_final_reduced_machine<
     num_instances_upper_bound: usize,
     bytecode: &[u32],
     non_determinism: ND,
-    risc_v_circuit_precomputations: &MainCircuitPrecomputations<IWithoutByteAccessIsaConfig, A>,
-    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A>)],
+    risc_v_circuit_precomputations: &MainCircuitPrecomputations<IWithoutByteAccessIsaConfig, A, A>,
+    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A, A>)],
     worker: &worker::Worker,
 ) -> (Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>) {
     prove_image_execution_for_machine_with_gpu_tracers::<ND, IWithoutByteAccessIsaConfig, A>(
@@ -165,18 +172,18 @@ pub fn trace_execution_for_gpu<
     trace_len: usize,
     worker: &worker::Worker,
 ) -> (
-    Vec<CycleData<C>>,
+    Vec<CycleData<C, A>>,
     (
         usize, // number of empty ones to assume
-        Vec<ShuffleRamSetupAndTeardown>,
+        Vec<ShuffleRamSetupAndTeardown<A>>,
     ),
-    HashMap<u16, Vec<DelegationWitness>>,
+    HashMap<u16, Vec<DelegationWitness<A>>>,
     Vec<FinalRegisterValue>,
 ) {
     let cycles_per_circuit = trace_len - 1;
     let max_cycles_to_run = num_instances_upper_bound * cycles_per_circuit;
 
-    let delegation_factories = setups::delegation_factories_for_machine::<C, Global>();
+    let delegation_factories = setups::delegation_factories_for_machine::<C, A>();
 
     let (
         final_pc,
@@ -184,7 +191,7 @@ pub fn trace_execution_for_gpu<
         delegation_circuits_witness,
         final_register_values,
         init_and_teardown_chunks,
-    ) = run_and_split_for_gpu::<ND, C, Global>(
+    ) = run_and_split_for_gpu::<ND, C, A>(
         max_cycles_to_run,
         trace_len,
         bytecode,
@@ -206,7 +213,7 @@ pub fn trace_execution_for_gpu<
 
     // we just need to chunk inits/teardowns
 
-    let init_and_teardown_chunks = chunk_lazy_init_and_teardown(
+    let init_and_teardown_chunks = chunk_lazy_init_and_teardown::<A, _>(
         main_circuits_witness.len(),
         cycles_per_circuit,
         &init_and_teardown_chunks,
@@ -229,8 +236,8 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
     num_instances_upper_bound: usize,
     bytecode: &[u32],
     non_determinism: ND,
-    risc_v_circuit_precomputations: &MainCircuitPrecomputations<C, A>,
-    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A>)],
+    risc_v_circuit_precomputations: &MainCircuitPrecomputations<C, A, A>,
+    delegation_circuits_precomputations: &[(u32, DelegationCircuitPrecomputations<A, A>)],
     worker: &worker::Worker,
 ) -> (Vec<Proof>, Vec<(u32, Vec<Proof>)>, Vec<FinalRegisterValue>) {
     let trace_len = risc_v_circuit_precomputations.compiled_circuit.trace_len;
@@ -265,10 +272,18 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
     let mut memory_trees = vec![];
     let mut previous_aux: Option<WitnessEvaluationAuxData> = None;
     let padding_shuffle_ram_inits_and_teardowns = ShuffleRamSetupAndTeardown {
-        lazy_init_data: vec![
-            Default::default();
-            risc_v_circuit_precomputations.compiled_circuit.trace_len - 1
-        ],
+        lazy_init_data: {
+            let mut t = Vec::with_capacity_in(
+                risc_v_circuit_precomputations.compiled_circuit.trace_len - 1,
+                A::default(),
+            );
+            t.resize(
+                risc_v_circuit_precomputations.compiled_circuit.trace_len - 1,
+                Default::default(),
+            );
+
+            t
+        },
     };
 
     // commit memory trees
@@ -420,14 +435,14 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
         };
 
         if should_dump_witness {
-            bincode_serialize_to_file(
-                shuffle_rams,
-                &format!("riscv_shuffle_ram_inits_chunk_{}.bin", circuit_sequence),
-            );
-            bincode_serialize_to_file(
-                witness_chunk,
-                &format!("riscv_witness_chunk_{}.bin", circuit_sequence),
-            );
+            // bincode_serialize_to_file(
+            //     shuffle_rams,
+            //     &format!("riscv_shuffle_ram_inits_chunk_{}.bin", circuit_sequence),
+            // );
+            // bincode_serialize_to_file(
+            //     witness_chunk,
+            //     &format!("riscv_witness_chunk_{}.bin", circuit_sequence),
+            // );
         }
 
         let oracle = MainRiscVOracle {
@@ -498,7 +513,7 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
             lde_factor,
             risc_v_cycles::TREE_CAP_SIZE,
             NUM_QUERIES,
-            POW_BITS,
+            verifier_common::POW_BITS as u32,
             worker,
         );
         #[cfg(feature = "timing_logs")]
@@ -559,21 +574,21 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
         let mut per_delegation_type_proofs = vec![];
         for (_circuit_idx, el) in els.iter().enumerate() {
             delegation_proofs_count += 1;
-            let oracle = DelegationCircuitOracle { cycle_data: el };
+            let oracle = DelegationCircuitOracle::<A> { cycle_data: el };
 
             if should_dump_witness {
-                println!(
-                    "Will serialize witness for delegaiton circuit {}",
-                    delegation_type
-                );
-                bincode_serialize_to_file(
-                    &oracle.cycle_data,
-                    &format!(
-                        "delegation_circuit_{}_{}_oracle_witness.bin",
-                        delegation_type, _circuit_idx
-                    ),
-                );
-                println!("Serialization is done");
+                // println!(
+                //     "Will serialize witness for delegaiton circuit {}",
+                //     delegation_type
+                // );
+                // bincode_serialize_to_file(
+                //     &oracle.cycle_data,
+                //     &format!(
+                //         "delegation_circuit_{}_{}_oracle_witness.bin",
+                //         delegation_type, _circuit_idx
+                //     ),
+                // );
+                // println!("Serialization is done");
             }
 
             #[cfg(feature = "timing_logs")]
@@ -631,7 +646,7 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
                 prec.lde_factor,
                 prec.tree_cap_size,
                 NUM_QUERIES,
-                POW_BITS,
+                verifier_common::POW_BITS as u32,
                 worker,
             );
             #[cfg(feature = "timing_logs")]

@@ -22,16 +22,19 @@ pub struct WordSpecializedTracer<
 > {
     pub bookkeeping_aux_data: RamTracingData<TRACE_FOR_TEARDOWNS>,
     pub current_timestamp: TimestampScalar,
-    pub current_family_chunks: [NonMemTracingFamilyChunk; NUM_OPCODE_FAMILIES_NO_RAM],
-    pub completed_family_chunks: HashMap<u8, Vec<NonMemTracingFamilyChunk>>,
-    pub current_word_sized_mem_family_chunk: MemTracingFamilyChunk,
-    pub current_subword_sized_mem_family_chunk: MemTracingFamilyChunk,
-    pub completed_word_sized_mem_family_chunks: Vec<MemTracingFamilyChunk>,
-    pub completed_subword_sized_mem_family_chunks: Vec<MemTracingFamilyChunk>,
-    pub opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-    pub word_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    pub subword_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    pub delegation_tracer: DelegationTracingData,
+    pub current_family_chunks: [NonMemTracingFamilyChunk<A>; NUM_OPCODE_FAMILIES_NO_RAM],
+    pub completed_family_chunks: HashMap<u8, Vec<NonMemTracingFamilyChunk<A>>>,
+    pub current_word_sized_mem_family_chunk: MemTracingFamilyChunk<A>,
+    pub current_subword_sized_mem_family_chunk: MemTracingFamilyChunk<A>,
+    pub completed_word_sized_mem_family_chunks: Vec<MemTracingFamilyChunk<A>>,
+    pub completed_subword_sized_mem_family_chunks: Vec<MemTracingFamilyChunk<A>>,
+    pub opcode_family_chunk_factories:
+        HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    pub word_sized_mem_family_chunk_factory:
+        Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    pub subword_sized_mem_family_chunk_factory:
+        Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    pub delegation_tracer: DelegationTracingData<A>,
     pub _marker: core::marker::PhantomData<C>,
 }
 
@@ -45,10 +48,17 @@ impl<
 {
     pub fn new(
         bookkeeping_aux_data: RamTracingData<TRACE_FOR_TEARDOWNS>,
-        opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-        word_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-        subword_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-        delegation_tracer: DelegationTracingData,
+        opcode_family_chunk_factories: HashMap<
+            u8,
+            Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
+        >,
+        word_sized_mem_family_chunk_factory: Box<
+            dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static,
+        >,
+        subword_sized_mem_family_chunk_factory: Box<
+            dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static,
+        >,
+        delegation_tracer: DelegationTracingData<A>,
     ) -> Self {
         if TRACE_FOR_PROVING {
             assert!(

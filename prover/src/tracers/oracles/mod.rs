@@ -9,10 +9,10 @@ use worker::Worker;
 pub mod delegation_oracle;
 pub mod main_risc_v_circuit;
 
-pub fn chunk_lazy_init_and_teardown<A: GoodAllocator>(
+pub fn chunk_lazy_init_and_teardown<A: GoodAllocator, B: GoodAllocator>(
     total_num_chunks: usize,
     inits_chunk_size: usize,
-    data: &[Vec<(u32, (TimestampScalar, u32))>],
+    data: &[Vec<(u32, (TimestampScalar, u32)), B>],
     worker: &Worker,
 ) -> (
     usize, // number of empty ones to assume

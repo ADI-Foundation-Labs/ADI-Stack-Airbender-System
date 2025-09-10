@@ -19,6 +19,8 @@ use prover::tracers::delegation::blake2_with_control_factory_fn;
 use prover::tracers::delegation::keccak_special5_factory_fn;
 use prover::tracers::oracles::delegation_oracle::DelegationCircuitOracle;
 use prover::tracers::oracles::main_risc_v_circuit::MainRiscVOracle;
+use prover::tracers::unrolled::tracer::MemTracingFamilyChunk;
+use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::unrolled::MemoryCircuitOracle;
 use prover::unrolled::NonMemoryCircuitOracle;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
@@ -66,8 +68,10 @@ pub fn is_final_reduced_machine_configuration<C: MachineConfig>() -> bool {
     std::any::TypeId::of::<C>() == std::any::TypeId::of::<IWithoutByteAccessIsaConfig>()
 }
 
-pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
-) -> HashMap<u16, Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>> {
+pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>() -> HashMap<
+    u16,
+    Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A> + Send + Sync + 'static>,
+> {
     if is_default_machine_configuration::<C>()
         || is_machine_without_signed_mul_div_configuration::<C>()
     {
@@ -83,7 +87,12 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                             A::default(),
                         )
                     })
-                        as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
+                        as Box<
+                            dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>
+                                + Send
+                                + Sync
+                                + 'static,
+                        >,
                 ),
                 (
                     bigint_with_control::DELEGATION_TYPE_ID as u16,
@@ -94,7 +103,12 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                             A::default(),
                         )
                     })
-                        as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
+                        as Box<
+                            dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>
+                                + Send
+                                + Sync
+                                + 'static,
+                        >,
                 ),
                 (
                     keccak_special5::DELEGATION_TYPE_ID as u16,
@@ -105,7 +119,12 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                             A::default(),
                         )
                     })
-                        as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
+                        as Box<
+                            dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>
+                                + Send
+                                + Sync
+                                + 'static,
+                        >,
                 ),
             ]
             .into_iter(),
@@ -122,7 +141,12 @@ pub fn delegation_factories_for_machine<C: MachineConfig, A: GoodAllocator>(
                         A::default(),
                     )
                 })
-                    as Box<dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>>,
+                    as Box<
+                        dyn Fn() -> prover::tracers::delegation::DelegationWitness<A>
+                            + Send
+                            + Sync
+                            + 'static,
+                    >,
             )]
             .into_iter(),
         )
@@ -143,15 +167,15 @@ pub struct MainCircuitPrecomputations<C: MachineConfig, A: GoodAllocator, B: Goo
     pub witness_eval_fn_for_gpu_tracer: fn(&mut SimpleWitnessProxy<'_, MainRiscVOracle<'_, C, B>>),
 }
 
-pub enum UnrolledCircuitWitnessEvalFn {
+pub enum UnrolledCircuitWitnessEvalFn<A: GoodAllocator> {
     NonMemory {
         witness_fn: fn(&'_ mut SimpleWitnessProxy<'_, NonMemoryCircuitOracle<'_>>),
-        decoder_table: Vec<ExecutorFamilyDecoderData>,
+        decoder_table: Vec<ExecutorFamilyDecoderData, A>,
         default_pc_value_in_padding: u32,
     },
     Memory {
         witness_fn: fn(&'_ mut SimpleWitnessProxy<'_, MemoryCircuitOracle<'_>>),
-        decoder_table: Vec<ExecutorFamilyDecoderData>,
+        decoder_table: Vec<ExecutorFamilyDecoderData, A>,
     },
 }
 
@@ -165,7 +189,7 @@ pub struct UnrolledCircuitPrecomputations<A: GoodAllocator, B: GoodAllocator = G
     pub twiddles: Twiddles<Mersenne31Complex, A>,
     pub lde_precomputations: LdePrecomputations<A>,
     pub setup: SetupPrecomputations<DEFAULT_TRACE_PADDING_MULTIPLE, A, DefaultTreeConstructor>,
-    pub witness_eval_fn_for_gpu_tracer: Option<UnrolledCircuitWitnessEvalFn>,
+    pub witness_eval_fn_for_gpu_tracer: Option<UnrolledCircuitWitnessEvalFn<B>>,
 }
 
 pub struct DelegationCircuitPrecomputations<A: GoodAllocator, B: GoodAllocator = Global> {
@@ -328,6 +352,84 @@ pub struct InitsAndTeardownsCircuitSetupParams {
     pub setup_caps: [MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
 }
 
+fn make_factories_for_unrolled_circuits_impl<A: GoodAllocator>(
+    non_mem_factories: &[fn() -> (
+        u8,
+        Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    )],
+    mem_factories: &[fn() -> (
+        u8,
+        Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    )],
+) -> (
+    HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    HashMap<u8, Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+) {
+    let mut non_mem = HashMap::new();
+    let mut mem = HashMap::new();
+
+    for el in non_mem_factories.iter() {
+        let (family, factory) = (el)();
+        let existing = non_mem.insert(family, factory);
+        assert!(existing.is_none());
+    }
+
+    for el in mem_factories.iter() {
+        let (family, factory) = (el)();
+        let existing = mem.insert(family, factory);
+        assert!(existing.is_none());
+    }
+
+    (non_mem, mem)
+}
+
+pub fn factories_for_unrolled_circuits_base_layer<A: GoodAllocator>() -> (
+    HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    HashMap<u8, Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+) {
+    let non_mem_fns = vec![
+        ::add_sub_lui_auipc_mop::get_tracer_factory,
+        ::jump_branch_slt::get_tracer_factory,
+        ::shift_binary_csr_all_delegations::get_tracer_factory,
+        ::mul_div::get_tracer_factory,
+    ];
+    let mem_fns = vec![
+        ::load_store_word_only::get_tracer_factory,
+        ::load_store_subword_only::get_tracer_factory,
+    ];
+    make_factories_for_unrolled_circuits_impl::<A>(&non_mem_fns, &mem_fns)
+}
+
+pub fn factories_for_unrolled_circuits_base_layer_unsigned_only<A: GoodAllocator>() -> (
+    HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    HashMap<u8, Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+) {
+    let non_mem_fns = vec![
+        ::add_sub_lui_auipc_mop::get_tracer_factory,
+        ::jump_branch_slt::get_tracer_factory,
+        ::shift_binary_csr_all_delegations::get_tracer_factory,
+        ::mul_div_unsigned::get_tracer_factory,
+    ];
+    let mem_fns = vec![
+        ::load_store_word_only::get_tracer_factory,
+        ::load_store_subword_only::get_tracer_factory,
+    ];
+    make_factories_for_unrolled_circuits_impl::<A>(&non_mem_fns, &mem_fns)
+}
+
+pub fn factories_for_unrolled_circuits_recursion_layer<A: GoodAllocator>() -> (
+    HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    HashMap<u8, Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+) {
+    let non_mem_fns = vec![
+        ::add_sub_lui_auipc_mop::get_tracer_factory,
+        ::jump_branch_slt::get_tracer_factory,
+        ::shift_binary_csr_blake_only_delegation::get_tracer_factory,
+    ];
+    let mem_fns = vec![::load_store_word_only::get_tracer_factory as _];
+    make_factories_for_unrolled_circuits_impl::<A>(&non_mem_fns, &mem_fns[..])
+}
+
 pub fn compute_unrolled_circuits_params_base_layer(
     binary_image: &[u32],
     bytecode: &[u32],
@@ -371,7 +473,7 @@ pub fn compute_unrolled_circuits_params_recursion_layer(
     compute_unrolled_circuits_params_impl(binary_image, bytecode, &eval_fns)
 }
 
-pub fn compute_unrolled_circuits_params_impl(
+fn compute_unrolled_circuits_params_impl(
     binary_image: &[u32],
     bytecode: &[u32],
     circuits: &[fn(&[u32], &[u32], &Worker) -> UnrolledCircuitPrecomputations<Global, Global>],

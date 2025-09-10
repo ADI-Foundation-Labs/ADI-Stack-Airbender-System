@@ -70,7 +70,6 @@ default-members = [
     "circuit_defs/bigint_with_control",
     "circuit_defs/blake2_with_compression",
     "circuit_defs/circuit_common",
-    # "circuit_defs/opcode_tests",
     "circuit_defs/prover_examples",
     "circuit_defs/reduced_risc_v_machine",
     "circuit_defs/reduced_risc_v_log_23_machine",

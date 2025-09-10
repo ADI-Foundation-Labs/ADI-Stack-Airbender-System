@@ -95,7 +95,7 @@ where
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else if *delegation_type == BIGINT_OPS_WITH_CONTROL_CSR_REGISTER {
             let num_requests_per_circuit = circuit.num_requests_per_circuit;
@@ -105,7 +105,7 @@ where
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else if *delegation_type == KECCAK_SPECIAL5_CSR_REGISTER {
             let num_requests_per_circuit = circuit.num_requests_per_circuit;
@@ -115,7 +115,7 @@ where
             };
             factories.insert(
                 delegation_type,
-                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness>,
+                Box::new(factory_fn) as Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>,
             );
         } else {
             panic!(
@@ -155,7 +155,7 @@ where
     }
 
     let (num_trivial, inits_and_teardowns) =
-        chunk_lazy_init_and_teardown::<Global>(num_chunks, chunk_size, &[teardown], worker);
+        chunk_lazy_init_and_teardown::<Global, _>(num_chunks, chunk_size, &[teardown], worker);
 
     assert_eq!(num_trivial, 0, "trivial padding is not expected in tests");
 
@@ -372,7 +372,7 @@ pub fn dev_run_for_num_cycles_under_convention_ext_with_gpu_tracers<
     mut custom_csr_processor: CSR,
     memory: &mut VectorMemoryImplWithRom,
     rom_address_space_bound: usize,
-    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness>>,
+    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness + Send + Sync + 'static>>,
     non_determinism_replies: &[u32],
 ) -> (
     u32,

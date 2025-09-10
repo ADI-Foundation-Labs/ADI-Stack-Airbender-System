@@ -11,24 +11,35 @@ mod family_circuits;
 
 pub use self::family_circuits::*;
 
-pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: MachineConfig>(
+pub fn run_unrolled_machine_for_num_cycles<
+    CSR: DelegationCSRProcessor,
+    C: MachineConfig,
+    A: GoodAllocator,
+>(
     num_cycles: usize,
     initial_pc: u32,
     mut custom_csr_processor: CSR,
     memory: &mut VectorMemoryImplWithRom,
     rom_address_space_bound: usize,
-    non_determinism_replies: Vec<u32>,
-    opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-    mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness>>,
+    non_determinism: &mut impl NonDeterminismCSRSource<VectorMemoryImplWithRom>,
+    opcode_family_chunk_factories: HashMap<
+        u8,
+        Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    >,
+    mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    delegation_factories: HashMap<
+        u16,
+        Box<dyn Fn() -> DelegationWitness<A> + Send + Sync + 'static>,
+    >,
+    ram_bound: usize,
     worker: &Worker,
 ) -> (
     u32,
-    HashMap<u8, Vec<NonMemTracingFamilyChunk>>,
-    Vec<MemTracingFamilyChunk>,
-    HashMap<u16, Vec<DelegationWitness>>,
+    HashMap<u8, Vec<NonMemTracingFamilyChunk<A>>>,
+    Vec<MemTracingFamilyChunk<A>>,
+    HashMap<u16, Vec<DelegationWitness<A>>>,
     [RamShuffleMemStateRecord; NUM_REGISTERS], // register final values
-    Vec<Vec<(u32, (TimestampScalar, u32))>>, // lazy iniy/teardown data - all unique words touched, sorted ascending, but not in one vector
+    Vec<Vec<(u32, (TimestampScalar, u32)), A>>, // lazy iniy/teardown data - all unique words touched, sorted ascending, but not in one vector
 ) {
     use crate::tracers::main_cycle_optimized::DelegationTracingData;
     use crate::tracers::main_cycle_optimized::RamTracingData;
@@ -38,7 +49,7 @@ pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: Machi
     let mut state = RiscV32StateForUnrolledProver::<C>::initial(initial_pc);
 
     let ram_tracer =
-        RamTracingData::<true>::new_for_ram_size_and_rom_bound(1 << 32, rom_address_space_bound);
+        RamTracingData::<true>::new_for_ram_size_and_rom_bound(ram_bound, rom_address_space_bound);
     let delegation_tracer = DelegationTracingData {
         all_per_type_logs: HashMap::new(),
         delegation_witness_factories: delegation_factories,
@@ -51,9 +62,7 @@ pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: Machi
     // important - in out memory implementation first access in every chunk is timestamped as (trace_size * circuit_idx) + 4,
     // so we take care of it
 
-    let mut non_determinism = QuasiUARTSource::new_with_reads(non_determinism_replies);
-
-    let mut tracer = UnrolledGPUFriendlyTracer::<C, Global, true, true, true>::new(
+    let mut tracer = UnrolledGPUFriendlyTracer::<C, A, true, true, true>::new(
         ram_tracer,
         opcode_family_chunk_factories,
         mem_family_chunk_factory,
@@ -63,7 +72,7 @@ pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: Machi
     state.run_cycles(
         memory,
         &mut tracer,
-        &mut non_determinism,
+        non_determinism,
         &mut custom_csr_processor,
         num_cycles,
     );
@@ -112,8 +121,8 @@ pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: Machi
 
     // parallel collect
     // first we will walk over access_bitmask and collect subparts
-    let mut chunks: Vec<Vec<(u32, (TimestampScalar, u32))>> =
-        vec![vec![].clone(); worker.get_num_cores()];
+    let mut chunks: Vec<Vec<(u32, (TimestampScalar, u32)), A>> =
+        vec![Vec::new_in(A::default()).clone(); worker.get_num_cores()];
     let mut dst = &mut chunks[..];
     worker.scope(access_bitmask.len(), |scope, geometry| {
         for thread_idx in 0..geometry.len() {
@@ -194,27 +203,39 @@ pub fn run_unrolled_machine_for_num_cycles<CSR: DelegationCSRProcessor, C: Machi
 pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
     CSR: DelegationCSRProcessor,
     C: MachineConfig,
+    A: GoodAllocator,
 >(
     num_cycles: usize,
     initial_pc: u32,
     mut custom_csr_processor: CSR,
     memory: &mut VectorMemoryImplWithRom,
     rom_address_space_bound: usize,
-    non_determinism_replies: Vec<u32>,
-    opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-    word_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    subword_sized_mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    delegation_factories: HashMap<u16, Box<dyn Fn() -> DelegationWitness>>,
+    non_determinism: &mut impl NonDeterminismCSRSource<VectorMemoryImplWithRom>,
+    opcode_family_chunk_factories: HashMap<
+        u8,
+        Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    >,
+    word_sized_mem_family_chunk_factory: Box<
+        dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static,
+    >,
+    subword_sized_mem_family_chunk_factory: Box<
+        dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static,
+    >,
+    delegation_factories: HashMap<
+        u16,
+        Box<dyn Fn() -> DelegationWitness<A> + Send + Sync + 'static>,
+    >,
+    ram_bound: usize,
     worker: &Worker,
 ) -> (
     u32,
     TimestampScalar,
     usize,
-    HashMap<u8, Vec<NonMemTracingFamilyChunk>>,
-    (Vec<MemTracingFamilyChunk>, Vec<MemTracingFamilyChunk>),
-    HashMap<u16, Vec<DelegationWitness>>,
+    HashMap<u8, Vec<NonMemTracingFamilyChunk<A>>>,
+    (Vec<MemTracingFamilyChunk<A>>, Vec<MemTracingFamilyChunk<A>>),
+    HashMap<u16, Vec<DelegationWitness<A>>>,
     [RamShuffleMemStateRecord; NUM_REGISTERS], // register final values
-    Vec<Vec<(u32, (TimestampScalar, u32))>>, // lazy iniy/teardown data - all unique words touched, sorted ascending, but not in one vector
+    Vec<Vec<(u32, (TimestampScalar, u32)), A>>, // lazy iniy/teardown data - all unique words touched, sorted ascending, but not in one vector
 ) {
     use crate::tracers::main_cycle_optimized::DelegationTracingData;
     use crate::tracers::main_cycle_optimized::RamTracingData;
@@ -224,8 +245,8 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
     let mut state = RiscV32StateForUnrolledProver::<C>::initial(initial_pc);
 
     let ram_tracer =
-        RamTracingData::<true>::new_for_ram_size_and_rom_bound(1 << 32, rom_address_space_bound);
-    let delegation_tracer = DelegationTracingData {
+        RamTracingData::<true>::new_for_ram_size_and_rom_bound(ram_bound, rom_address_space_bound);
+    let delegation_tracer = DelegationTracingData::<A> {
         all_per_type_logs: HashMap::new(),
         delegation_witness_factories: delegation_factories,
         current_per_type_logs: HashMap::new(),
@@ -237,9 +258,7 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
     // important - in out memory implementation first access in every chunk is timestamped as (trace_size * circuit_idx) + 4,
     // so we take care of it
 
-    let mut non_determinism = QuasiUARTSource::new_with_reads(non_determinism_replies);
-
-    let mut tracer = WordSpecializedTracer::<C, Global, true, true, true>::new(
+    let mut tracer = WordSpecializedTracer::<C, A, true, true, true>::new(
         ram_tracer,
         opcode_family_chunk_factories,
         word_sized_mem_family_chunk_factory,
@@ -250,7 +269,7 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
     let cycles_used = state.run_cycles(
         memory,
         &mut tracer,
-        &mut non_determinism,
+        non_determinism,
         &mut custom_csr_processor,
         num_cycles,
     );
@@ -306,8 +325,8 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
 
     // parallel collect
     // first we will walk over access_bitmask and collect subparts
-    let mut chunks: Vec<Vec<(u32, (TimestampScalar, u32))>> =
-        vec![vec![].clone(); worker.get_num_cores()];
+    let mut chunks: Vec<Vec<(u32, (TimestampScalar, u32)), A>> =
+        vec![Vec::new_in(A::default()).clone(); worker.get_num_cores()];
     let mut dst = &mut chunks[..];
     worker.scope(access_bitmask.len(), |scope, geometry| {
         for thread_idx in 0..geometry.len() {

@@ -20,36 +20,36 @@ pub(crate) const DELEGATION_ACCESS_IDX: TimestampScalar = 3;
 pub(crate) const RAM_READ_ACCESS_IDX: TimestampScalar = RS2_ACCESS_IDX;
 pub(crate) const RAM_WRITE_ACCESS_IDX: TimestampScalar = RD_ACCESS_IDX;
 
-pub struct NonMemTracingFamilyChunk {
+pub struct NonMemTracingFamilyChunk<A: GoodAllocator = Global> {
     pub num_cycles: usize,
-    pub data: Vec<NonMemoryOpcodeTracingDataWithTimestamp>,
+    pub data: Vec<NonMemoryOpcodeTracingDataWithTimestamp, A>,
 }
 
-impl NonMemTracingFamilyChunk {
+impl<A: GoodAllocator> NonMemTracingFamilyChunk<A> {
     pub fn new_for_num_cycles(num_cycles: usize) -> Self {
         let capacity = num_cycles + 1;
         assert!(capacity.is_power_of_two());
 
         Self {
             num_cycles,
-            data: Vec::with_capacity(capacity),
+            data: Vec::with_capacity_in(capacity, A::default()),
         }
     }
 }
 
-pub struct MemTracingFamilyChunk {
+pub struct MemTracingFamilyChunk<A: GoodAllocator = Global> {
     pub num_cycles: usize,
-    pub data: Vec<MemoryOpcodeTracingDataWithTimestamp>,
+    pub data: Vec<MemoryOpcodeTracingDataWithTimestamp, A>,
 }
 
-impl MemTracingFamilyChunk {
+impl<A: GoodAllocator> MemTracingFamilyChunk<A> {
     pub fn new_for_num_cycles(num_cycles: usize) -> Self {
         let capacity = num_cycles + 1;
         assert!(capacity.is_power_of_two());
 
         Self {
             num_cycles,
-            data: Vec::with_capacity(capacity),
+            data: Vec::with_capacity_in(capacity, A::default()),
         }
     }
 }
@@ -63,13 +63,14 @@ pub struct UnrolledGPUFriendlyTracer<
 > {
     pub bookkeeping_aux_data: RamTracingData<TRACE_FOR_TEARDOWNS>,
     pub current_timestamp: TimestampScalar,
-    pub current_family_chunks: [NonMemTracingFamilyChunk; NUM_OPCODE_FAMILIES_NO_RAM],
-    pub completed_family_chunks: HashMap<u8, Vec<NonMemTracingFamilyChunk>>,
-    pub current_mem_family_chunk: MemTracingFamilyChunk,
-    pub completed_mem_family_chunks: Vec<MemTracingFamilyChunk>,
-    pub opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-    pub mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-    pub delegation_tracer: DelegationTracingData,
+    pub current_family_chunks: [NonMemTracingFamilyChunk<A>; NUM_OPCODE_FAMILIES_NO_RAM],
+    pub completed_family_chunks: HashMap<u8, Vec<NonMemTracingFamilyChunk<A>>>,
+    pub current_mem_family_chunk: MemTracingFamilyChunk<A>,
+    pub completed_mem_family_chunks: Vec<MemTracingFamilyChunk<A>>,
+    pub opcode_family_chunk_factories:
+        HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>>,
+    pub mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+    pub delegation_tracer: DelegationTracingData<A>,
     pub _marker: core::marker::PhantomData<C>,
 }
 
@@ -83,9 +84,12 @@ impl<
 {
     pub fn new(
         bookkeeping_aux_data: RamTracingData<TRACE_FOR_TEARDOWNS>,
-        opcode_family_chunk_factories: HashMap<u8, Box<dyn Fn() -> NonMemTracingFamilyChunk>>,
-        mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk>,
-        delegation_tracer: DelegationTracingData,
+        opcode_family_chunk_factories: HashMap<
+            u8,
+            Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
+        >,
+        mem_family_chunk_factory: Box<dyn Fn() -> MemTracingFamilyChunk<A> + Send + Sync + 'static>,
+        delegation_tracer: DelegationTracingData<A>,
     ) -> Self {
         if TRACE_FOR_PROVING {
             assert!(

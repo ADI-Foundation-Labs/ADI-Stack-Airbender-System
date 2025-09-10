@@ -10,4 +10,5 @@ use crate::machine_mode_only_unrolled::UnrolledTracer;
 use cs::definitions::TimestampScalar;
 
 pub mod blake2_round_function_with_compression_mode;
+pub mod keccak_special5;
 pub mod u256_ops_with_control;

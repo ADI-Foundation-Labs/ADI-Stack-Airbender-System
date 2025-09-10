@@ -8,11 +8,27 @@
 #[cfg(any(all(feature = "security_80", feature = "security_100"),))]
 compiler_error!("multiple security levels selected same time");
 
+#[cfg(not(any(feature = "security_80", feature = "security_100"),))]
+compiler_error!("some security level must be selected");
+
 #[cfg(feature = "security_80")]
 pub const SECURITY_BITS: usize = 80;
+#[cfg(feature = "security_80")]
+pub const POW_BITS: usize = 28;
 
 #[cfg(feature = "security_100")]
 pub const SECURITY_BITS: usize = 100;
+#[cfg(feature = "security_100")]
+pub const POW_BITS: usize = 28;
+
+pub const fn num_queries_for_security_params(
+    security_bits: usize,
+    pow_bits: usize,
+    lde_factor_log2: usize,
+) -> usize {
+    let bits = security_bits - pow_bits;
+    bits.div_ceil(lde_factor_log2) + 1
+}
 
 use core::mem::MaybeUninit;
 

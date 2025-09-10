@@ -2,13 +2,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::alloc::Allocator;
-
 use common_constants::circuit_families::JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX;
 use prover::cs::cs::oracle::ExecutorFamilyDecoderData;
 use prover::cs::machine::ops::unrolled::compile_unrolled_circuit_state_transition;
 use prover::cs::machine::ops::unrolled::{DecoderTableEntry, JumpSltBranchDecoder};
 use prover::cs::*;
+use prover::fft::GoodAllocator;
 use prover::field::Mersenne31Field;
 use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
 use prover::*;
@@ -88,17 +87,12 @@ pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: 
     table_driver
 }
 
-pub fn get_tracer_factory<A: Allocator>(
-    allocator: A,
-) -> (
+pub fn get_tracer_factory<A: GoodAllocator>() -> (
     u8,
-    Box<dyn Fn() -> NonMemTracingFamilyChunk + Send + Sync + 'static, A>,
+    Box<dyn Fn() -> NonMemTracingFamilyChunk<A> + Send + Sync + 'static>,
 ) {
     use prover::tracers::unrolled::tracer::NonMemTracingFamilyChunk;
-    let factory = Box::new_in(
-        || NonMemTracingFamilyChunk::new_for_num_cycles(DOMAIN_SIZE - 1),
-        allocator,
-    );
+    let factory = Box::new(|| NonMemTracingFamilyChunk::new_for_num_cycles(DOMAIN_SIZE - 1));
 
     (FAMILY_IDX, factory as _)
 }
