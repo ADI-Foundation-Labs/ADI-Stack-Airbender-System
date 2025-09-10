@@ -156,7 +156,7 @@ Everything from *Full ISA (No Exceptions)* **plus** the CSR instruction(s) requi
 
 #### When to Use
 
-Choose `FullIsaWithDelegationNoExceptions` for zkSync OS or applications that:
+Choose `FullIsaWithDelegationNoExceptions` for ZKsync OS or applications that:
 * Require the **full RV32IM instruction set**, **and**
 * Need to invoke **pre-compiled cryptographic primitives** or inject non-deterministic data via the delegation interface.
 
