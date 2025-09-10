@@ -80,7 +80,7 @@ This pattern yields significant savings:
 
 - Fewer muxes and selectors: selection happens once per relation type, not per wire.
 - Variable reuse: preallocated registers/flags/bytes are recycled across operations.
-- Betterfor GPU. Uniform relation shapes are easier to fold in Stage 3.
+- Better for GPU. Uniform relation shapes are easier to fold in Stage 3.
 
 
 ---
