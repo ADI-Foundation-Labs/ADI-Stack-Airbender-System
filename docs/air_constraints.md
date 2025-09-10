@@ -27,7 +27,7 @@ Term * Term can create degree up to 4 at the Term level. This is allowed for com
 - If a Constraint still has degree > 2 at normalization time, it panics.
 
 ## Witness generation vs constraints 
-- create an empty variable (placeholder with idex but without assigned to witness).
+- create an empty variable (placeholder with index but without assigned witness value).
 - set_values(value_fn): records a closure that computes and assigns witness values for variables. These functions do not add constraints.
 - During witness generation, the executor runs the recorded closures to fill variable values.
 - You must still add constraints/lookup relations that verify the assigned witnesses satisfy the circuit equations.
