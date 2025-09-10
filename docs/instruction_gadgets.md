@@ -1,6 +1,6 @@
 # Instruction Gadget Circuits
 
-*ZK-Sync Airbender – Core circuits *
+*ZKsync Airbender – Core circuits *
 
 **every RISC-V instruction circuit** found under `cs/src/machine/ops`.  .
 ---
