@@ -16,7 +16,7 @@ Currently in our system we have 3 delegation circuits implemented:
 - Blake2 single round — `cs/src/delegation/blake2_single_round/mod.rs`
 -   Used in: experiments/tests. Not enabled by default in setups
 - BigInt (u256) ops with control — `cs/src/delegation/bigint_with_control/mod.rs`
--   Used in: zkOS as a BN254 math primitive (256-bit field ops; ADD/SUB/MUL/EQ, carry, memcopy)
+-   Used in: ZKsync OS as a BN254 math primitive (256-bit field ops; ADD/SUB/MUL/EQ, carry, memcopy)
 
 ### Delegation call 
 One delegation request is a small primitive, not a full workflow. A complete high‑level operation (e.g., a full hash or multi‑step u256 flow) typically spans multiple delegation requests.
