@@ -3,7 +3,7 @@ use verifier_common::cs::utils::split_timestamp;
 
 use super::*;
 
-pub fn setup_caps_flattened(caps: &'_ [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) -> &'_ [u32] {
+pub fn caps_flattened(caps: &'_ [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) -> &'_ [u32] {
     unsafe {
         core::slice::from_ptr_range(
             caps.as_ptr_range().start.cast::<u32>()..caps.as_ptr_range().end.cast::<u32>(),
@@ -51,8 +51,8 @@ pub const SHIFT_BINARY_CSR_BLAKE_ONLY_DELEGATION_VERIFIER_PTR: VerificationFunct
     );
 
 pub const FULL_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS: &[(
-    u32,
-    u32, // delegation capacity
+    u32, // family
+    u32, // capacity
     VerificationFunctionPointer,
 )] = &[
     (
@@ -88,8 +88,8 @@ pub const FULL_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS: &[(
 ];
 
 pub const FULL_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS: &[(
-    u32,
-    u32, // delegation capacity
+    u32, // family
+    u32, // capacity
     VerificationFunctionPointer,
 )] = &[
     (
@@ -125,8 +125,8 @@ pub const FULL_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS: &[(
 ];
 
 pub const RECURSION_WORD_ONLY_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS: &[(
-    u32,
-    u32, // delegation capacity
+    u32, // family
+    u32, // capacity
     VerificationFunctionPointer,
 )] = &[
     (
@@ -151,6 +151,14 @@ pub const RECURSION_WORD_ONLY_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PA
         LOAD_STORE_WORD_ONLY_VERIFIER_PTR,
     ),
 ];
+
+pub const INITS_AND_TEARDOWNS_VERIFIER_PTR: VerifierFunctionPointer<
+    CAP_SIZE,
+    NUM_COSETS,
+    0,
+    { inits_and_teardowns_verifier::concrete::size_constants::NUM_AUX_BOUNDARY_VALUES },
+    0,
+> = inits_and_teardowns_verifier::verify;
 
 /// If we recurse over user's program -> we must provide expected final PC,
 /// and setup caps (that encode the program itself!),
@@ -225,6 +233,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
     let mut proof_output_with_delegation_1: ProofOutput<CAP_SIZE, NUM_COSETS, 1, 0, 1> =
         MaybeUninit::uninit().assume_init();
     let mut state_variables = ProofPublicInputs::uninit();
+    let mut delegation_used = false;
 
     // NOTE: in unrolled circuits we do have contribution from setup values into
     // memory or delegation, so we skip setups here (same as we do with delegation circuits in general)
@@ -310,6 +319,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
                     // now we should check all invariants about continuity
 
                     if circuit_sequence > 0 {
+                        delegation_used |= true;
                         // and check equality of the setup
                         assert!(MerkleTreeCap::compare(
                             &previous.setup_caps,
@@ -468,6 +478,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
             let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
 
             if num_circuits > 0 {
+                delegation_used |= true;
                 let mut buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
                 buffer[0] = *delegation_type;
                 transcript.absorb(&buffer);
@@ -526,10 +537,10 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
         expected_challenges.memory_argument,
         proof_output_0.memory_challenges
     );
-    if NUM_DELEGATION_CHALLENGES > 0 {
+    if delegation_used {
         assert_eq!(
             expected_challenges.delegation_argument.unwrap_unchecked(),
-            proof_output_0.delegation_challenges[0]
+            proof_output_with_delegation_0.delegation_challenges[0]
         );
     }
     assert_eq!(
@@ -559,7 +570,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
         );
     grand_product_accumulator.mul_assign(&register_contribution);
     grand_product_accumulator.mul_assign(&machine_state_contribution);
-    
+
     assert_eq!(grand_product_accumulator, Mersenne31Quartic::ONE);
     assert_eq!(delegation_set_accumulator, Mersenne31Quartic::ZERO);
 
@@ -577,9 +588,9 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
     let mut result_hasher = Blake2sBufferingTranscript::new();
     result_hasher.absorb(&final_pc_buffer);
     for setup in circuits_families_setups.iter() {
-        result_hasher.absorb(setup_caps_flattened(*setup));
+        result_hasher.absorb(caps_flattened(*setup));
     }
-    result_hasher.absorb(setup_caps_flattened(&inits_and_teardowns_verifier.0));
+    result_hasher.absorb(caps_flattened(&inits_and_teardowns_verifier.0));
     let end_params_output = result_hasher.finalize_reset();
 
     if BASE_LAYER {

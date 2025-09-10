@@ -1063,6 +1063,8 @@ pub fn prove_unrolled_execution<
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bincode_deserialize_from_file;
+    use crate::deserialize_from_file;
     use crate::risc_v_simulator::cycle::IMWithoutSignedMulDivIsaConfig;
     use risc_v_simulator::abstractions::non_determinism::QuasiUARTSource;
     use std::alloc::Global;
@@ -1121,5 +1123,35 @@ mod test {
             ),
             "tmp_proof.bin",
         );
+    }
+
+    #[test]
+    fn test_verify_simple_fib() {
+        use setups::*;
+
+        let t: (
+            BTreeMap<u8, Vec<UnrolledModeProof>>,
+            Vec<(u32, Vec<Proof>)>,
+            [FinalRegisterValue; 32],
+            (u32, TimestampScalar),
+        ) = bincode_deserialize_from_file("tmp_proof.bin");
+        let (main_proofs, delegation_proofs, register_final_state, (final_pc, final_timestamp)) = t;
+
+        // flatten and set iterator
+
+        todo!();
+
+        let t: (Vec<UnrolledCircuitSetupParams>, [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) = deserialize_from_file("../setups/42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285_42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285.json");
+        let (setups, inits_and_teardowns_setup) = t;
+
+        let families_setups: Vec<_> = setups.iter().map(|el| &el.setup_caps).collect();
+        let _ = unsafe {
+            full_statement_verifier::unrolled_proof_statement::verify_full_statement_for_unrolled_circuits::<true, { setups::inits_and_teardowns::NUM_INIT_AND_TEARDOWN_SETS }>(
+                &families_setups,
+                full_statement_verifier::unrolled_proof_statement::FULL_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS,
+                (&inits_and_teardowns_setup, full_statement_verifier::unrolled_proof_statement::INITS_AND_TEARDOWNS_VERIFIER_PTR),
+                full_statement_verifier::BASE_LAYER_DELEGATION_CIRCUITS_VERIFICATION_PARAMETERS,
+            )
+        };
     }
 }

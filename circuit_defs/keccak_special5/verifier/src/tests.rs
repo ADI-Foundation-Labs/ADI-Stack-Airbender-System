@@ -192,6 +192,7 @@ fn test_full_machine_verifier_out_of_simulator() {
                 NUM_COSETS,
                 NUM_DELEGATION_CHALLENGES,
                 NUM_AUX_BOUNDARY_VALUES,
+                NUM_MACHINE_STATE_PERMUTATION_CHALLENGES,
             > = unsafe { MaybeUninit::uninit().assume_init() };
             let mut state_variables = ProofPublicInputs::uninit();
 
@@ -237,6 +238,7 @@ fn test_reduced_machine_verifier_out_of_simulator() {
                 NUM_COSETS,
                 NUM_DELEGATION_CHALLENGES,
                 NUM_AUX_BOUNDARY_VALUES,
+                NUM_MACHINE_STATE_PERMUTATION_CHALLENGES,
             > = unsafe { MaybeUninit::uninit().assume_init() };
             let mut state_variables = ProofPublicInputs::uninit();
 

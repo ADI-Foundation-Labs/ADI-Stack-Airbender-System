@@ -509,6 +509,30 @@ fn compute_unrolled_circuits_params_impl(
     results
 }
 
+pub fn compute_inits_and_teardowns_params(
+    binary_image: &[u32],
+    bytecode: &[u32],
+) -> [MerkleTreeCap<CAP_SIZE>; NUM_COSETS] {
+    let worker = prover::worker::Worker::new();
+    use prover::merkle_trees::MerkleTreeConstructor;
+    let setup = crate::unrolled_circuits::inits_and_teardowns_circuit_setup::<Global, Global>(
+        binary_image,
+        bytecode,
+        &worker,
+    );
+    let setup = DefaultTreeConstructor::dump_caps(&setup.setup.trees);
+    let setup: [MerkleTreeCap<CAP_SIZE>; NUM_COSETS] = setup
+        .into_iter()
+        .map(|el| MerkleTreeCap {
+            cap: el.cap.try_into().unwrap(),
+        })
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+
+    setup
+}
+
 pub fn compute_delegation_circuits_params() -> Vec<DelegationCircuitSetupParams> {
     let worker = prover::worker::Worker::new();
     use prover::merkle_trees::MerkleTreeConstructor;
@@ -596,6 +620,7 @@ pub fn compute_and_save_params(
     let (raw_binary_image, binary_image) = read_binary(binary_image_path);
     let (raw_bytecode, bytecode) = read_binary(bytecode_path);
     let setups = (gen_fn)(&binary_image, &bytecode);
+    let inits_setup = compute_inits_and_teardowns_params(&binary_image, &bytecode);
     let binary_image_hash = sha3::Keccak256::digest(&raw_binary_image);
     let bytecode_hash = sha3::Keccak256::digest(&raw_bytecode);
     let path = destination.join(format!(
@@ -604,7 +629,7 @@ pub fn compute_and_save_params(
         hex::encode(bytecode_hash)
     ));
     let file = std::fs::File::create(path).expect("create result file");
-    serde_json::to_writer(file, &setups).expect("must serialize");
+    serde_json::to_writer(file, &(setups, inits_setup)).expect("must serialize");
 }
 
 #[cfg(test)]

@@ -60,9 +60,22 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     serde_json::to_writer_pretty(&mut dst, el).unwrap();
 }
 
+#[allow(dead_code)]
+fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
+    let src = std::fs::File::open(filename).unwrap();
+    serde_json::from_reader(src).unwrap()
+}
+
+#[allow(dead_code)]
 fn bincode_serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     let mut dst = std::fs::File::create(filename).unwrap();
     bincode::serialize_into(&mut dst, el).unwrap();
+}
+
+#[allow(dead_code)]
+fn bincode_deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
+    let src = std::fs::File::open(filename).unwrap();
+    bincode::deserialize_from(src).unwrap()
 }
 
 fn u32_from_field_elems(src: &[Mersenne31Field; 2]) -> u32 {
