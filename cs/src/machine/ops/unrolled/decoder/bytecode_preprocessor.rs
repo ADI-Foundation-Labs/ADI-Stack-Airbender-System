@@ -32,19 +32,24 @@ impl<F: PrimeField> DecoderTableEntry<F> {
     }
 }
 
-pub fn preprocess_bytecode<F: PrimeField>(
+pub fn preprocess_bytecode<F: PrimeField, A: GoodAllocator>(
     binary: &[u32],
     max_bytecode_size_words: usize,
     family: &Box<dyn OpcodeFamilyDecoder>,
     supported_csrs: &[u16],
 ) -> (
-    Vec<Option<DecoderTableEntry<F>>>,
-    Vec<ExecutorFamilyDecoderData>,
+    Vec<Option<DecoderTableEntry<F>>, A>,
+    Vec<ExecutorFamilyDecoderData, A>,
 ) {
     use crate::definitions::*;
-    let mut table = vec![None; max_bytecode_size_words];
+    let mut table = Vec::with_capacity_in(max_bytecode_size_words, A::default());
+    table.resize(max_bytecode_size_words, None);
     let mut witness_eval_decoder_data =
-        vec![ExecutorFamilyDecoderData::default(); max_bytecode_size_words];
+        Vec::with_capacity_in(max_bytecode_size_words, A::default());
+    witness_eval_decoder_data.resize(
+        max_bytecode_size_words,
+        ExecutorFamilyDecoderData::default(),
+    );
 
     assert!(binary.len() < table.len());
 

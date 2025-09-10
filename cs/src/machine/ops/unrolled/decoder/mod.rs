@@ -1,7 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
 
-use field::PrimeField;
-
 use super::super::constants::*;
 use crate::cs::oracle::ExecutorFamilyDecoderData;
 use crate::definitions::*;
@@ -16,6 +14,8 @@ use crate::{
     definitions::Variable,
     devices::risc_v_types::{InstructionType, NUM_INSTRUCTION_TYPES},
 };
+use fft::GoodAllocator;
+use field::PrimeField;
 
 mod add_sub_lui_auipc_mop;
 mod bytecode_preprocessor;
@@ -285,7 +285,7 @@ pub fn full_machine_decoder_table<F: PrimeField>(table_id: u32) -> LookupTable<F
     produce_decoder_table_from_data::<F>(data, table_id)
 }
 
-pub fn process_binary_into_separate_tables<F: PrimeField>(
+pub fn process_binary_into_separate_tables<F: PrimeField, A: GoodAllocator>(
     binary: &[u32],
     families: &[Box<dyn OpcodeFamilyDecoder>],
     max_bytecode_size_words: usize,
@@ -293,11 +293,11 @@ pub fn process_binary_into_separate_tables<F: PrimeField>(
 ) -> HashMap<
     u8,
     (
-        Vec<Option<DecoderTableEntry<F>>>,
-        Vec<ExecutorFamilyDecoderData>,
+        Vec<Option<DecoderTableEntry<F>>, A>,
+        Vec<ExecutorFamilyDecoderData, A>,
     ),
 > {
-    process_binary_into_separate_tables_ext::<F, false>(
+    process_binary_into_separate_tables_ext::<F, false, A>(
         binary,
         families,
         max_bytecode_size_words,
@@ -305,7 +305,11 @@ pub fn process_binary_into_separate_tables<F: PrimeField>(
     )
 }
 
-pub fn process_binary_into_separate_tables_ext<F: PrimeField, const ALLOW_UNSUPPORTED: bool>(
+pub fn process_binary_into_separate_tables_ext<
+    F: PrimeField,
+    const ALLOW_UNSUPPORTED: bool,
+    A: GoodAllocator,
+>(
     binary: &[u32],
     families: &[Box<dyn OpcodeFamilyDecoder>],
     max_bytecode_size_words: usize,
@@ -313,8 +317,8 @@ pub fn process_binary_into_separate_tables_ext<F: PrimeField, const ALLOW_UNSUPP
 ) -> HashMap<
     u8,
     (
-        Vec<Option<DecoderTableEntry<F>>>,
-        Vec<ExecutorFamilyDecoderData>,
+        Vec<Option<DecoderTableEntry<F>>, A>,
+        Vec<ExecutorFamilyDecoderData, A>,
     ),
 > {
     assert!(
@@ -326,7 +330,7 @@ pub fn process_binary_into_separate_tables_ext<F: PrimeField, const ALLOW_UNSUPP
     for family in families.iter() {
         let family_type = family.instruction_family_index();
         let (table, witness_eval_data) =
-            preprocess_bytecode::<F>(&binary, max_bytecode_size_words, &family, supported_csrs);
+            preprocess_bytecode::<F, A>(&binary, max_bytecode_size_words, &family, supported_csrs);
         for (idx, entry) in table.iter().enumerate() {
             if entry.is_some() {
                 let is_unique = pc_set.insert(idx);
@@ -382,7 +386,7 @@ pub fn materialize_flattened_decoder_table<F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-    use std::io::Read;
+    use std::{alloc::Global, io::Read};
 
     use field::Mersenne31Field;
 
@@ -435,7 +439,7 @@ mod test {
             .map(|el| u32::from_le_bytes(*el))
             .collect();
 
-        let _ = process_binary_into_separate_tables::<Mersenne31Field>(
+        let _ = process_binary_into_separate_tables::<Mersenne31Field, Global>(
             &binary,
             &opcodes_for_full_machine(),
             1 << 20,

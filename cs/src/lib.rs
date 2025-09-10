@@ -6,6 +6,7 @@
 #![feature(ptr_as_ref_unchecked)]
 #![feature(option_zip)]
 #![feature(assert_matches)]
+#![feature(allocator_api)]
 
 pub mod definitions;
 

@@ -119,15 +119,12 @@ pub fn prover_stage_2_for_unrolled_circuit<
         )
     };
 
-    dbg!(lookup_argument_linearization_challenges);
-    dbg!(lookup_argument_gamma);
-    dbg!(decoder_table_linearization_challenges);
-    dbg!(decoder_table_gamma);
-
     #[cfg(feature = "debug_logs")]
     {
         dbg!(lookup_argument_linearization_challenges);
         dbg!(lookup_argument_gamma);
+        dbg!(decoder_table_linearization_challenges);
+        dbg!(decoder_table_gamma);
     }
 
     let mut lookup_argument_two_gamma = lookup_argument_gamma;
@@ -145,7 +142,6 @@ pub fn prover_stage_2_for_unrolled_circuit<
         delegation_request_layout,
         process_batch_ram_access,
         process_registers_and_indirect_access,
-        delegation_processor_layout,
         process_delegations,
         delegation_processing_aux_poly,
 

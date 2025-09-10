@@ -55,32 +55,33 @@ use trace_and_split::ENTRY_POINT;
 pub fn preprocess_text_section_for_machine_config<
     C: MachineConfig,
     const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize,
+    A: GoodAllocator,
 >(
     text_section: &[u32],
 ) -> HashMap<
     u8,
     (
-        Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
-        Vec<ExecutorFamilyDecoderData>,
+        Vec<Option<DecoderTableEntry<Mersenne31Field>>, A>,
+        Vec<ExecutorFamilyDecoderData, A>,
     ),
 > {
     let rom_size_in_words: usize = 1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS - 2);
     if setups::is_default_machine_configuration::<C>() {
-        process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
+        process_binary_into_separate_tables_ext::<Mersenne31Field, true, A>(
             &text_section,
             &opcodes_for_full_machine_with_mem_word_access_specialization(),
             rom_size_in_words,
             setups::shift_binary_csr_all_delegations::ALLOWED_DELEGATION_CSRS_U16,
         )
     } else if setups::is_machine_without_signed_mul_div_configuration::<C>() {
-        process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
+        process_binary_into_separate_tables_ext::<Mersenne31Field, true, A>(
             &text_section,
             &opcodes_for_full_machine_with_unsigned_mul_div_only_with_mem_word_access_specialization(),
             rom_size_in_words,
             setups::shift_binary_csr_all_delegations::ALLOWED_DELEGATION_CSRS_U16,
         )
     } else if setups::is_reduced_machine_configuration::<C>() {
-        process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
+        process_binary_into_separate_tables_ext::<Mersenne31Field, true, A>(
             &text_section,
             &opcodes_for_reduced_machine(),
             rom_size_in_words,
@@ -704,9 +705,18 @@ pub fn prove_unrolled_execution<
 
             permutation_argument_grand_product
                 .mul_assign(&proof.permutation_grand_product_accumulator);
-            delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
-
-            // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
+            if let Some(delegation_argument_accumulator) = proof.delegation_argument_accumulator {
+                assert_eq!(
+                    family_idx,
+                    common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX
+                );
+                delegation_argument_sum.add_assign(&delegation_argument_accumulator);
+            } else {
+                assert_ne!(
+                    family_idx,
+                    common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX
+                );
+            }
 
             family_caps.push(proof.memory_tree_caps.clone());
             family_proofs.push(proof);
@@ -806,9 +816,18 @@ pub fn prove_unrolled_execution<
 
             permutation_argument_grand_product
                 .mul_assign(&proof.permutation_grand_product_accumulator);
-            delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
-
-            // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
+            if let Some(delegation_argument_accumulator) = proof.delegation_argument_accumulator {
+                assert_eq!(
+                    family_idx,
+                    common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX
+                );
+                delegation_argument_sum.add_assign(&delegation_argument_accumulator);
+            } else {
+                assert_ne!(
+                    family_idx,
+                    common_constants::circuit_families::SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX
+                );
+            }
 
             family_caps.push(proof.memory_tree_caps.clone());
             family_proofs.push(proof);
@@ -816,108 +835,6 @@ pub fn prove_unrolled_execution<
         aux_memory_trees.push((family_idx as u32, family_caps));
         main_proofs.insert(family_idx, family_proofs);
     }
-
-    // for (family_idx, witness_chunks) in mem_circuits.into_iter() {
-    //     if witness_chunks.is_empty() {
-    //         continue;
-    //     }
-
-    //     if should_dump_witness {
-    //         // TODO
-    //     }
-
-    //     let mut family_caps = vec![];
-    //     let mut family_proofs = vec![];
-
-    //     let precomputation = &unrolled_circuits_precomputations[&family_idx];
-    //     let UnrolledCircuitWitnessEvalFn::Memory {
-    //         decoder_table,
-    //         witness_fn,
-    //     } = precomputation
-    //         .witness_eval_fn_for_gpu_tracer
-    //         .as_ref()
-    //         .unwrap()
-    //     else {
-    //         unreachable!()
-    //     };
-
-    //     for chunk in witness_chunks.into_iter() {
-    //         let oracle = MemoryCircuitOracle {
-    //             inner: &chunk.data[..],
-    //             decoder_table,
-    //         };
-
-    //         let now = std::time::Instant::now();
-    //         let witness_trace = prover::unrolled::evaluate_witness_for_executor_family::<_, A>(
-    //             &precomputation.compiled_circuit,
-    //             *witness_fn,
-    //             precomputation.trace_len - 1,
-    //             &oracle,
-    //             &precomputation.table_driver,
-    //             &worker,
-    //             A::default(),
-    //         );
-    //         #[cfg(feature = "timing_logs")]
-    //         println!(
-    //             "Witness generation for unrolled circuit type {} took {:?}",
-    //             family_idx,
-    //             now.elapsed()
-    //         );
-
-    //         if crate::PRECHECK_SATISFIED {
-    //             println!("Will evaluate basic satisfiability checks for main circuit");
-
-    //             assert!(check_satisfied(
-    //                 &precomputation.compiled_circuit,
-    //                 &witness_trace.exec_trace,
-    //                 witness_trace.num_witness_columns
-    //             ));
-    //         }
-
-    //         let now = std::time::Instant::now();
-    //         let (prover_data, proof) =
-    //             prover::prover_stages::unrolled_prover::prove_configured_for_unrolled_circuits::<
-    //                 DEFAULT_TRACE_PADDING_MULTIPLE,
-    //                 A,
-    //                 DefaultTreeConstructor,
-    //             >(
-    //                 &precomputation.compiled_circuit,
-    //                 &[],
-    //                 &external_challenges,
-    //                 witness_trace,
-    //                 &[],
-    //                 &precomputation.setup,
-    //                 &precomputation.twiddles,
-    //                 &precomputation.lde_precomputations,
-    //                 None,
-    //                 precomputation.lde_factor,
-    //                 precomputation.tree_cap_size,
-    //                 crate::NUM_QUERIES,
-    //                 verifier_common::POW_BITS as u32,
-    //                 &worker,
-    //             );
-    //         println!(
-    //             "Proving time for unrolled circuit type {} is {:?}",
-    //             family_idx,
-    //             now.elapsed()
-    //         );
-
-    //         // {
-    //         //     serialize_to_file(&proof, &format!("riscv_proof_{}", circuit_sequence));
-    //         // }
-
-    //         permutation_argument_grand_product
-    //             .mul_assign(&proof.permutation_grand_product_accumulator);
-    //         delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
-
-    //         // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
-
-    //         family_caps.push(proof.memory_tree_caps.clone());
-    //         family_proofs.push(proof);
-    //     }
-    //     aux_memory_trees.push((family_idx as u32, family_caps));
-    //     main_proofs.insert(family_idx, family_proofs);
-    // }
 
     // inits and teardowns
     let mut aux_inits_and_teardown_trees = vec![];
@@ -1141,4 +1058,58 @@ pub fn prove_unrolled_execution<
         register_final_state,
         (final_pc, final_timestamp),
     )
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::risc_v_simulator::cycle::IMWithoutSignedMulDivIsaConfig;
+    use risc_v_simulator::abstractions::non_determinism::QuasiUARTSource;
+    use std::alloc::Global;
+    use std::path::Path;
+
+    #[test]
+    fn test_prove_unrolled_fibonacci() {
+        let (_, binary_image) =
+            setups::read_binary(&Path::new("../../examples/basic_fibonacci/app.bin"));
+        let (_, text_section) =
+            setups::read_binary(&Path::new("../../examples/basic_fibonacci/app.text"));
+
+        // setups::pad_bytecode_for_proving(&mut binary);
+
+        let worker = worker::Worker::new_with_num_threads(8);
+        println!("Performing precomputations for circuit families");
+        let families_precomps =
+            setups::unrolled_circuits::get_unrolled_circuits_setups_for_machine_type::<
+                IMWithoutSignedMulDivIsaConfig,
+                _,
+                _,
+            >(&binary_image, &text_section, &worker);
+
+        println!("Performing precomputations for inits and teardowns");
+        let inits_and_teardowns_precomps =
+            setups::unrolled_circuits::inits_and_teardowns_circuit_setup(
+                &binary_image,
+                &text_section,
+                &worker,
+            );
+
+        println!("Performing precomputations for delegation circuits");
+        let delegation_precomputations = setups::all_delegation_circuits_precomputations(&worker);
+
+        let non_determinism_source = QuasiUARTSource::new_with_reads(vec![15, 1]);
+
+        let (main_proofs, delegation_proofs, register_final_state, (final_pc, final_timestamp)) =
+            prove_unrolled_execution::<_, IMWithoutSignedMulDivIsaConfig, Global, 5>(
+                1 << 24,
+                &binary_image,
+                &text_section,
+                non_determinism_source,
+                &families_precomps,
+                &inits_and_teardowns_precomps,
+                &delegation_precomputations,
+                1 << 32,
+                &worker,
+            );
+    }
 }

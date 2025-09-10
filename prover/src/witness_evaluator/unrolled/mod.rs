@@ -274,7 +274,7 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
         num_cycles,
     );
 
-    dbg!(cycles_used);
+    println!("Execution completed after {} cycles", cycles_used);
 
     let WordSpecializedTracer {
         bookkeeping_aux_data,
@@ -304,8 +304,7 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
     completed_subword_sized_mem_family_chunks.push(current_subword_sized_mem_family_chunk);
 
     let cycles_passed = (current_timestamp - INITIAL_TIMESTAMP) / TIMESTAMP_STEP;
-
-    println!("Finished over {} cycles", cycles_passed);
+    assert_eq!(cycles_used as u64, cycles_passed);
 
     let RamTracingData {
         register_last_live_timestamps,
@@ -315,7 +314,7 @@ pub fn run_unrolled_machine_for_num_cycles_with_word_memory_ops_specialization<
         ..
     } = bookkeeping_aux_data;
 
-    dbg!(num_touched_ram_cells);
+    println!("{} unique memory cells touched", num_touched_ram_cells);
 
     // now we can co-join touched memory cells, their final values and timestamps
 

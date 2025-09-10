@@ -458,7 +458,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
     use crate::cs::machine::ops::unrolled::process_binary_into_separate_tables;
 
     let preprocessing_data = if SUPPORT_SIGNED {
-        process_binary_into_separate_tables::<Mersenne31Field>(
+        process_binary_into_separate_tables::<Mersenne31Field, Global>(
             &text_section,
             &opcodes_for_full_machine_with_mem_word_access_specialization(),
             1 << 20,
@@ -469,7 +469,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             ],
         )
     } else {
-        process_binary_into_separate_tables::<Mersenne31Field>(
+        process_binary_into_separate_tables::<Mersenne31Field, Global>(
             &text_section,
             &opcodes_for_full_machine_with_unsigned_mul_div_only_with_mem_word_access_specialization(),
             1 << 20,

@@ -582,7 +582,9 @@ impl<F: PrimeField> LookupWrapper<F> {
             LookupWrapper::Dimensional1(table) => table.id,
             LookupWrapper::Dimensional2(table) => table.id,
             LookupWrapper::Dimensional3(table) => table.id,
-            Self::Uninitialized => unreachable!(),
+            Self::Uninitialized => {
+                panic!("Trying to lookup into uninitialized table wrapper");
+            }
         }
     }
 
@@ -593,7 +595,9 @@ impl<F: PrimeField> LookupWrapper<F> {
             Self::Dimensional1(inner) => inner.lookup_value(keys),
             Self::Dimensional2(inner) => inner.lookup_value(keys),
             Self::Dimensional3(inner) => inner.lookup_value(keys),
-            Self::Uninitialized => unreachable!(),
+            Self::Uninitialized => {
+                panic!("Trying to lookup into uninitialized table wrapper");
+            }
         }
     }
 
@@ -607,7 +611,9 @@ impl<F: PrimeField> LookupWrapper<F> {
             Self::Dimensional1(inner) => inner.lookup_values_and_get_index(keys),
             Self::Dimensional2(inner) => inner.lookup_values_and_get_index(keys),
             Self::Dimensional3(inner) => inner.lookup_values_and_get_index(keys),
-            Self::Uninitialized => unreachable!(),
+            Self::Uninitialized => {
+                panic!("Table is not initialized");
+            }
         }
     }
 
@@ -1091,48 +1097,6 @@ pub fn key_get_bit<F: PrimeField, const N: usize>() -> Vec<SmallVec<[F; N]>> {
 
     keys
 }
-
-// pub fn create_pow2_table<F: PrimeField, const WIDTH: usize>(id: u32) -> LookupTable<F, 3> {
-//     // also support formal 1<<width as place 0 in such cases
-//     let keys = key_for_continuous_range(1u64 << WIDTH);
-//     const MASK: u64 = (1u64 << 16) - 1;
-//     let table_name = format!("Powers of 2 table up to {} value", (1 << WIDTH) - 1);
-
-//     LookupTable::create_table_from_key_and_pure_generation_fn(
-//         &keys,
-//         table_name,
-//         1,
-//         |keys| {
-//             let max_value: u64 = 1u64 << WIDTH;
-//             let a = keys[0].as_u64_reduced();
-//             assert!(a <= max_value);
-//             if a == max_value {
-//                 let result = [F::ZERO; 3];
-
-//                 (a as usize, result)
-//             } else {
-//                 let mut result = [F::ZERO; 3];
-//                 let pow_of_2 = 1u64 << a;
-//                 let low: u64 = pow_of_2 & MASK;
-//                 let high = pow_of_2 >> 16;
-
-//                 result[0] = F::from_u64_unchecked(low as u64);
-//                 result[1] = F::from_u64_unchecked(high as u64);
-
-//                 (a as usize, result)
-//             }
-//         },
-//         Some(first_key_index_gen_fn::<F, 3>),
-//         id,
-//     )
-// }
-
-// // We have 11 available opcodes [LOAD, MISC_MEM, OP_IMM, AUIPC, STORE, OP, LUI, BRANCH, JALR, JAL, SYSTEM].
-// // Not all binary combinations 2^7 exist an opcode so we add an extra flag for this OP_INVALID,
-// // as a result we get bitmask with 12 bits
-// pub fn create_op_bitmask_table<F: PrimeField>(_id: u32) -> LookupTable<F, 3> {
-//     unimplemented!("no longer used");
-// }
 
 /// Manages multiple lookup tables.
 #[derive(Clone, Debug)]

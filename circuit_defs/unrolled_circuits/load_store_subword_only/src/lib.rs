@@ -41,17 +41,15 @@ pub fn get_circuit_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize
 ) -> one_row_compiler::CompiledCircuitArtifact<field::Mersenne31Field> {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
-    use crate::machine::ops::unrolled::load_store_word_only::create_word_only_load_store_special_tables;
+    use crate::machine::ops::unrolled::load_store::create_load_store_special_tables;
     use prover::cs::machine::ops::unrolled::load_store_subword_only::*;
 
     compile_unrolled_circuit_state_transition(
         &|cs| {
             subword_only_load_store_table_addition_fn(cs);
 
-            let extra_tables = create_word_only_load_store_special_tables::<
-                _,
-                ROM_ADDRESS_SPACE_SECOND_WORD_BITS,
-            >(bytecode);
+            let extra_tables =
+                create_load_store_special_tables::<_, ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode);
             for (table_type, table) in extra_tables {
                 cs.add_table_with_content(table_type, table);
             }
@@ -80,17 +78,15 @@ pub fn dump_ssa_form_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usi
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
     use crate::machine::ops::unrolled::dump_ssa_witness_eval_form_for_unrolled_circuit;
-    use crate::machine::ops::unrolled::load_store_word_only::create_word_only_load_store_special_tables;
+    use crate::machine::ops::unrolled::load_store::create_load_store_special_tables;
     use prover::cs::machine::ops::unrolled::load_store_subword_only::*;
 
     dump_ssa_witness_eval_form_for_unrolled_circuit::<Mersenne31Field>(
         &|cs| {
             subword_only_load_store_table_addition_fn(cs);
 
-            let extra_tables = create_word_only_load_store_special_tables::<
-                _,
-                ROM_ADDRESS_SPACE_SECOND_WORD_BITS,
-            >(bytecode);
+            let extra_tables =
+                create_load_store_special_tables::<_, ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode);
             for (table_type, table) in extra_tables {
                 cs.add_table_with_content(table_type, table);
             }
@@ -112,7 +108,7 @@ pub fn get_table_driver(bytecode: &[u32]) -> prover::cs::tables::TableDriver<Mer
 pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
     bytecode: &[u32],
 ) -> prover::cs::tables::TableDriver<Mersenne31Field> {
-    use crate::machine::ops::unrolled::load_store_word_only::create_word_only_load_store_special_tables;
+    use crate::machine::ops::unrolled::load_store::create_load_store_special_tables;
     use crate::tables::TableDriver;
     use prover::cs::machine::ops::unrolled::load_store_subword_only::*;
 
@@ -122,10 +118,8 @@ pub fn get_table_driver_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: 
     let mut table_driver = TableDriver::<Mersenne31Field>::new();
     subword_only_load_store_table_driver_fn(&mut table_driver);
 
-    let extra_tables = create_word_only_load_store_special_tables::<
-        _,
-        ROM_ADDRESS_SPACE_SECOND_WORD_BITS,
-    >(bytecode);
+    let extra_tables =
+        create_load_store_special_tables::<_, ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode);
     for (table_type, table) in extra_tables {
         table_driver.add_table_with_content(table_type, table);
     }
@@ -143,26 +137,29 @@ pub fn get_tracer_factory<A: GoodAllocator>() -> (
     (FAMILY_IDX, factory as _)
 }
 
-pub fn get_decoder_table(
+pub fn get_decoder_table<A: GoodAllocator>(
     bytecode: &[u32],
 ) -> (
-    Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
-    Vec<ExecutorFamilyDecoderData>,
+    Vec<Option<DecoderTableEntry<Mersenne31Field>>, A>,
+    Vec<ExecutorFamilyDecoderData, A>,
 ) {
-    get_decoder_table_for_rom_bound::<ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
+    get_decoder_table_for_rom_bound::<A, ROM_ADDRESS_SPACE_SECOND_WORD_BITS>(bytecode)
 }
 
-pub fn get_decoder_table_for_rom_bound<const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize>(
+pub fn get_decoder_table_for_rom_bound<
+    A: GoodAllocator,
+    const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize,
+>(
     bytecode: &[u32],
 ) -> (
-    Vec<Option<DecoderTableEntry<Mersenne31Field>>>,
-    Vec<ExecutorFamilyDecoderData>,
+    Vec<Option<DecoderTableEntry<Mersenne31Field>>, A>,
+    Vec<ExecutorFamilyDecoderData, A>,
 ) {
     let num_bytecode_words = (1 << (16 + ROM_ADDRESS_SPACE_SECOND_WORD_BITS)) / 4;
     assert!(bytecode.len() <= num_bytecode_words);
 
     use crate::machine::ops::unrolled::process_binary_into_separate_tables_ext;
-    let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true>(
+    let mut t = process_binary_into_separate_tables_ext::<Mersenne31Field, true, A>(
         bytecode,
         &[Box::new(MemoryFamilyDecoder)],
         num_bytecode_words,
