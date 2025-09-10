@@ -32,7 +32,7 @@ Highlights:
 * Detects arithmetic overflow and raises the appropriate trap when **M-mode** compatibility is enabled.
 * Constant folding path: immediate additions with constant zero are optimised away at compile time to save constraints.
 
-### 2. `binops.rs` – Boolean Binary Ops
+### 2. `binops.rs` – Bitwise Binary Ops
 
 Implements `AND`, `OR`, `XOR` (and immediate forms).
 
