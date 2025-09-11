@@ -26,22 +26,15 @@
 
 | **Instruction** | **Description** |
 | --- | --- |
-| `CSRRW`, `CSRRS`, `CSRRC`, `CSRRWI`, `CSRRSI`, `CSRRCI` | Full CSR access set |
+| `CSRRW` | Enabled by default (`SUPPORT_ONLY_CSRRW = true`). Other Zicsr forms exist in code but are typically disabled. |
 
 ### Delegation pre-compiles encoded via `CSRRW`
 
 | **Delegation ID** | **Delegation Name** |
 | --- | --- |
-| 1985 `(0x7C1)` | blake2s |
-| 1986 `(0x7C2)` | blake round function |
-| 1987 `(0x7C3)` | blake round function with final xor |
-| 1988 `(0x7C4)` | blake round function with state registers |
-| 1989 `(0x7C5)` | mersenne ext4 fma |
-| 1990 `(0x7C6)` | poseidon2 |
-| 1991 `(0x7C7)` | blake2 round function with compression |
-| 1992 `(0x7C8)` | mersenne ext fma indirect |
-| 1993 `(0x7C9)` | u256_bigint |
-| 1994 `(0x7CA)` | u256 with control |
+| 1991 `(0x7C7)` | blake2 round with extended control |
+| 1994 `(0x7CA)` | u256 ops with control |
+
 
 ### Explicitly Unsupported / Disabled
 
