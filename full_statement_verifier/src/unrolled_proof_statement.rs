@@ -189,6 +189,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
         circuits_families_setups.len(),
         circuits_families_verifiers.len()
     );
+    debug_assert!(circuits_families_verifiers.is_sorted_by(|a, b| { a.0 < b.0 }));
     // we should in parallel verify proofs, and drag along the transcript to assert equality of challenges
     let mut transcript = Blake2sBufferingTranscript::new();
 
@@ -243,10 +244,7 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
         .iter()
         .zip(circuits_families_setups.iter())
     {
-        
         let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
-        dbg!(circuit_family);
-        dbg!(num_circuits);
         if num_circuits > 0 {
             let mut buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
             buffer[0] = *circuit_family;

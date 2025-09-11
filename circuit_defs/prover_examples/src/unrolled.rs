@@ -1093,15 +1093,7 @@ mod test {
     }
 
     impl UnrolledProgramProof {
-        pub fn get_num_delegation_proofs_for_type(&self, delegation_type: u32) -> u32 {
-            if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
-                proofs.len() as u32
-            } else {
-                0
-            }
-        }
-
-        pub fn flatten_for_delegation_circuits_set(&self) -> Vec<u32> {
+        pub fn flatten_into_responses(&self, allowed_delegation_circuits: &[u32]) -> Vec<u32> {
             let mut responses = Vec::with_capacity(32 + 32 * 2);
 
             assert_eq!(self.register_final_values.len(), 32);
@@ -1125,7 +1117,10 @@ mod test {
             for (family, proofs) in self.circuit_families_proofs.iter() {
                 responses.push(proofs.len() as u32);
                 for proof in proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_unrolled_circuits_proof_for_skeleton(proof, &self.compiled_circuit_families[family]);
+                    let t = verifier_common::proof_flattener::flatten_full_unrolled_proof(
+                        proof,
+                        &self.compiled_circuit_families[family],
+                    );
                     responses.extend(t);
                 }
             }
@@ -1134,17 +1129,24 @@ mod test {
             {
                 responses.push(self.inits_and_teardowns_proofs.len() as u32);
                 for proof in self.inits_and_teardowns_proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_unrolled_circuits_proof_for_skeleton(proof, &self.compiled_inits_and_teardowns);
+                    let t = verifier_common::proof_flattener::flatten_full_unrolled_proof(
+                        proof,
+                        &self.compiled_inits_and_teardowns,
+                    );
                     responses.extend(t);
                 }
             }
 
             // then for every allowed delegation circuit
-            for (delegation_type, proofs) in self.delegation_proofs.iter() {
-                responses.push(proofs.len() as u32);
-                for proof in proofs.iter() {
-                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, 0);
-                    responses.extend(t);
+            for delegation_type in allowed_delegation_circuits.iter() {
+                if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
+                    responses.push(proofs.len() as u32);
+                    for proof in proofs.iter() {
+                        let t = verifier_common::proof_flattener::flatten_full_proof(proof, 0);
+                        responses.extend(t);
+                    }
+                } else {
+                    responses.push(0);
                 }
             }
 
@@ -1259,7 +1261,8 @@ mod test {
             recursion_chain_preimage: None,
         };
 
-        let responses = program_proofs.flatten_for_delegation_circuits_set();
+        let responses = program_proofs
+            .flatten_into_responses(IMWithoutSignedMulDivIsaConfig::ALLOWED_DELEGATION_CSRS);
         let t: (Vec<UnrolledCircuitSetupParams>, [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) = deserialize_from_file("../setups/42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285_42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285.json");
         let (setups, inits_and_teardowns_setup) = t;
 

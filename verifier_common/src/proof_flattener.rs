@@ -4,6 +4,7 @@ use core::alloc::Allocator;
 use cs::one_row_compiler::CompiledCircuitArtifact;
 use prover::field::*;
 use prover::merkle_trees::MerkleTreeCapVarLength;
+use prover::prover_stages::unrolled_prover::UnrolledModeProof;
 use prover::prover_stages::{Proof, QuerySet};
 
 fn flatten_merkle_caps_into<A: Allocator>(trees: &[MerkleTreeCapVarLength], dst: &mut Vec<u32, A>) {
@@ -115,7 +116,7 @@ pub fn flatten_proof_for_skeleton(proof: &Proof, lazy_inits_and_teardowns_len: u
 }
 
 pub fn flatten_unrolled_circuits_proof_for_skeleton(
-    proof: &prover::prover_stages::unrolled_prover::UnrolledModeProof,
+    proof: &UnrolledModeProof,
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
 ) -> Vec<u32> {
     let mut result = Vec::new();
@@ -273,6 +274,18 @@ pub fn flatten_query(query: &QuerySet) -> Vec<u32> {
 
 pub fn flatten_full_proof(proof: &Proof, lazy_inits_and_teardowns_len: usize) -> Vec<u32> {
     let mut result = flatten_proof_for_skeleton(proof, lazy_inits_and_teardowns_len);
+    for query in proof.queries.iter() {
+        result.extend(flatten_query(query));
+    }
+
+    result
+}
+
+pub fn flatten_full_unrolled_proof(
+    proof: &UnrolledModeProof,
+    compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
+) -> Vec<u32> {
+    let mut result = flatten_unrolled_circuits_proof_for_skeleton(proof, compiled_circuit);
     for query in proof.queries.iter() {
         result.extend(flatten_query(query));
     }
