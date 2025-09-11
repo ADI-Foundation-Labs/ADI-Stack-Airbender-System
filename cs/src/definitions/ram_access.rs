@@ -1,23 +1,23 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RegisterOnlyAccessAddress {
     pub register_index: ColumnSet<1>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RegisterOrRamAccessAddress {
     pub is_register: ColumnSet<1>,
     pub address: ColumnSet<REGISTER_SIZE>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub enum ShuffleRamAddress {
     RegisterOnly(RegisterOnlyAccessAddress),
     RegisterOrRam(RegisterOrRamAccessAddress),
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ShuffleRamQueryReadColumns {
     pub in_cycle_write_index: u32,
     pub address: ShuffleRamAddress,
@@ -27,7 +27,7 @@ pub struct ShuffleRamQueryReadColumns {
     pub read_value: ColumnSet<REGISTER_SIZE>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ShuffleRamQueryWriteColumns {
     pub in_cycle_write_index: u32,
     pub address: ShuffleRamAddress,
@@ -38,7 +38,7 @@ pub struct ShuffleRamQueryWriteColumns {
     pub write_value: ColumnSet<REGISTER_SIZE>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub enum ShuffleRamQueryColumns {
     Readonly(ShuffleRamQueryReadColumns),
     Write(ShuffleRamQueryWriteColumns),
@@ -77,7 +77,7 @@ impl ShuffleRamQueryColumns {
 // NOTE: to sort lazy init addresses we will materialize intermediate subtraction values to avoid extending
 // lookup expressions to span >1 row
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ShuffleRamAuxComparisonSet {
     pub aux_low_high: [ColumnAddress; 2],
     pub intermediate_borrow: ColumnAddress,
@@ -88,7 +88,7 @@ pub struct ShuffleRamAuxComparisonSet {
 // but using lookup expressions we do not need to make any extra description for it - lookup expression contains
 // all the information
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub enum BatchedRamAccessColumns {
     ReadAccess {
         read_timestamp: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,
@@ -119,7 +119,7 @@ impl BatchedRamAccessColumns {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BatchedRamTimestampComparisonAuxVars {
     pub predicate: ColumnAddress,
     pub write_timestamp_columns: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,
@@ -127,7 +127,7 @@ pub struct BatchedRamTimestampComparisonAuxVars {
     pub aux_borrow_vars: Vec<ColumnAddress>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub enum RegisterAccessColumns {
     ReadAccess {
         register_index: u32,
@@ -167,7 +167,7 @@ impl RegisterAccessColumns {
     }
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub enum IndirectAccessColumns {
     ReadAccess {
         read_timestamp: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,
@@ -243,7 +243,7 @@ impl IndirectAccessColumns {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct RegisterAndIndirectAccessDescription {
     pub register_access: RegisterAccessColumns,
     pub indirect_accesses: Vec<IndirectAccessColumns>,
@@ -258,13 +258,13 @@ impl RegisterAndIndirectAccessDescription {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct CompiledRegisterAndIndirectAccessDescription<'a> {
     pub register_access: RegisterAccessColumns,
     pub indirect_accesses: &'a [IndirectAccessColumns],
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RegisterAndIndirectAccessTimestampComparisonAuxVars {
     pub predicate: ColumnAddress,
     pub write_timestamp_columns: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,

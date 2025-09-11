@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct LookupAndMemoryArgumentLayout {
     pub intermediate_polys_for_range_check_16: OptimizedOraclesForLookupWidth1,
     pub remainder_for_range_check_16: Option<AlignedColumnSet<4>>,

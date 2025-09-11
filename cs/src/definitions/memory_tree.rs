@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct ShuffleRamInitAndTeardownLayout {
     pub lazy_init_addresses_columns: ColumnSet<REGISTER_SIZE>,
     pub lazy_teardown_values_columns: ColumnSet<REGISTER_SIZE>,
@@ -17,7 +17,7 @@ impl ShuffleRamInitAndTeardownLayout {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct MemorySubtree {
     pub shuffle_ram_inits_and_teardowns: Vec<ShuffleRamInitAndTeardownLayout>,
     pub shuffle_ram_access_sets: Vec<ShuffleRamQueryColumns>,

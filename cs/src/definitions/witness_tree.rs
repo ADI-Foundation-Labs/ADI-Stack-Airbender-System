@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct WitnessSubtree<F: PrimeField> {
     // we use separate multiplicities columns for tables of width 1 for an optimization
     // in the prover

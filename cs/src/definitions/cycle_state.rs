@@ -4,7 +4,7 @@ use crate::definitions::{Variable, NUM_TIMESTAMP_COLUMNS_FOR_RAM, REGISTER_SIZE}
 
 use super::{ColumnAddress, ColumnSet};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct MachineCycleStartOrEndState<F: PrimeField> {
     pub pc: [Variable; 2],
     pub(crate) timestamp: [Variable; NUM_TIMESTAMP_COLUMNS_FOR_RAM],
@@ -16,7 +16,7 @@ pub struct MachineCycleStartOrEndState<F: PrimeField> {
 // and `circuit_family_extra_mask` for the corresponding families would
 // indicate whether it's REG-IMM or REG-REG instruction
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct DecoderData<F: PrimeField> {
     pub rs1_index: Variable,
     pub rs2_index: Variable,
@@ -29,19 +29,19 @@ pub struct DecoderData<F: PrimeField> {
     pub(crate) _marker: core::marker::PhantomData<F>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct DecoderDataForDecoderCircuit<F: PrimeField> {
     pub decoder_data: DecoderData<F>,
     pub circuit_family: Variable,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct DecoderCircuitMachineState<F: PrimeField> {
     pub cycle_start_state: MachineCycleStartOrEndState<F>,
     pub decoder_data: DecoderDataForDecoderCircuit<F>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Hash, Debug)]
 pub struct OpcodeFamilyCircuitState<F: PrimeField> {
     pub(crate) execute: Variable, // Boolean
     pub cycle_start_state: MachineCycleStartOrEndState<F>,
@@ -49,13 +49,13 @@ pub struct OpcodeFamilyCircuitState<F: PrimeField> {
     pub cycle_end_state: MachineCycleStartOrEndState<F>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MachineStatePermutationVariables {
     pub pc: ColumnSet<2>,
     pub timestamp: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct IntermediateStatePermutationVariables {
     pub execute: ColumnSet<1>,
     pub pc: ColumnSet<2>,

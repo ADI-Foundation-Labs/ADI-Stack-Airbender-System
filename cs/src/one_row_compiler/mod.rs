@@ -900,7 +900,7 @@ impl quote::ToTokens for IntermediateStatePermutationVariables {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Hash, serde::Serialize, serde::Deserialize)]
 pub struct CompiledCircuitArtifact<F: PrimeField> {
     pub witness_layout: WitnessSubtree<F>,
     pub memory_layout: MemorySubtree,

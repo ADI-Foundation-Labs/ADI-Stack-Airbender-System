@@ -238,18 +238,15 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
     // NOTE: in unrolled circuits we do have contribution from setup values into
     // memory or delegation, so we skip setups here (same as we do with delegation circuits in general)
 
-    // for setup in circuits_families_setups.iter() {
-    //     // commit setup into transcript
-    //     transcript.absorb(setup_caps_flattened(*setup));
-    // }
-    // transcript.absorb(setup_caps_flattened(&inits_and_teardowns_verifier.0));
-
     let mut total_cycles = 0u64;
     for ((circuit_family, capacity, verifier_fn), setup) in circuits_families_verifiers
         .iter()
         .zip(circuits_families_setups.iter())
     {
+        
         let num_circuits = verifier_common::DefaultNonDeterminismSource::read_word();
+        dbg!(circuit_family);
+        dbg!(num_circuits);
         if num_circuits > 0 {
             let mut buffer = [0u32; BLAKE2S_BLOCK_SIZE_U32_WORDS];
             buffer[0] = *circuit_family;

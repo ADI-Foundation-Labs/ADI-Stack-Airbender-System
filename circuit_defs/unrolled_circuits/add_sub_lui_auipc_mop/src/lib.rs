@@ -2,8 +2,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::alloc::Global;
-
 use common_constants::circuit_families::ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX;
 use prover::cs::cs::oracle::ExecutorFamilyDecoderData;
 use prover::cs::machine::ops::unrolled::DecoderTableEntry;

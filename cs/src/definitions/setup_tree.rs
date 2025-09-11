@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SetupLayout {
     pub timestamp_setup_columns: ColumnSet<NUM_TIMESTAMP_COLUMNS_FOR_RAM>,
     pub range_check_16_setup_column: ColumnSet<1>,

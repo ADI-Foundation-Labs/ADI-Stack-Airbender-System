@@ -356,6 +356,7 @@ pub fn prove_unrolled_execution<
     worker: &worker::Worker,
 ) -> (
     BTreeMap<u8, Vec<UnrolledModeProof>>,
+    Vec<UnrolledModeProof>,
     Vec<(u32, Vec<Proof>)>,
     [FinalRegisterValue; 32],
     (u32, TimestampScalar),
@@ -1054,6 +1055,7 @@ pub fn prove_unrolled_execution<
 
     (
         main_proofs,
+        inits_and_teardowns_proofs,
         delegation_proofs,
         register_final_state,
         (final_pc, final_timestamp),
@@ -1068,7 +1070,91 @@ mod test {
     use crate::risc_v_simulator::cycle::IMWithoutSignedMulDivIsaConfig;
     use risc_v_simulator::abstractions::non_determinism::QuasiUARTSource;
     use std::alloc::Global;
+    use std::io::Read;
     use std::path::Path;
+
+    use crate::cs::one_row_compiler::CompiledCircuitArtifact;
+    use common_constants::TimestampScalar;
+    use prover::prover_stages::unrolled_prover::UnrolledModeProof;
+
+    #[derive(Clone, Debug, Hash, serde::Serialize, serde::Deserialize)]
+    pub struct UnrolledProgramProof {
+        pub final_pc: u32,
+        pub final_timestamp: TimestampScalar,
+        pub compiled_circuit_families: BTreeMap<u8, CompiledCircuitArtifact<Mersenne31Field>>,
+        pub circuit_families_proofs: BTreeMap<u8, Vec<UnrolledModeProof>>,
+        pub compiled_inits_and_teardowns: CompiledCircuitArtifact<Mersenne31Field>,
+        pub inits_and_teardowns_proofs: Vec<UnrolledModeProof>,
+        pub delegation_proofs: BTreeMap<u32, Vec<Proof>>,
+        pub register_final_values: [FinalRegisterValue; 32],
+        pub end_params: [u32; 8],
+        pub recursion_chain_preimage: Option<[u32; 16]>,
+        pub recursion_chain_hash: Option<[u32; 8]>,
+    }
+
+    impl UnrolledProgramProof {
+        pub fn get_num_delegation_proofs_for_type(&self, delegation_type: u32) -> u32 {
+            if let Some(proofs) = self.delegation_proofs.get(&delegation_type) {
+                proofs.len() as u32
+            } else {
+                0
+            }
+        }
+
+        pub fn flatten_for_delegation_circuits_set(&self) -> Vec<u32> {
+            let mut responses = Vec::with_capacity(32 + 32 * 2);
+
+            assert_eq!(self.register_final_values.len(), 32);
+            // registers
+            for final_values in self.register_final_values.iter() {
+                responses.push(final_values.value);
+                let (low, high) = split_timestamp(final_values.last_access_timestamp);
+                responses.push(low);
+                responses.push(high);
+            }
+
+            // final PC and timestamp
+            {
+                responses.push(self.final_pc);
+                let (low, high) = split_timestamp(self.final_timestamp);
+                responses.push(low);
+                responses.push(high);
+            }
+
+            // families ones
+            for (family, proofs) in self.circuit_families_proofs.iter() {
+                responses.push(proofs.len() as u32);
+                for proof in proofs.iter() {
+                    let t = verifier_common::proof_flattener::flatten_unrolled_circuits_proof_for_skeleton(proof, &self.compiled_circuit_families[family]);
+                    responses.extend(t);
+                }
+            }
+
+            // inits and teardowns
+            {
+                responses.push(self.inits_and_teardowns_proofs.len() as u32);
+                for proof in self.inits_and_teardowns_proofs.iter() {
+                    let t = verifier_common::proof_flattener::flatten_unrolled_circuits_proof_for_skeleton(proof, &self.compiled_inits_and_teardowns);
+                    responses.extend(t);
+                }
+            }
+
+            // then for every allowed delegation circuit
+            for (delegation_type, proofs) in self.delegation_proofs.iter() {
+                responses.push(proofs.len() as u32);
+                for proof in proofs.iter() {
+                    let t = verifier_common::proof_flattener::flatten_full_proof(proof, 0);
+                    responses.extend(t);
+                }
+            }
+
+            if let Some(preimage) = self.recursion_chain_preimage {
+                responses.extend(preimage);
+            }
+
+            responses
+        }
+    }
 
     #[test]
     fn test_prove_unrolled_fibonacci() {
@@ -1101,22 +1187,28 @@ mod test {
 
         let non_determinism_source = QuasiUARTSource::new_with_reads(vec![15, 1]);
 
-        let (main_proofs, delegation_proofs, register_final_state, (final_pc, final_timestamp)) =
-            prove_unrolled_execution::<_, IMWithoutSignedMulDivIsaConfig, Global, 5>(
-                1 << 24,
-                &binary_image,
-                &text_section,
-                non_determinism_source,
-                &families_precomps,
-                &inits_and_teardowns_precomps,
-                &delegation_precomputations,
-                1 << 32,
-                &worker,
-            );
+        let (
+            main_proofs,
+            inits_and_teardowns_proofs,
+            delegation_proofs,
+            register_final_state,
+            (final_pc, final_timestamp),
+        ) = prove_unrolled_execution::<_, IMWithoutSignedMulDivIsaConfig, Global, 5>(
+            1 << 24,
+            &binary_image,
+            &text_section,
+            non_determinism_source,
+            &families_precomps,
+            &inits_and_teardowns_precomps,
+            &delegation_precomputations,
+            1 << 32,
+            &worker,
+        );
 
         bincode_serialize_to_file(
             &(
                 main_proofs,
+                inits_and_teardowns_proofs,
                 delegation_proofs,
                 register_final_state,
                 (final_pc, final_timestamp),
@@ -1131,27 +1223,66 @@ mod test {
 
         let t: (
             BTreeMap<u8, Vec<UnrolledModeProof>>,
+            Vec<UnrolledModeProof>,
             Vec<(u32, Vec<Proof>)>,
             [FinalRegisterValue; 32],
             (u32, TimestampScalar),
         ) = bincode_deserialize_from_file("tmp_proof.bin");
-        let (main_proofs, delegation_proofs, register_final_state, (final_pc, final_timestamp)) = t;
+        let (
+            main_proofs,
+            inits_and_teardowns_proofs,
+            delegation_proofs,
+            register_final_state,
+            (final_pc, final_timestamp),
+        ) = t;
+
+        let (_, binary_image) =
+            setups::read_binary(&Path::new("../../examples/basic_fibonacci/app.bin"));
+        let (families, inits_and_teardowns) =
+            setups::unrolled_circuits::get_unrolled_circuits_artifacts_for_machine_type::<
+                IMWithoutSignedMulDivIsaConfig,
+            >(&binary_image);
 
         // flatten and set iterator
 
-        todo!();
+        let program_proofs = UnrolledProgramProof {
+            final_pc,
+            final_timestamp,
+            compiled_circuit_families: families,
+            circuit_families_proofs: main_proofs,
+            compiled_inits_and_teardowns: inits_and_teardowns,
+            inits_and_teardowns_proofs,
+            delegation_proofs: BTreeMap::from_iter(delegation_proofs.into_iter()),
+            register_final_values: register_final_state,
+            end_params: [0u32; 8],
+            recursion_chain_hash: None,
+            recursion_chain_preimage: None,
+        };
 
+        let responses = program_proofs.flatten_for_delegation_circuits_set();
         let t: (Vec<UnrolledCircuitSetupParams>, [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) = deserialize_from_file("../setups/42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285_42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285.json");
         let (setups, inits_and_teardowns_setup) = t;
 
-        let families_setups: Vec<_> = setups.iter().map(|el| &el.setup_caps).collect();
-        let _ = unsafe {
-            full_statement_verifier::unrolled_proof_statement::verify_full_statement_for_unrolled_circuits::<true, { setups::inits_and_teardowns::NUM_INIT_AND_TEARDOWN_SETS }>(
-                &families_setups,
-                full_statement_verifier::unrolled_proof_statement::FULL_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS,
-                (&inits_and_teardowns_setup, full_statement_verifier::unrolled_proof_statement::INITS_AND_TEARDOWNS_VERIFIER_PTR),
-                full_statement_verifier::BASE_LAYER_DELEGATION_CIRCUITS_VERIFICATION_PARAMETERS,
-            )
-        };
+        let result = std::thread::Builder::new()
+                .name("verifier thread".to_string())
+                .stack_size(1 << 27)
+                .spawn(move || {
+
+                    let families_setups: Vec<_> = setups.iter().map(|el| &el.setup_caps).collect();
+
+                    let it = responses.into_iter();
+                    prover::nd_source_std::set_iterator(it);
+
+                    #[allow(invalid_value)]
+                    let _ = unsafe {
+                        full_statement_verifier::unrolled_proof_statement::verify_full_statement_for_unrolled_circuits::<true, { setups::inits_and_teardowns::NUM_INIT_AND_TEARDOWN_SETS }>(
+                            &families_setups,
+                            full_statement_verifier::unrolled_proof_statement::FULL_UNSIGNED_MACHINE_UNROLLED_CIRCUITS_VERIFICATION_PARAMETERS,
+                            (&inits_and_teardowns_setup, full_statement_verifier::unrolled_proof_statement::INITS_AND_TEARDOWNS_VERIFIER_PTR),
+                            full_statement_verifier::BASE_LAYER_DELEGATION_CIRCUITS_VERIFICATION_PARAMETERS,
+                        )
+                    };
+                })
+                .map(|t| t.join());
     }
 }
