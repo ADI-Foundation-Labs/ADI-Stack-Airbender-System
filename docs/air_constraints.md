@@ -31,13 +31,20 @@ Term * Term can create degree up to 4 at the Term level. This is allowed for com
 
 ## Witness generation vs constraints 
 - create an empty variable (placeholder with index but without assigned witness value).
-- set_values(value_fn): records a closure that computes and assigns witness values for variables. These functions do not add constraints.
+- set_values(value_fn): records a closure that computes and assigns witness values for variables. These functions do not add constraints. Means the closure is stored and executed later during the witness‑generation phase (before constraints are checked). Use it to fill concrete values for variables that were allocated earlier (placeholders).
 - During witness generation, the executor runs the recorded closures to fill variable values.
 - You must still add constraints/lookup relations that verify the assigned witnesses satisfy the circuit equations.
 
 ## Invariants and compiler layout
 
-Some properties are not enforced immediately but are recorded as invariants and realized during compilation/placement:
+Some properties are not enforced immediately but are recorded as invariants and realized during compilation/placement. Concretely:
+- At allocation time the builder queues an invariant via `require_invariant(...)`.
+  - Booleans: the variable is pushed into an internal `boolean_variables` list.
+  - Range checks: a `RangeCheckQuery { variable, width }` is pushed into `rangechecked_expressions`.
+- During finalize/layout:
+  - Range checks: the compiler converts queued `rangechecked_expressions` into lookups against the 8/16‑bit tables (batched where possible), and appends them to lookup storage.
+  - Booleans: the queued `boolean_variables` are laid out into dedicated columns, and the compiled circuit enforces `x^2 − x = 0` for each (one boolean constraint per placed row/column).
+In practice, no polynomial is emitted at the call site, we tag the variable/relation now and materialize the corresponding polynomial later while building the prover's execution table.
 
 Boolean variables: created via add_boolean_variable or helpers that return Boolean::Is.
   - Records Invariant::Boolean.
@@ -46,7 +53,7 @@ Boolean variables: created via add_boolean_variable or helpers that return Boole
 Range-checked variables: add_variable_with_range_check(width) records Invariant::RangeChecked { width }.
   - Compiler converts these into lookup constraints (8-bit and 16-bit tables supported here).
 
-Substitutions/Linkage: some variables are marked with substitutions or linkages (e.g., public I/O linkage), and the compiler materializes the corresponding constraints at layout time.
+Substitutions/Linkage: some variables are marked with substitutions or linkages (e.g., public I/O linkage), and the compiler materializes (generates and inserts) the corresponding constraints at layout time.
 
 ## Equality and zero-check gadgets
 
@@ -79,7 +86,7 @@ Substitutions/Linkage: some variables are marked with substitutions or linkages 
 
 ## What is an AIR?
 
-An Algebraic Intermediate Representation (AIR) encodes a computation as polynomial equalities over a finite field F_q. The computation execution trace is laid out in rows and columns. Constraints enforce:
+An Algebraic Intermediate Representation (AIR) encodes a computation (the program's transition function over its execution trace) as polynomial equalities over a finite field F_q. The computation execution trace is laid out in rows and columns. Constraints enforce:
 
 - **Boundary conditions** (initial/final rows)
 - **Transition relations** between successive rows 
