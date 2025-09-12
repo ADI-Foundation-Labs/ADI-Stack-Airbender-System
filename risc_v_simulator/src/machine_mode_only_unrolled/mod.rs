@@ -248,11 +248,11 @@ impl DelegationCSRProcessor for crate::delegations::DelegationsCSRProcessor {
         tracer: &mut TR,
     ) {
         use self::delegations::blake2_round_function_with_compression_mode::*;
-        use self::delegations::u256_ops_with_control::*;
         use self::delegations::keccak_special5::*;
+        use self::delegations::u256_ops_with_control::*;
 
-        use common_constants::delegation_types::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER;
         use common_constants::delegation_types::bigint_with_control::BIGINT_OPS_WITH_CONTROL_CSR_REGISTER;
+        use common_constants::delegation_types::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER;
         use common_constants::delegation_types::keccak_special5::KECCAK_SPECIAL5_CSR_REGISTER;
 
         match csr_index as u32 {
@@ -888,12 +888,16 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             // Memory implementation should handle read in full. For now we only use one
                             // that doesn't step over 4 byte boundary ever, meaning even though formal address is not 4 byte aligned,
                             // loads of u8/u16/u32 are still "aligned"
-                            let (aligned_ram_read_value, ram_read_value, adjusted_load_address, adjusted_ram_read_value) =
-                                mem_read_mask_rom_if_needed::<M, Config>(
-                                    memory_source,
-                                    load_address as u64,
-                                    num_bytes,
-                                );
+                            let (
+                                aligned_ram_read_value,
+                                ram_read_value,
+                                adjusted_load_address,
+                                adjusted_ram_read_value,
+                            ) = mem_read_mask_rom_if_needed::<M, Config>(
+                                memory_source,
+                                load_address as u64,
+                                num_bytes,
+                            );
                             let rd_value = if Config::SUPPORT_SIGNED_LOAD {
                                 // now depending on the type of load we extend it
                                 match a {

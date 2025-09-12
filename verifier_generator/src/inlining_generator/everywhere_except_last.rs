@@ -1080,11 +1080,19 @@ pub(crate) fn transform_delegation_ram_conventions(
         idents,
         false,
     );
-    let mem_abi_offset_expr = read_value_expr(
-        ColumnAddress::MemorySubtree(delegation_processor_layout.abi_mem_offset_high.start()),
-        idents,
-        false,
-    );
+    let mem_abi_offset_expr = if delegation_processor_layout
+        .abi_mem_offset_high
+        .num_elements()
+        > 0
+    {
+        read_value_expr(
+            ColumnAddress::MemorySubtree(delegation_processor_layout.abi_mem_offset_high.start()),
+            idents,
+            false,
+        )
+    } else {
+        quote! { Mersenne31Field::ZERO }
+    };
     let write_timestamp_low_expr = read_value_expr(
         ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start()),
         idents,
@@ -1548,11 +1556,15 @@ pub(crate) fn transform_delegation_requests_creation(
             idents,
             false,
         );
-        let src_1_expr = read_value_expr(
-            ColumnAddress::MemorySubtree(delegation_argument.abi_mem_offset_high.start()),
-            idents,
-            false,
-        );
+        let src_1_expr = if delegation_argument.abi_mem_offset_high.num_elements() > 0 {
+            read_value_expr(
+                ColumnAddress::MemorySubtree(delegation_argument.abi_mem_offset_high.start()),
+                idents,
+                false,
+            )
+        } else {
+            quote! { Mersenne31Field::ZERO }
+        };
         let src_2_expr = read_value_expr(
             ColumnAddress::SetupSubtree(timestamp_setup_start),
             idents,
@@ -1635,12 +1647,21 @@ pub(crate) fn transform_delegation_requests_processing(
         );
 
         // delegation type is a verifier-provided constant
-
-        let src_1_expr = read_value_expr(
-            ColumnAddress::MemorySubtree(delegation_processor_layout.abi_mem_offset_high.start()),
-            idents,
-            false,
-        );
+        let src_1_expr = if delegation_processor_layout
+            .abi_mem_offset_high
+            .num_elements()
+            > 0
+        {
+            read_value_expr(
+                ColumnAddress::MemorySubtree(
+                    delegation_processor_layout.abi_mem_offset_high.start(),
+                ),
+                idents,
+                false,
+            )
+        } else {
+            quote! { Mersenne31Field::ZERO }
+        };
         let src_2_expr = read_value_expr(
             ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start()),
             idents,

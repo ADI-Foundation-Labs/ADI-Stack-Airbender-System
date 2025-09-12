@@ -155,6 +155,8 @@ mod test {
             &worker,
         );
 
+        println!("Proving completed, running verifier now");
+
         let is_valid = verify_unrolled_base_layer_for_machine_configuration::<
             IMWithoutSignedMulDivIsaConfig,
         >(&binary_image, &text_section, proofs);
