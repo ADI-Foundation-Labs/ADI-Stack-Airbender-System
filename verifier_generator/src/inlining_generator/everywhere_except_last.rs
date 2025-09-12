@@ -1091,7 +1091,7 @@ pub(crate) fn transform_delegation_ram_conventions(
             false,
         )
     } else {
-        quote! { Mersenne31Field::ZERO }
+        quote! { Mersenne31Quartic::ZERO }
     };
     let write_timestamp_low_expr = read_value_expr(
         ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start()),
@@ -1563,7 +1563,7 @@ pub(crate) fn transform_delegation_requests_creation(
                 false,
             )
         } else {
-            quote! { Mersenne31Field::ZERO }
+            quote! { Mersenne31Quartic::ZERO }
         };
         let src_2_expr = read_value_expr(
             ColumnAddress::SetupSubtree(timestamp_setup_start),
@@ -1660,7 +1660,7 @@ pub(crate) fn transform_delegation_requests_processing(
                 false,
             )
         } else {
-            quote! { Mersenne31Field::ZERO }
+            quote! { Mersenne31Quartic::ZERO }
         };
         let src_2_expr = read_value_expr(
             ColumnAddress::MemorySubtree(delegation_processor_layout.write_timestamp.start()),

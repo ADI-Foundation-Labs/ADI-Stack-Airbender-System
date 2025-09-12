@@ -2056,7 +2056,7 @@ unsafe fn evaluate_every_row_except_last(
                     let mut t = delegation_argument_linearization_challenges[1];
                     t.mul_assign(&timestamp_low);
                     denom.add_assign(&t);
-                    let mem_abi_offset = Mersenne31Field::ZERO;
+                    let mem_abi_offset = Mersenne31Quartic::ZERO;
                     let mut t = delegation_argument_linearization_challenges[0];
                     t.mul_assign(&mem_abi_offset);
                     denom.add_assign(&t);
