@@ -1,5 +1,4 @@
 use super::*;
-use crate::cycle::state_new::RiscV32StateForUnrolledProver;
 use crate::cycle::status_registers::TrapReason;
 use crate::delegations::unrolled::register_indirect_read_write_sparse_noexcept;
 use crate::delegations::unrolled::write_indirect_accesses_sparse_noexcept;
@@ -16,8 +15,8 @@ pub fn keccak_special5_over_unrolled_state<
     tracer: &mut TR,
 ) {
     // read registers first
-    let x10 = machine_state.observable.registers[10];
-    let x11 = machine_state.observable.registers[11];
+    let x10 = machine_state.registers[10];
+    let x11 = machine_state.registers[11];
     let control = x10 >> 16;
     assert!(
         x10 % (1 << 16) == 0,
@@ -106,7 +105,7 @@ pub fn keccak_special5_over_unrolled_state<
         _ => unreachable!(),
     };
     let x10_next = control_next << 16;
-    machine_state.observable.registers[10] = x10_next;
+    machine_state.registers[10] = x10_next;
 
     // extract state indexes (for address r/w)
     let sparse_access_state_indexes: [usize; KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS] = {

@@ -26,6 +26,7 @@ use setups::prover::*;
 use std::collections::HashMap;
 use worker::Worker;
 
+pub use prover;
 pub use setups;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]

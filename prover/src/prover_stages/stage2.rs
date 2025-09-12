@@ -456,12 +456,18 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                 .cast::<Mersenne31Quartic>()
                                 .write(numerator);
 
+                            let mem_abi_offset = if delegation_processor_layout.abi_mem_offset_high.num_elements() > 0 {
+                                *memory_trace_row.get_unchecked(
+                                    delegation_processor_layout.abi_mem_offset_high.start(),
+                                )
+                            } else {
+                                Mersenne31Field::ZERO
+                            };
+
                             let denom = compute_aggregated_key_value(
                                 delegation_type,
                                 [
-                                    *memory_trace_row.get_unchecked(
-                                        delegation_processor_layout.abi_mem_offset_high.start(),
-                                    ),
+                                    mem_abi_offset,
                                     *memory_trace_row.get_unchecked(
                                         delegation_processor_layout.write_timestamp.start(),
                                     ),
@@ -488,9 +494,7 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                         valid_convention,
                                         "Delegation processing violates convention with inputs: delegation type = {:?}, abi offset = {:?}, timestamp {:?}|{:?}",
                                         delegation_type,
-                                        memory_trace_row.get_unchecked(
-                                            delegation_processor_layout.abi_mem_offset_high.start(),
-                                        ),
+                                        mem_abi_offset,
                                         memory_trace_row.get_unchecked(
                                             delegation_processor_layout.write_timestamp.start(),
                                         ),
@@ -499,22 +503,20 @@ pub fn prover_stage_2<const N: usize, A: GoodAllocator, T: MerkleTreeConstructor
                                         ),
                                     );
                                 }
-                                // else {
-                                //     println!(
-                                //         "Delegation processing with inputs: delegation type = {:?}, abi offset = {:?}, timestamp {:?}|{:?}",
-                                //         delegation_type,
-                                //         memory_trace_row.get_unchecked(
-                                //             delegation_processor_layout.abi_mem_offset_high.start(),
-                                //         ),
-                                //         memory_trace_row.get_unchecked(
-                                //             delegation_processor_layout.write_timestamp.start(),
-                                //         ),
-                                //         memory_trace_row.get_unchecked(
-                                //             delegation_processor_layout.write_timestamp.start() + 1,
-                                //         ),
-                                //     );
-                                //     println!("Contribution = {:?}", denom);
-                                // }
+                                else {
+                                    println!(
+                                        "Delegation processing with inputs: delegation type = {:?}, abi offset = {:?}, timestamp {:?}|{:?}",
+                                        delegation_type,
+                                        mem_abi_offset,
+                                        memory_trace_row.get_unchecked(
+                                            delegation_processor_layout.write_timestamp.start(),
+                                        ),
+                                        memory_trace_row.get_unchecked(
+                                            delegation_processor_layout.write_timestamp.start() + 1,
+                                        ),
+                                    );
+                                    println!("Contribution = {:?}", denom);
+                                }
                             }
                         }
 

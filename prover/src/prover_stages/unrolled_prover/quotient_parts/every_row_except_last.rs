@@ -1787,15 +1787,16 @@ pub(crate) unsafe fn evaluate_delegation_requests(
 
     let m = *memory_trace_view_row.get_unchecked(delegation_request_layout.multiplicity.start());
 
+    let mem_abi_offset = if delegation_request_layout.abi_mem_offset_high.num_elements() > 0 {
+        *memory_trace_view_row.get_unchecked(delegation_request_layout.abi_mem_offset_high.start())
+    } else {
+        Mersenne31Field::ZERO
+    };
+
     // we will add contribution from literal offset afterwards
     let mut denom = quotient_compute_aggregated_key_value(
         *memory_trace_view_row.get_unchecked(delegation_request_layout.delegation_type.start()),
-        [
-            *memory_trace_view_row
-                .get_unchecked(delegation_request_layout.abi_mem_offset_high.start()),
-            timestamp_low,
-            timestamp_high,
-        ],
+        [mem_abi_offset, timestamp_low, timestamp_high],
         delegation_challenges.delegation_argument_linearization_challenges,
         delegation_challenges.delegation_argument_gamma,
         *tau_in_domain_by_half,

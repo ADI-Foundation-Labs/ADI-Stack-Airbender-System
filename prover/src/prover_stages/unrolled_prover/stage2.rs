@@ -627,13 +627,13 @@ pub fn prover_stage_2_for_unrolled_circuit<
 
                             let mut it = batch_inverses_input.iter();
                             if handle_delegation_requests || process_delegations {
-                                if let Some(el) = compiled_circuit
+                                if let Some(delegation_processing_aux_poly) = compiled_circuit
                                     .stage_2_layout
                                     .delegation_processing_aux_poly
                                 {
                                     stage_2_trace
                                         .as_mut_ptr()
-                                        .add(el.start())
+                                        .add(delegation_processing_aux_poly.start())
                                         .cast::<Mersenne31Quartic>()
                                         .as_mut_unchecked()
                                         .mul_assign(it.next().unwrap());

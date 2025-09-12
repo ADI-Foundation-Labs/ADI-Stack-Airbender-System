@@ -138,15 +138,17 @@ impl MemorySource for VectorMemoryImplWithRom {
     }
 
     #[inline(always)]
-    fn get_noexcept_with_rom_check(&self, phys_address: u64) -> (u32, u32) {
+    fn get_noexcept_with_rom_check(&self, phys_address: u64) -> (u32, u32, u32) {
         debug_assert!(phys_address % 4 == 0);
         if ((phys_address / 4) as usize) < self.ram.len() {
-            let addr = if phys_address < self.rom_bound as u64 {
-                0
+            let true_value = self.ram[(phys_address / 4) as usize];
+            let (addr, adjusted_value) = if phys_address < self.rom_bound as u64 {
+                (0, 0)
             } else {
-                phys_address as u32
+                (phys_address as u32, true_value)
             };
-            (self.ram[(phys_address / 4) as usize], addr)
+
+            (true_value, addr, adjusted_value)
         } else {
             panic!("Out of bound memory access at address 0x{:x}", phys_address);
         }

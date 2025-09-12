@@ -1266,7 +1266,7 @@ mod test {
         let t: (Vec<UnrolledCircuitSetupParams>, [MerkleTreeCap<CAP_SIZE>; NUM_COSETS]) = deserialize_from_file("../setups/42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285_42c88bf092af93acc4a3bf780b64dc98a36ba03b54d7acd886dbd9b3eff90285.json");
         let (setups, inits_and_teardowns_setup) = t;
 
-        let result = std::thread::Builder::new()
+        std::thread::Builder::new()
                 .name("verifier thread".to_string())
                 .stack_size(1 << 27)
                 .spawn(move || {
@@ -1286,6 +1286,8 @@ mod test {
                         )
                     };
                 })
-                .map(|t| t.join());
+                .expect("must spawn")
+                .join()
+                .expect("must verify");
     }
 }

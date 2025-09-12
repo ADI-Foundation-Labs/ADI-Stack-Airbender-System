@@ -395,57 +395,40 @@ pub unsafe fn verify_full_statement_for_unrolled_circuits<
             grand_product_accumulator.mul_assign(&current.grand_product_accumulator);
 
             let mut last_previous = if circuit_sequence == 0 {
-                0u32
+                InitAndTeardownTuple {
+                    address: 0u32,
+                    teardown_value: 0u32,
+                    teardown_ts_pair: (0u32, 0u32),
+                }
             } else {
-                parse_field_els_as_u32_from_u16_limbs_checked(
-                    previous.lazy_init_boundary_values[NUM_INIT_AND_TEARDOWN_SETS - 1]
-                        .lazy_init_one_before_last_row,
+                InitAndTeardownTuple::from_aux_values_one_before_last_row(
+                    &previous.lazy_init_boundary_values[NUM_INIT_AND_TEARDOWN_SETS - 1],
                 )
             };
 
             // check that addresses are sorted at juctions
             for i in 0..NUM_INIT_AND_TEARDOWN_SETS {
                 cells_initialized += INITS_AND_TEARDOWNS_CAPACITY_PER_SET;
-                let first_current = parse_field_els_as_u32_from_u16_limbs_checked(
+                let first_current_address = parse_field_els_as_u32_from_u16_limbs_checked(
                     current.lazy_init_boundary_values[i].lazy_init_first_row,
                 );
 
                 // if it's
-                if first_current > last_previous {
+                if last_previous.address < first_current_address {
                     // nothing, we are all good
                 } else {
                     // we require padding of 0 init address, and 0 teardown value and timestamp
-                    assert_eq!(last_previous, 0);
+                    assert_eq!(last_previous.address, 0);
+                    assert_eq!(last_previous.teardown_value, 0);
 
                     // just compare to 0 after reduction to avoid parsing u16 or timestamp bits
-                    assert_eq!(
-                        previous.lazy_init_boundary_values[i].teardown_value_one_before_last_row[0]
-                            .to_reduced_u32(),
-                        0
-                    );
-                    assert_eq!(
-                        previous.lazy_init_boundary_values[i].teardown_value_one_before_last_row[1]
-                            .to_reduced_u32(),
-                        0
-                    );
-
-                    assert_eq!(
-                        previous.lazy_init_boundary_values[i]
-                            .teardown_timestamp_one_before_last_row[0]
-                            .to_reduced_u32(),
-                        0
-                    );
-                    assert_eq!(
-                        previous.lazy_init_boundary_values[i]
-                            .teardown_timestamp_one_before_last_row[1]
-                            .to_reduced_u32(),
-                        0
-                    );
+                    assert_eq!(last_previous.teardown_ts_pair.0, 0);
+                    assert_eq!(last_previous.teardown_ts_pair.1, 0);
                 }
 
                 // circuits sort addresses in the column, so we just need to re-assign
-                last_previous = parse_field_els_as_u32_from_u16_limbs_checked(
-                    current.lazy_init_boundary_values[i].lazy_init_one_before_last_row,
+                last_previous = InitAndTeardownTuple::from_aux_values_one_before_last_row(
+                    &current.lazy_init_boundary_values[i],
                 )
             }
         }

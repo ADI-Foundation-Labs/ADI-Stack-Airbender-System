@@ -121,6 +121,12 @@ unsafe fn parse_shuffle_ram_accesses(
                 }
             }
 
+            // if is_register == false && address == 0 {
+            //     // special padding value to make ROM read via RAM read at 0
+            //     assert_eq!(read_value, 0);
+            //     continue;
+            // }
+
             let to_write = (is_register, address, write_ts, write_value);
             let is_unique = write_set.insert(to_write);
             if is_unique == false {
@@ -135,6 +141,156 @@ unsafe fn parse_shuffle_ram_accesses(
                 dbg!(trace_row);
                 dbg!(access_idx);
                 panic!("Duplicate entry {:?} in read set", to_read);
+            }
+        }
+    }
+}
+
+unsafe fn parse_delegation_ram_accesses(
+    compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
+    trace_row: &[Mersenne31Field],
+    write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
+    read_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
+) {
+    let delegation_processor_layout = compiled_circuit
+        .memory_layout
+        .delegation_processor_layout
+        .unwrap();
+    let execute = delegation_processor_layout.multiplicity;
+    let is_active = trace_row[execute.start()].as_boolean();
+    if is_active {
+        let write_ts = read_timestamp(trace_row, delegation_processor_layout.write_timestamp);
+        assert_eq!(write_ts % 4, 3);
+        assert!(write_ts >= INITIAL_TIMESTAMP);
+        for (access_idx, access) in compiled_circuit
+            .memory_layout
+            .register_and_indirect_accesses
+            .iter()
+            .enumerate()
+        {
+            // register
+            let base_offset = {
+                let reg_idx = access.register_access.get_register_index();
+                let read_ts = read_timestamp(
+                    trace_row,
+                    access.register_access.get_read_timestamp_columns(),
+                );
+                let read_value =
+                    read_u32(trace_row, access.register_access.get_read_value_columns());
+                let mut write_value = read_value;
+                if let RegisterAccessColumns::WriteAccess {
+                    write_value: write_columns,
+                    ..
+                } = access.register_access
+                {
+                    write_value = read_u32(trace_row, write_columns);
+                }
+
+                let to_write = (true, reg_idx, write_ts, write_value);
+                let is_unique = write_set.insert(to_write);
+                if is_unique == false {
+                    dbg!(trace_row);
+                    dbg!(access_idx);
+                    panic!("Duplicate entry {:?} in write set", to_write);
+                }
+
+                let to_read = (true, reg_idx, read_ts, read_value);
+                let is_unique = read_set.insert(to_read);
+                if is_unique == false {
+                    dbg!(trace_row);
+                    dbg!(access_idx);
+                    panic!("Duplicate entry {:?} in read set", to_read);
+                }
+
+                read_value
+            };
+
+            for indirect in access.indirect_accesses.iter() {
+                if indirect.variable_dependent().is_some() {
+                    todo!();
+                }
+                assert!(base_offset >= 1 << 21);
+                let offset = indirect.offset_constant();
+                assert_eq!(offset % 4, 0);
+                let (address, of) = base_offset.overflowing_add(offset);
+                assert!(of == false);
+                assert!(address >= 1 << 21);
+                let read_ts = read_timestamp(trace_row, indirect.get_read_timestamp_columns());
+                let read_value = read_u32(trace_row, indirect.get_read_value_columns());
+                let mut write_value = read_value;
+                if let IndirectAccessColumns::WriteAccess {
+                    write_value: write_columns,
+                    ..
+                } = indirect
+                {
+                    write_value = read_u32(trace_row, *write_columns);
+                }
+
+                let to_write = (false, address, write_ts, write_value);
+                let is_unique = write_set.insert(to_write);
+                if is_unique == false {
+                    dbg!(trace_row);
+                    dbg!(access_idx);
+                    panic!("Duplicate entry {:?} in write set", to_write);
+                }
+
+                let to_read = (false, address, read_ts, read_value);
+                let is_unique = read_set.insert(to_read);
+                if is_unique == false {
+                    dbg!(trace_row);
+                    dbg!(access_idx);
+                    panic!("Duplicate entry {:?} in read set", to_read);
+                }
+            }
+        }
+    } else {
+        // check conventions
+        let base_ts = read_timestamp(trace_row, delegation_processor_layout.write_timestamp);
+        assert_eq!(base_ts, 0);
+        for (_access_idx, access) in compiled_circuit
+            .memory_layout
+            .register_and_indirect_accesses
+            .iter()
+            .enumerate()
+        {
+            // register
+            {
+                let read_ts = read_timestamp(
+                    trace_row,
+                    access.register_access.get_read_timestamp_columns(),
+                );
+                let read_value =
+                    read_u32(trace_row, access.register_access.get_read_value_columns());
+                let mut write_value = read_value;
+                if let RegisterAccessColumns::WriteAccess {
+                    write_value: write_columns,
+                    ..
+                } = access.register_access
+                {
+                    write_value = read_u32(trace_row, write_columns);
+                }
+                assert_eq!(read_ts, 0);
+                assert_eq!(read_value, 0);
+                assert_eq!(write_value, 0);
+            }
+
+            for indirect in access.indirect_accesses.iter() {
+                if indirect.variable_dependent().is_some() {
+                    todo!();
+                }
+                let read_ts = read_timestamp(trace_row, indirect.get_read_timestamp_columns());
+                let read_value = read_u32(trace_row, indirect.get_read_value_columns());
+                let mut write_value = read_value;
+                if let IndirectAccessColumns::WriteAccess {
+                    write_value: write_columns,
+                    ..
+                } = indirect
+                {
+                    write_value = read_u32(trace_row, *write_columns);
+                }
+                assert_eq!(read_ts, 0);
+                assert_eq!(read_value, 0);
+                assert_eq!(write_value, 0);
             }
         }
     }
@@ -176,6 +332,24 @@ fn parse_shuffle_ram_accesses_from_full_trace<const N: usize>(
     }
 }
 
+fn parse_delegation_ram_accesses_from_full_trace<const N: usize>(
+    compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
+    witness: &WitnessEvaluationData<N, Global>,
+    write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
+    read_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
+) {
+    let mut trace = witness
+        .exec_trace
+        .row_view(0..(witness.exec_trace.len() - 1));
+    for _ in 0..(witness.exec_trace.len() - 1) {
+        unsafe {
+            let (_, memory) = trace.current_row_split(witness.num_witness_columns);
+            parse_delegation_ram_accesses(compiled_circuit, &*memory, write_set, read_set);
+            trace.advance_row();
+        }
+    }
+}
+
 // #[ignore = "test has explicit panic inside"]
 #[test]
 fn run_basic_unrolled_test_with_word_specialization() {
@@ -195,11 +369,12 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
     let lde_factor = 2;
     let tree_cap_size = 32;
 
-    let worker = Worker::new_with_num_threads(1);
+    // let worker = Worker::new_with_num_threads(1);
+    let worker = Worker::new_with_num_threads(8);
     // load binary
 
-    let binary = std::fs::read("../examples/basic_fibonacci/app.bin").unwrap();
-    // let binary = std::fs::read("../examples/hashed_fibonacci/app.bin").unwrap();
+    // let binary = std::fs::read("../examples/basic_fibonacci/app.bin").unwrap();
+    let binary = std::fs::read("../examples/hashed_fibonacci/app.bin").unwrap();
     assert!(binary.len() % 4 == 0);
     let binary: Vec<_> = binary
         .as_chunks::<4>()
@@ -208,8 +383,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         .map(|el| u32::from_le_bytes(*el))
         .collect();
 
-    let text_section = std::fs::read("../examples/basic_fibonacci/app.text").unwrap();
-    // let text_section = std::fs::read("../examples/hashed_fibonacci/app.text").unwrap();
+    // let text_section = std::fs::read("../examples/basic_fibonacci/app.text").unwrap();
+    let text_section = std::fs::read("../examples/hashed_fibonacci/app.text").unwrap();
     assert!(text_section.len() % 4 == 0);
     let text_section: Vec<_> = text_section
         .as_chunks::<4>()
@@ -527,7 +702,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         ));
     }
 
-    if false {
+    if true {
         println!("Will try to prove ADD/SUB/LUI/AUIPC/MOP circuit");
 
         let add_sub_circuit = {
@@ -664,7 +839,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if false {
+    if true {
         println!("Will try to prove JUMP/BRANCH/SLT circuit");
 
         use crate::cs::machine::ops::unrolled::jump_branch_slt::*;
@@ -802,7 +977,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
-    if false {
+    if true {
         println!("Will try to prove XOR/AND/OR/SHIFT/CSR circuit");
         use crate::cs::machine::ops::unrolled::shift_binary_csr::*;
 
@@ -936,19 +1111,21 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
                 proof.permutation_grand_product_accumulator,
                 Mersenne31Quartic::ONE
             );
+            assert_eq!(
+                proof.delegation_argument_accumulator.unwrap(),
+                Mersenne31Quartic::ZERO
+            );
         }
-        assert_eq!(
-            proof.delegation_argument_accumulator.unwrap(),
-            Mersenne31Quartic::ZERO
-        );
 
         serialize_to_file(&proof, "shift_binop_csrrw_unrolled_proof.json");
+
+        dbg!(proof.delegation_argument_accumulator.unwrap());
 
         delegation_argument_accumulator.add_assign(&proof.delegation_argument_accumulator.unwrap());
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if false {
+    if true {
         println!("Will try to prove MUL/DIV circuit");
 
         use crate::cs::machine::ops::unrolled::mul_div::*;
@@ -1092,7 +1269,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if false {
+    if true {
         println!("Will try to prove word LOAD/STORE circuit");
 
         const SECOND_WORD_BITS: usize = 4;
@@ -1238,7 +1415,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if false {
+    if true {
         println!("Will try to prove subword LOAD/STORE circuit");
 
         use cs::machine::ops::unrolled::load_store::*;
@@ -1385,44 +1562,20 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    // // Machine state permutation ended
-    // {
-    //     for (pc, ts) in write_set.iter().copied() {
-    //         if read_set.contains(&(pc, ts)) == false {
-    //             panic!("read set doesn't contain a pair {:?}", (pc, ts));
-    //         }
-    //     }
+    // Machine state permutation ended
+    {
+        for (pc, ts) in write_set.iter().copied() {
+            if read_set.contains(&(pc, ts)) == false {
+                panic!("read set doesn't contain a pair {:?}", (pc, ts));
+            }
+        }
 
-    //     for (pc, ts) in read_set.iter().copied() {
-    //         if write_set.contains(&(pc, ts)) == false {
-    //             panic!("write set doesn't contain a pair {:?}", (pc, ts));
-    //         }
-    //     }
-    // }
-
-    // // inits and teardowns
-    // {
-    //     let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
-    //     let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
-    //     assert_eq!(expected_init_set.len(), expected_teardown_set.len());
-    //     assert_eq!(total_unique_teardowns, expected_teardown_set.len());
-
-    //     for (is_register, _, ts, init_value) in expected_init_set.iter() {
-    //         assert!(*is_register == false);
-    //         assert_eq!(*ts, 0);
-    //         assert_eq!(*init_value, 0);
-    //     }
-    //     for (is_register, _, ts, _) in expected_teardown_set.iter() {
-    //         assert!(*is_register == false);
-    //         assert!(*ts > INITIAL_TIMESTAMP);
-    //     }
-
-    //     for ((_, addr0, _, _), (_, addr1, _, _)) in
-    //         expected_init_set.iter().zip(expected_teardown_set.iter())
-    //     {
-    //         assert_eq!(*addr0, *addr1);
-    //     }
-    // }
+        for (pc, ts) in read_set.iter().copied() {
+            if write_set.contains(&(pc, ts)) == false {
+                panic!("write set doesn't contain a pair {:?}", (pc, ts));
+            }
+        }
+    }
 
     if true {
         println!("Will try to prove memory inits and teardowns circuit");
@@ -1521,7 +1674,7 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    if false {
+    if true {
         // now prove delegation circuits
         let mut external_values = ExternalValues {
             challenges: external_challenges,
@@ -1595,6 +1748,20 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
                 Global,
             );
 
+            parse_delegation_ram_accesses_from_full_trace(
+                &circuit,
+                &full_witness,
+                &mut memory_write_set,
+                &mut memory_read_set,
+            );
+
+            let is_satisfied = check_satisfied(
+                &circuit,
+                &full_witness.exec_trace,
+                full_witness.num_witness_columns,
+            );
+            assert!(is_satisfied);
+
             let trace_len = NUM_DELEGATION_CYCLES + 1;
 
             // create setup
@@ -1612,13 +1779,6 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
                 tree_cap_size,
                 &worker,
             );
-
-            let is_satisfied = check_satisfied(
-                &circuit,
-                &full_witness.exec_trace,
-                full_witness.num_witness_columns,
-            );
-            assert!(is_satisfied);
 
             // let lookup_mapping_for_gpu = if maybe_delegated_gpu_comparison_hook.is_some() {
             //     Some(witness.witness.lookup_mapping.clone())
@@ -1686,150 +1846,43 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
     dbg!(permutation_argument_accumulator);
     dbg!(delegation_argument_accumulator);
 
+    // inits and teardowns
+    {
+        let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
+        let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
+        assert_eq!(expected_init_set.len(), expected_teardown_set.len());
+
+        for (is_register, addr, ts, init_value) in expected_init_set.iter() {
+            assert!(*is_register == false);
+            assert_eq!(
+                *ts, 0,
+                "init timestamp is invalid for memory address {}",
+                addr
+            );
+            assert_eq!(
+                *init_value, 0,
+                "init value is invalid for memory address {}",
+                addr
+            );
+        }
+        for (is_register, addr, ts, _) in expected_teardown_set.iter() {
+            assert!(*is_register == false);
+            assert!(
+                *ts > INITIAL_TIMESTAMP,
+                "teardown timestamp is invalid for memory address {}",
+                addr
+            );
+        }
+
+        for ((_, addr0, _, _), (_, addr1, _, _)) in
+            expected_init_set.iter().zip(expected_teardown_set.iter())
+        {
+            assert_eq!(*addr0, *addr1);
+        }
+
+        assert_eq!(total_unique_teardowns, expected_teardown_set.len());
+    }
+
     assert_eq!(permutation_argument_accumulator, Mersenne31Quartic::ONE);
     assert_eq!(delegation_argument_accumulator, Mersenne31Quartic::ZERO);
-
-    // if !for_gpu_comparison {
-    //     serialize_to_file(&proof, "delegation_proof");
-    // }
-
-    // if let Some(ref gpu_comparison_hook) = maybe_delegator_gpu_comparison_hook {
-    //     let log_n = (NUM_PROC_CYCLES + 1).trailing_zeros();
-    //     assert_eq!(log_n, 20);
-    //     let gpu_comparison_args = GpuComparisonArgs {
-    //         circuit: &compiled_machine,
-    //         setup: &setup,
-    //         external_values: &external_values,
-    //         public_inputs: &public_inputs,
-    //         twiddles: &twiddles,
-    //         lde_precomputations: &lde_precomputations,
-    //         table_driver: &table_driver,
-    //         lookup_mapping: lookup_mapping_for_gpu.unwrap(),
-    //         log_n: log_n as usize,
-    //         circuit_sequence: 0,
-    //         delegation_processing_type: None,
-    //         prover_data: &prover_data,
-    //     };
-    //     gpu_comparison_hook(&gpu_comparison_args);
-    // }
-
-    // let register_contribution_in_memory_argument =
-    //     produce_register_contribution_into_memory_accumulator(
-    //         &register_final_values,
-    //         memory_argument_linearization_challenges_powers,
-    //         memory_argument_gamma,
-    //     );
-
-    // dbg!(&prover_data.stage_2_result.grand_product_accumulator);
-    // dbg!(&prover_data.stage_2_result.sum_over_delegation_poly);
-    // dbg!(register_contribution_in_memory_argument);
-
-    // let mut memory_accumulator = prover_data.stage_2_result.grand_product_accumulator;
-    // memory_accumulator.mul_assign(&register_contribution_in_memory_argument);
-
-    // let mut sum_over_delegation_poly = prover_data.stage_2_result.sum_over_delegation_poly;
-
-    // // now prove delegation circuits
-    // let mut external_values = external_values;
-    // external_values.aux_boundary_values = Default::default();
-    // for work_type in delegation_circuits.into_iter() {
-    //     dbg!(work_type.delegation_type);
-    //     dbg!(work_type.trace_len);
-    //     dbg!(work_type.work_units.len());
-
-    //     let delegation_type = work_type.delegation_type;
-    //     // create setup
-    //     let twiddles: Twiddles<_, Global> = Twiddles::new(work_type.trace_len, &worker);
-    //     let lde_precomputations =
-    //         LdePrecomputations::new(work_type.trace_len, lde_factor, &[0, 1], &worker);
-
-    //     let setup = SetupPrecomputations::from_tables_and_trace_len(
-    //         &work_type.table_driver,
-    //         work_type.trace_len,
-    //         &work_type.compiled_circuit.setup_layout,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         &worker,
-    //     );
-
-    //     for witness in work_type.work_units.into_iter() {
-    //         println!(
-    //             "Checking if delegation type {} circuit is satisfied",
-    //             delegation_type
-    //         );
-    //         let is_satisfied = check_satisfied(
-    //             &work_type.compiled_circuit,
-    //             &witness.witness.exec_trace,
-    //             witness.witness.num_witness_columns,
-    //         );
-    //         assert!(is_satisfied);
-
-    //         let lookup_mapping_for_gpu = if maybe_delegated_gpu_comparison_hook.is_some() {
-    //             Some(witness.witness.lookup_mapping.clone())
-    //         } else {
-    //             None
-    //         };
-
-    //         dbg!(witness.witness.exec_trace.len());
-    //         let now = std::time::Instant::now();
-    //         let (prover_data, proof) = prove::<DEFAULT_TRACE_PADDING_MULTIPLE, _>(
-    //             &work_type.compiled_circuit,
-    //             &[],
-    //             &external_values,
-    //             witness.witness,
-    //             &setup,
-    //             &twiddles,
-    //             &lde_precomputations,
-    //             0,
-    //             Some(delegation_type),
-    //             lde_factor,
-    //             tree_cap_size,
-    //             53,
-    //             28,
-    //             &worker,
-    //         );
-    //         println!(
-    //             "Delegation circuit type {} proving time is {:?}",
-    //             delegation_type,
-    //             now.elapsed()
-    //         );
-
-    //         if let Some(ref gpu_comparison_hook) = maybe_delegated_gpu_comparison_hook {
-    //             let log_n = work_type.trace_len.trailing_zeros();
-    //             assert_eq!(work_type.trace_len, 1 << log_n);
-    //             let dummy_public_inputs = Vec::<Mersenne31Field>::new();
-    //             let gpu_comparison_args = GpuComparisonArgs {
-    //                 circuit: &work_type.compiled_circuit,
-    //                 setup: &setup,
-    //                 external_values: &external_values,
-    //                 public_inputs: &dummy_public_inputs,
-    //                 twiddles: &twiddles,
-    //                 lde_precomputations: &lde_precomputations,
-    //                 table_driver: &work_type.table_driver,
-    //                 lookup_mapping: lookup_mapping_for_gpu.unwrap(),
-    //                 log_n: log_n as usize,
-    //                 circuit_sequence: 0,
-    //                 delegation_processing_type: Some(delegation_type),
-    //                 prover_data: &prover_data,
-    //             };
-    //             gpu_comparison_hook(&gpu_comparison_args);
-    //         }
-
-    //         if !for_gpu_comparison {
-    //             serialize_to_file(&proof, "blake2s_delegator_proof");
-    //         }
-
-    //         dbg!(prover_data.stage_2_result.grand_product_accumulator);
-    //         dbg!(prover_data.stage_2_result.sum_over_delegation_poly);
-
-    //         memory_accumulator.mul_assign(&prover_data.stage_2_result.grand_product_accumulator);
-    //         sum_over_delegation_poly
-    //             .sub_assign(&prover_data.stage_2_result.sum_over_delegation_poly);
-    //     }
-    // }
-
-    // assert_eq!(memory_accumulator, Mersenne31Quartic::ONE);
-    // assert_eq!(sum_over_delegation_poly, Mersenne31Quartic::ZERO);
 }

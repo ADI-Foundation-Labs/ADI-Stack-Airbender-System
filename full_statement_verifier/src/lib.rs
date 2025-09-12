@@ -166,12 +166,55 @@ const _: () = {
     ()
 };
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct InitAndTeardownTuple {
+    pub address: u32,
+    pub teardown_value: u32,
+    pub teardown_ts_pair: (u32, u32),
+}
+
+impl InitAndTeardownTuple {
+    #[inline(always)]
+    pub fn from_aux_values_first_row(
+        value: &prover::definitions::AuxArgumentsBoundaryValues,
+    ) -> Self {
+        Self {
+            address: parse_field_els_as_u32_from_u16_limbs_checked(value.lazy_init_first_row),
+            teardown_value: parse_field_els_as_u32_from_u16_limbs_checked(
+                value.teardown_value_first_row,
+            ),
+            teardown_ts_pair: (
+                value.teardown_timestamp_first_row[0].to_reduced_u32(),
+                value.teardown_timestamp_first_row[1].to_reduced_u32(),
+            ),
+        }
+    }
+
+    #[inline(always)]
+    pub fn from_aux_values_one_before_last_row(
+        value: &prover::definitions::AuxArgumentsBoundaryValues,
+    ) -> Self {
+        Self {
+            address: parse_field_els_as_u32_from_u16_limbs_checked(
+                value.lazy_init_one_before_last_row,
+            ),
+            teardown_value: parse_field_els_as_u32_from_u16_limbs_checked(
+                value.teardown_value_one_before_last_row,
+            ),
+            teardown_ts_pair: (
+                value.teardown_timestamp_one_before_last_row[0].to_reduced_u32(),
+                value.teardown_timestamp_one_before_last_row[1].to_reduced_u32(),
+            ),
+        }
+    }
+}
+
 /// If we recurse over user's program -> we must provide expected final PC,
 /// and setup caps (that encode the program itself!),
 /// otherwise we only need to provide final PC
 #[allow(invalid_value)]
 #[inline(never)]
-unsafe fn verify_full_statement<const BASE_LAYER: bool>(
+pub unsafe fn verify_full_statement<const BASE_LAYER: bool>(
     main_risc_v_circuit_verifier: VerifierFunctionPointer<
         CAP_SIZE,
         NUM_COSETS,

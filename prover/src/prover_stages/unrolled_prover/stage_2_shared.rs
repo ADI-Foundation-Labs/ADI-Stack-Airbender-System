@@ -734,14 +734,15 @@ pub(crate) fn process_delegation_requests(
             delegation_request_layout.in_cycle_write_index as u32,
         ));
 
+        let mem_abi_offset = if delegation_request_layout.abi_mem_offset_high.num_elements() > 0 {
+            *memory_trace_row.get_unchecked(delegation_request_layout.abi_mem_offset_high.start())
+        } else {
+            Mersenne31Field::ZERO
+        };
+
         let denom = compute_aggregated_key_value(
             *memory_trace_row.get_unchecked(delegation_request_layout.delegation_type.start()),
-            [
-                *memory_trace_row
-                    .get_unchecked(delegation_request_layout.abi_mem_offset_high.start()),
-                timestamp_low,
-                timestamp_high,
-            ],
+            [mem_abi_offset, timestamp_low, timestamp_high],
             delegation_challenges.delegation_argument_linearization_challenges,
             delegation_challenges.delegation_argument_gamma,
         );
@@ -767,27 +768,22 @@ pub(crate) fn process_delegation_requests(
                     memory_trace_row.get_unchecked(
                         delegation_request_layout.delegation_type.start(),
                     ),
-                    memory_trace_row.get_unchecked(
-                        delegation_request_layout.abi_mem_offset_high.start(),
-                    ),
+                    mem_abi_offset,
                     timestamp_low,
                     timestamp_high,
                 );
+            } else {
+                println!(
+                    "Delegation request with inputs: delegation type = {:?}, abi offset = {:?}, timestamp {:?}|{:?}",
+                    memory_trace_row.get_unchecked(
+                        delegation_request_layout.delegation_type.start(),
+                    ),
+                    mem_abi_offset,
+                    timestamp_low,
+                    timestamp_high,
+                );
+                println!("Contribution = {:?}", denom);
             }
-            // else {
-            //     println!(
-            //         "Delegation request with inputs: delegation type = {:?}, abi offset = {:?}, timestamp {:?}|{:?}",
-            //         memory_trace_row.get_unchecked(
-            //             delegation_request_layout.delegation_type.start(),
-            //         ),
-            //         memory_trace_row.get_unchecked(
-            //             delegation_request_layout.abi_mem_offset_high.start(),
-            //         ),
-            //         timestamp_low,
-            //         timestamp_high,
-            //     );
-            //     println!("Contribution = {:?}", denom);
-            // }
         }
     }
 }

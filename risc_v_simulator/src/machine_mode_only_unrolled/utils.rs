@@ -14,10 +14,10 @@ pub fn mem_read_mask_rom_if_needed<M: MemorySource, C: MachineConfig>(
     memory_source: &mut M,
     phys_address: u64,
     num_bytes: u32,
-) -> (u32, u32, u32) {
+) -> (u32, u32, u32, u32) {
     let unalignment = (phys_address & 3) as u8;
     let aligned_address = phys_address & !3;
-    let (aligned_value, adjusted_address) =
+    let (aligned_value, adjusted_address, adjusted_value) =
         memory_source.get_noexcept_with_rom_check(aligned_address);
     if C::SUPPORT_LOAD_LESS_THAN_WORD {
         let value = match (unalignment, num_bytes) {
@@ -42,7 +42,7 @@ pub fn mem_read_mask_rom_if_needed<M: MemorySource, C: MachineConfig>(
         };
         let value = value & mask;
 
-        (aligned_value, value, adjusted_address)
+        (aligned_value, value, adjusted_address, adjusted_value)
     } else {
         let value = match (unalignment, num_bytes) {
             (0, 4) => aligned_value,
@@ -54,7 +54,7 @@ pub fn mem_read_mask_rom_if_needed<M: MemorySource, C: MachineConfig>(
             }
         };
 
-        (aligned_value, value, adjusted_address)
+        (aligned_value, value, adjusted_address, adjusted_value)
     }
 }
 

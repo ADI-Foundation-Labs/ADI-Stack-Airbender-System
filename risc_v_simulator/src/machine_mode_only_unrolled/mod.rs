@@ -249,17 +249,25 @@ impl DelegationCSRProcessor for crate::delegations::DelegationsCSRProcessor {
     ) {
         use self::delegations::blake2_round_function_with_compression_mode::*;
         use self::delegations::u256_ops_with_control::*;
+        use self::delegations::keccak_special5::*;
+
+        use common_constants::delegation_types::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER;
+        use common_constants::delegation_types::bigint_with_control::BIGINT_OPS_WITH_CONTROL_CSR_REGISTER;
+        use common_constants::delegation_types::keccak_special5::KECCAK_SPECIAL5_CSR_REGISTER;
 
         match csr_index as u32 {
-            BLAKE2_ROUND_FUNCTION_WITH_EXTENDED_CONTROL_ACCESS_ID => {
+            BLAKE2S_DELEGATION_CSR_REGISTER => {
                 blake2_round_function_with_extended_control_over_unrolled_state(
                     state,
                     memory_source,
                     tracer,
                 );
             }
-            U256_OPS_WITH_CONTROL_ACCESS_ID => {
+            BIGINT_OPS_WITH_CONTROL_CSR_REGISTER => {
                 u256_ops_with_control_impl_over_unrolled_state(state, memory_source, tracer);
+            }
+            KECCAK_SPECIAL5_CSR_REGISTER => {
+                keccak_special5_over_unrolled_state(state, memory_source, tracer);
             }
             csr => {
                 panic!("Unsupported CSR = 0x{:04x}", csr);
@@ -880,7 +888,7 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                             // Memory implementation should handle read in full. For now we only use one
                             // that doesn't step over 4 byte boundary ever, meaning even though formal address is not 4 byte aligned,
                             // loads of u8/u16/u32 are still "aligned"
-                            let (aligned_ram_read_value, ram_read_value, adjusted_load_address) =
+                            let (aligned_ram_read_value, ram_read_value, adjusted_load_address, adjusted_ram_read_value) =
                                 mem_read_mask_rom_if_needed::<M, Config>(
                                     memory_source,
                                     load_address as u64,
@@ -933,13 +941,17 @@ impl<Config: MachineConfig> RiscV32StateForUnrolledProver<Config> {
                                 }
                             };
 
+                            if adjusted_load_address & !3 == 0 {
+                                debug_assert_eq!(adjusted_ram_read_value, 0);
+                            }
+
                             let rd_old_value = self.set_register(rd, rd_value);
                             let tracing_data = LoadOpcodeTracingData {
                                 initial_pc: pc,
                                 opcode,
                                 rs1_value,
                                 aligned_ram_address: adjusted_load_address & !3,
-                                aligned_ram_read_value,
+                                aligned_ram_read_value: adjusted_ram_read_value,
                                 rd_value,
                                 rd_old_value,
                             };

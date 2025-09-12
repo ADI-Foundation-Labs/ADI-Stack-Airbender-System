@@ -21,6 +21,7 @@ use fft::VECTORIZED_MULTIPLE;
 pub const DEFAULT_TRACE_PADDING_MULTIPLE: usize = VECTORIZED_MULTIPLE;
 
 pub mod definitions;
+pub use common_constants;
 pub use cs;
 pub use field;
 pub use transcript;

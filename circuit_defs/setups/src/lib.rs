@@ -430,6 +430,21 @@ pub fn factories_for_unrolled_circuits_recursion_layer<A: GoodAllocator>() -> (
     make_factories_for_unrolled_circuits_impl::<A>(&non_mem_fns, &mem_fns[..])
 }
 
+pub fn compute_unrolled_circuits_params_for_machine_configuration<C: MachineConfig>(
+    binary_image: &[u32],
+    bytecode: &[u32],
+) -> Vec<UnrolledCircuitSetupParams> {
+    if is_default_machine_configuration::<C>() {
+        compute_unrolled_circuits_params_base_layer(binary_image, bytecode)
+    } else if is_machine_without_signed_mul_div_configuration::<C>() {
+        compute_unrolled_circuits_params_base_layer_unsigned_only(binary_image, bytecode)
+    } else if is_reduced_machine_configuration::<C>() {
+        compute_unrolled_circuits_params_recursion_layer(binary_image, bytecode)
+    } else {
+        panic!("Unknown configuration {:?}", std::any::type_name::<C>());
+    }
+}
+
 pub fn compute_unrolled_circuits_params_base_layer(
     binary_image: &[u32],
     bytecode: &[u32],

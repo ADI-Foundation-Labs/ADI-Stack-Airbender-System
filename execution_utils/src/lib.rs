@@ -13,8 +13,12 @@ use verifier_common::transcript::Blake2sBufferingTranscript;
 
 mod constants;
 mod proofs;
+#[cfg(feature = "verifier_binaries")]
 mod recursion;
+mod recursion_strategy;
 mod verifiers;
+
+pub mod unrolled;
 
 use self::constants::*;
 pub use self::proofs::{ProgramProof, ProofList, ProofMetadata};
@@ -25,9 +29,9 @@ pub use self::verifiers::{
     VerifierCircuitsIdentifiers,
 };
 
-pub use self::recursion::{
-    generate_constants_for_binary, generate_params_for_binary, RecursionStrategy,
-};
+#[cfg(feature = "verifier_binaries")]
+pub use self::recursion::{generate_constants_for_binary, generate_params_for_binary};
+pub use self::recursion_strategy::RecursionStrategy;
 
 // pub const RUN_VERIFIERS_WITH_OUTPUT: bool = false;
 pub const RUN_VERIFIERS_WITH_OUTPUT: bool = true;
@@ -36,31 +40,35 @@ pub const BASE_PROGRAM: &[u8] = include_bytes!("../../examples/hashed_fibonacci/
 pub const BASE_PROGRAM_TEXT_SECTION: &[u8] =
     include_bytes!("../../examples/hashed_fibonacci/app.text");
 
-pub const BASE_LAYER_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/base_layer.bin");
-pub const RECURSION_LAYER_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer.bin");
-pub const RECURSION_LOG_23_LAYER_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_log_23_layer.bin");
-pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer_no_delegation.bin");
-pub const FINAL_RECURSION_LAYER_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/final_recursion_layer.bin");
+#[cfg(feature = "verifier_binaries")]
+pub mod verifier_binaries {
+    pub const BASE_LAYER_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/base_layer.bin");
+    pub const RECURSION_LAYER_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_layer.bin");
+    pub const RECURSION_LOG_23_LAYER_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_log_23_layer.bin");
+    pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_layer_no_delegation.bin");
+    pub const FINAL_RECURSION_LAYER_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/final_recursion_layer.bin");
 
-pub const BASE_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/base_layer_with_output.bin");
-pub const RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer_with_output.bin");
-pub const RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_log_23_layer_with_output.bin");
-pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/recursion_layer_no_delegation_with_output.bin");
-pub const FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
-    include_bytes!("../../tools/verifier/final_recursion_layer_with_output.bin");
+    pub const BASE_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
+        include_bytes!("../../tools/verifier/base_layer_with_output.bin");
+    pub const RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_layer_with_output.bin");
+    pub const RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_log_23_layer_with_output.bin");
+    pub const RECURSION_LAYER_NO_DELEGATION_VERIFIER_WITH_OUTPUT: &[u8] =
+        include_bytes!("../../tools/verifier/recursion_layer_no_delegation_with_output.bin");
+    pub const FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT: &[u8] =
+        include_bytes!("../../tools/verifier/final_recursion_layer_with_output.bin");
 
-pub const UNIVERSAL_CIRCUIT_VERIFIER: &[u8] = include_bytes!("../../tools/verifier/universal.bin");
+    pub const UNIVERSAL_CIRCUIT_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/universal.bin");
 
-pub const UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER: &[u8] =
-    include_bytes!("../../tools/verifier/universal_no_delegation.bin");
+    pub const UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER: &[u8] =
+        include_bytes!("../../tools/verifier/universal_no_delegation.bin");
+}
 
 // Methods to fetch the verification keys for the binaries above.
 // They are usually refreshed with build_vk.sh
@@ -239,6 +247,7 @@ pub fn find_binary_exit_point(binary: &[u8]) -> u32 {
     final_pc as u32
 }
 
+#[cfg(feature = "verifier_binaries")]
 pub fn verify_base_layer(full_proof: &ProgramProof) -> bool {
     println!("Verifying base layer proof using RISC-V simulator and the verifier program");
     let allowed_delegation_types: Vec<_> = BASE_LAYER_DELEGATION_CIRCUITS_VERIFICATION_PARAMETERS
@@ -247,14 +256,15 @@ pub fn verify_base_layer(full_proof: &ProgramProof) -> bool {
         .collect();
     let responses = full_proof.flatten_for_delegation_circuits_set(&allowed_delegation_types);
     let binary = if RUN_VERIFIERS_WITH_OUTPUT {
-        BASE_LAYER_VERIFIER_WITH_OUTPUT
+        crate::verifier_binaries::BASE_LAYER_VERIFIER_WITH_OUTPUT
     } else {
-        BASE_LAYER_VERIFIER
+        crate::verifier_binaries::BASE_LAYER_VERIFIER
     };
 
     run_verifier_binary(binary, responses).is_some()
 }
 
+#[cfg(feature = "verifier_binaries")]
 pub fn verify_recursion_layer(full_proof: &ProgramProof) -> bool {
     println!("Verifying recursion layer proof using RISC-V simulator and the verifier program");
     let allowed_delegation_types: Vec<_> = RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS
@@ -263,14 +273,15 @@ pub fn verify_recursion_layer(full_proof: &ProgramProof) -> bool {
         .collect();
     let responses = full_proof.flatten_for_delegation_circuits_set(&allowed_delegation_types);
     let binary = if RUN_VERIFIERS_WITH_OUTPUT {
-        RECURSION_LAYER_VERIFIER_WITH_OUTPUT
+        crate::verifier_binaries::RECURSION_LAYER_VERIFIER_WITH_OUTPUT
     } else {
-        RECURSION_LAYER_VERIFIER
+        crate::verifier_binaries::RECURSION_LAYER_VERIFIER
     };
 
     run_verifier_binary(binary, responses).is_some()
 }
 
+#[cfg(feature = "verifier_binaries")]
 pub fn verify_recursion_log_23_layer(full_proof: &ProgramProof) -> bool {
     println!("Verifying recursion layer proof using RISC-V simulator and the verifier program");
     let allowed_delegation_types: Vec<_> = RECURSION_LAYER_CIRCUITS_VERIFICATION_PARAMETERS
@@ -279,14 +290,15 @@ pub fn verify_recursion_log_23_layer(full_proof: &ProgramProof) -> bool {
         .collect();
     let responses = full_proof.flatten_for_delegation_circuits_set(&allowed_delegation_types);
     let binary = if RUN_VERIFIERS_WITH_OUTPUT {
-        RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT
+        crate::verifier_binaries::RECURSION_LOG_23_LAYER_VERIFIER_WITH_OUTPUT
     } else {
-        RECURSION_LOG_23_LAYER_VERIFIER
+        crate::verifier_binaries::RECURSION_LOG_23_LAYER_VERIFIER
     };
 
     run_verifier_binary(binary, responses).is_some()
 }
 
+#[cfg(feature = "verifier_binaries")]
 pub fn verify_final_recursion_layer(full_proof: &ProgramProof) -> bool {
     println!(
         "Verifying final recursion layer proof using RISC-V simulator and the verifier program"
@@ -297,9 +309,9 @@ pub fn verify_final_recursion_layer(full_proof: &ProgramProof) -> bool {
         .collect();
     let responses = full_proof.flatten_for_delegation_circuits_set(&allowed_delegation_types);
     let binary = if RUN_VERIFIERS_WITH_OUTPUT {
-        FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT
+        crate::verifier_binaries::FINAL_RECURSION_LAYER_VERIFIER_WITH_OUTPUT
     } else {
-        FINAL_RECURSION_LAYER_VERIFIER
+        crate::verifier_binaries::FINAL_RECURSION_LAYER_VERIFIER
     };
 
     run_verifier_binary(binary, responses).is_some()
@@ -368,7 +380,7 @@ pub fn compute_chain_encoding(data: Vec<[u32; 8]>) -> [u32; 8] {
     previous
 }
 
-#[cfg(test)]
+#[cfg(all(feature = "verifier_binaries", test))]
 mod test {
     use std::alloc::Global;
     use std::collections::BTreeMap;
