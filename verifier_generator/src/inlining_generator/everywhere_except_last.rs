@@ -1536,8 +1536,50 @@ pub(crate) fn transform_delegation_requests_creation(
     let delegation_argument = memory_layout
         .delegation_request_layout
         .expect("must exists");
-    let timestamp_setup_start = setup_layout.timestamp_setup_columns.start();
+
     let in_cycle_timestamp = delegation_argument.in_cycle_write_index as u32;
+
+    let (timestamp_low_expr, timestamp_high_expr) = if setup_layout.timestamp_setup_columns.num_elements() > 0 {
+        let timestamp_setup_start = setup_layout.timestamp_setup_columns.start();
+
+        let low = read_value_expr(
+            ColumnAddress::SetupSubtree(timestamp_setup_start),
+            idents,
+            false,
+        );
+        let high_expr_base = read_value_expr(
+            ColumnAddress::SetupSubtree(timestamp_setup_start + 1),
+            idents,
+            false,
+        );
+
+        let timestamp_high_expr = quote! {
+            let mut timestamp_high = #high_expr_base;
+            timestamp_high.add_assign_base(&#memory_timestamp_high_from_sequence_idx_ident);
+        };
+
+        (low, timestamp_high_expr)
+    } else {
+        let intermediate_state_layout = memory_layout.intermediate_state_layout.expect("must exist");
+        let timestamp_start = intermediate_state_layout.timestamp.start();
+        let low = read_value_expr(
+            ColumnAddress::MemorySubtree(timestamp_start),
+            idents,
+            false,
+        );
+        let high_expr_base = read_value_expr(
+            ColumnAddress::MemorySubtree(timestamp_start + 1),
+            idents,
+            false,
+        );
+
+        let timestamp_high_expr = quote! {
+            let timestamp_high = #high_expr_base;
+        };
+
+        (low, timestamp_high_expr)
+    };
+
 
     // multiplicity for width 3 is special, as we need to assemble challenges
     {
@@ -1565,27 +1607,18 @@ pub(crate) fn transform_delegation_requests_creation(
         } else {
             quote! { Mersenne31Quartic::ZERO }
         };
-        let src_2_expr = read_value_expr(
-            ColumnAddress::SetupSubtree(timestamp_setup_start),
-            idents,
-            false,
-        );
-        let src_3_expr = read_value_expr(
-            ColumnAddress::SetupSubtree(timestamp_setup_start + 1),
-            idents,
-            false,
-        );
 
         let t = quote! {
             let #individual_term_ident = {
                 let m = #multiplicity_expr;
 
                 let mut denom = #delegation_argument_linearization_challenges_ident[2];
-                let mut timestamp_high = #src_3_expr;
-                timestamp_high.add_assign_base(&#memory_timestamp_high_from_sequence_idx_ident);
+
+                #timestamp_high_expr
+
                 denom.mul_assign(&timestamp_high);
 
-                let mut timestamp_low = #src_2_expr;
+                let mut timestamp_low = #timestamp_low_expr;
                 timestamp_low.add_assign_base(&Mersenne31Field(#in_cycle_timestamp));
                 let mut t = #delegation_argument_linearization_challenges_ident[1];
                 t.mul_assign(&timestamp_low);

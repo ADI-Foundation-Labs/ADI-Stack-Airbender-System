@@ -83,11 +83,11 @@ fn test_unrolled_circuit() {
 
     // let name = "add_sub_lui_auipc_mop";
     // let name = "jump_branch_slt";
-    // let name = "shift_binop_csrrw";
+    let name = "shift_binop_csrrw";
     // let name = "mul_div_unsigned";
     // let name = "word_only_load_store";
     // let name = "subword_only_load_store";
-    let name = "inits_and_teardowns";
+    // let name = "inits_and_teardowns";
 
     let proof: prover::prover_stages::unrolled_prover::UnrolledModeProof =
         deserialize_from_file(&format!("../prover/{}_unrolled_proof.json", name));
