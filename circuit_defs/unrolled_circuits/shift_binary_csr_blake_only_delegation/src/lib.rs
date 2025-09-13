@@ -28,9 +28,14 @@ pub const TREE_CAP_SIZE: usize = 32;
 pub const MAX_ROM_SIZE: usize = 1 << 21; // bytes
 pub const ROM_ADDRESS_SPACE_SECOND_WORD_BITS: usize = (MAX_ROM_SIZE.trailing_zeros() - 16) as usize;
 
-pub const ALLOWED_DELEGATION_CSRS: &[u32] = &[common_constants::NON_DETERMINISM_CSR];
-
-pub const ALLOWED_DELEGATION_CSRS_U16: &[u16] = &[common_constants::NON_DETERMINISM_CSR as u16];
+pub const ALLOWED_DELEGATION_CSRS: &[u32] = &[
+    common_constants::NON_DETERMINISM_CSR,
+    common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER,
+];
+pub const ALLOWED_DELEGATION_CSRS_U16: &[u16] = &[
+    common_constants::NON_DETERMINISM_CSR as u16,
+    common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as u16,
+];
 
 fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
     let mut dst = std::fs::File::create(filename).unwrap();

@@ -96,6 +96,7 @@ fn test_unrolled_circuit() {
 
     dbg!(&proof.public_inputs);
     dbg!(&proof.aux_boundary_values);
+    dbg!(&proof.delegation_argument_accumulator);
 
     // now form flattened iterator
     use verifier_common::proof_flattener::*;

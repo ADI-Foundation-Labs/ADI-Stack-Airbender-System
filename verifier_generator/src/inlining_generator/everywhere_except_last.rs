@@ -1539,47 +1539,44 @@ pub(crate) fn transform_delegation_requests_creation(
 
     let in_cycle_timestamp = delegation_argument.in_cycle_write_index as u32;
 
-    let (timestamp_low_expr, timestamp_high_expr) = if setup_layout.timestamp_setup_columns.num_elements() > 0 {
-        let timestamp_setup_start = setup_layout.timestamp_setup_columns.start();
+    let (timestamp_low_expr, timestamp_high_expr) =
+        if setup_layout.timestamp_setup_columns.num_elements() > 0 {
+            let timestamp_setup_start = setup_layout.timestamp_setup_columns.start();
 
-        let low = read_value_expr(
-            ColumnAddress::SetupSubtree(timestamp_setup_start),
-            idents,
-            false,
-        );
-        let high_expr_base = read_value_expr(
-            ColumnAddress::SetupSubtree(timestamp_setup_start + 1),
-            idents,
-            false,
-        );
+            let low = read_value_expr(
+                ColumnAddress::SetupSubtree(timestamp_setup_start),
+                idents,
+                false,
+            );
+            let high_expr_base = read_value_expr(
+                ColumnAddress::SetupSubtree(timestamp_setup_start + 1),
+                idents,
+                false,
+            );
 
-        let timestamp_high_expr = quote! {
-            let mut timestamp_high = #high_expr_base;
-            timestamp_high.add_assign_base(&#memory_timestamp_high_from_sequence_idx_ident);
+            let timestamp_high_expr = quote! {
+                let mut timestamp_high = #high_expr_base;
+                timestamp_high.add_assign_base(&#memory_timestamp_high_from_sequence_idx_ident);
+            };
+
+            (low, timestamp_high_expr)
+        } else {
+            let initial_machine_state =
+                memory_layout.intermediate_state_layout.expect("must exist");
+            let timestamp_start = initial_machine_state.timestamp.start();
+            let low = read_value_expr(ColumnAddress::MemorySubtree(timestamp_start), idents, false);
+            let high_expr_base = read_value_expr(
+                ColumnAddress::MemorySubtree(timestamp_start + 1),
+                idents,
+                false,
+            );
+
+            let timestamp_high_expr = quote! {
+                let timestamp_high = #high_expr_base;
+            };
+
+            (low, timestamp_high_expr)
         };
-
-        (low, timestamp_high_expr)
-    } else {
-        let intermediate_state_layout = memory_layout.intermediate_state_layout.expect("must exist");
-        let timestamp_start = intermediate_state_layout.timestamp.start();
-        let low = read_value_expr(
-            ColumnAddress::MemorySubtree(timestamp_start),
-            idents,
-            false,
-        );
-        let high_expr_base = read_value_expr(
-            ColumnAddress::MemorySubtree(timestamp_start + 1),
-            idents,
-            false,
-        );
-
-        let timestamp_high_expr = quote! {
-            let timestamp_high = #high_expr_base;
-        };
-
-        (low, timestamp_high_expr)
-    };
-
 
     // multiplicity for width 3 is special, as we need to assemble challenges
     {
