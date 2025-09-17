@@ -318,7 +318,7 @@ macro_rules! emit_runtime_error {
     ($ops:ident) => {
         dynasm!($ops
             ; jmp ->exit_with_error
-        );
+        )
     };
 }
 
