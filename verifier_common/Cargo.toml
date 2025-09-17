@@ -1,5 +1,5 @@
 [package]
-name = "verifier_common"
+name = "airbender_verifier_common"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

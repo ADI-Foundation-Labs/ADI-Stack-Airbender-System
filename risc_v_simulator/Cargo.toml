@@ -1,5 +1,5 @@
 [package]
-name = "risc_v_simulator"
+name = "airbender_risc_v_simulator"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

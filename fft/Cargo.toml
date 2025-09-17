@@ -1,5 +1,5 @@
 [package]
-name = "fft"
+name = "airbender_fft"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

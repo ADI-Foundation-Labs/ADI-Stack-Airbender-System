@@ -1,5 +1,5 @@
 [package]
-name = "blake2s_u32"
+name = "airbender_blake2s_u32"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

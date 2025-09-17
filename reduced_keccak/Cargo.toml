@@ -1,5 +1,5 @@
 [package]
-name = "reduced_keccak"
+name = "airbender_reduced_keccak"
 
 version.workspace = true
 edition.workspace = true

@@ -1,5 +1,5 @@
 [package]
-name = "prover_examples"
+name = "airbender_prover_examples"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

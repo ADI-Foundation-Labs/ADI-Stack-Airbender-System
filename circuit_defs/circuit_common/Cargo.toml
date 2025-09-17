@@ -1,5 +1,5 @@
 [package]
-name = "circuit_common"
+name = "airbender_circuit_common"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

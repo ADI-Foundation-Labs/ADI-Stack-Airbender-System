@@ -1,5 +1,5 @@
 [package]
-name = "bigint_with_control_verifier"
+name = "airbender_bigint_with_control_verifier"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

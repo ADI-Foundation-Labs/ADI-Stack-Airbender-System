@@ -1,5 +1,5 @@
 [package]
-name = "non_determinism_source"
+name = "airbender_non_determinism_source"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

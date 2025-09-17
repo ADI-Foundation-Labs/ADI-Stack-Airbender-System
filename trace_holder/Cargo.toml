@@ -1,5 +1,5 @@
 [package]
-name = "trace_holder"
+name = "airbender_trace_holder"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

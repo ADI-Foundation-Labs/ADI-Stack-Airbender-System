@@ -1,5 +1,5 @@
 [package]
-name = "trace_and_split"
+name = "airbender_trace_and_split"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

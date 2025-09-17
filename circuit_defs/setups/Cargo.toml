@@ -1,5 +1,5 @@
 [package]
-name = "setups"
+name = "airbender_setups"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
