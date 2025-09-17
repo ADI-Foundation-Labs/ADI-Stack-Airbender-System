@@ -411,7 +411,6 @@ pub fn run_alternative_simulator<N: NonDeterminismCSRSource<VectorMemoryImpl>>(
                 continue;
             }
 
-            let mut impure = false;
             match instruction {
                 // Arithmetic
                 Instruction::Addi(parts) => {
