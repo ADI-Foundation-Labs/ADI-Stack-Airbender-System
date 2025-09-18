@@ -16,6 +16,10 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  # Use stubs for CUDA during publishing.
+  ZKSYNC_USE_CUDA_STUBS: 1
+
 jobs:
   # Prepare the release PR with changelog updates and create github releases
   release-please:

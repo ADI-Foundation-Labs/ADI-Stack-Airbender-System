@@ -26,6 +26,9 @@ on:
         required: false
         default: 'github:matter-labs:crates-io'
 
+env:
+  # Use stubs for CUDA during publishing.
+  ZKSYNC_USE_CUDA_STUBS: 1
 
 jobs:
 
