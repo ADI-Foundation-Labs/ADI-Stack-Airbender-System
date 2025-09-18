@@ -2048,15 +2048,14 @@ unsafe fn evaluate_every_row_except_last(
                 let individual_term = {
                     let m = *(memory.get_unchecked(17usize));
                     let mut denom = delegation_argument_linearization_challenges[2];
-                    let mut timestamp_high = *(setup.get_unchecked(1usize));
-                    timestamp_high.add_assign_base(&memory_timestamp_high_from_sequence_idx);
+                    let timestamp_high = *(memory.get_unchecked(23usize));
                     denom.mul_assign(&timestamp_high);
-                    let mut timestamp_low = *(setup.get_unchecked(0usize));
+                    let mut timestamp_low = *(memory.get_unchecked(22usize));
                     timestamp_low.add_assign_base(&Mersenne31Field(3u32));
                     let mut t = delegation_argument_linearization_challenges[1];
                     t.mul_assign(&timestamp_low);
                     denom.add_assign(&t);
-                    let mem_abi_offset = *(memory.get_unchecked(0usize));
+                    let mem_abi_offset = Mersenne31Quartic::ZERO;
                     let mut t = delegation_argument_linearization_challenges[0];
                     t.mul_assign(&mem_abi_offset);
                     denom.add_assign(&t);
