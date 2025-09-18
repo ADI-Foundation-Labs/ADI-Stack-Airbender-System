@@ -40,6 +40,7 @@ pub mod gpu;
 pub mod unrolled;
 
 pub const LDE_FACTOR_LOG2: usize = 1;
+pub const POW_BITS: usize = verifier_common::POW_BITS;
 pub const NUM_QUERIES: usize = verifier_common::num_queries_for_security_params(
     verifier_common::SECURITY_BITS,
     verifier_common::POW_BITS,
