@@ -1,5 +1,6 @@
 [package]
 name = "airbender_cli"
+description = "ZKsync Airbender CLI"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -1,5 +1,6 @@
 [package]
 name = "airbender_verifier_common"
+description = "ZKsync Airbender verifier common"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

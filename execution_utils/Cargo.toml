@@ -1,5 +1,6 @@
 [package]
 name = "airbender_execution_utils"
+description = "ZKsync Airbender execution utils"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

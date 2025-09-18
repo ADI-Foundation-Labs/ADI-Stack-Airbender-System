@@ -1,5 +1,6 @@
 [package]
 name = "airbender_risc_v_simulator"
+description = "ZKsync Airbender RISC-V simulator"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -1,5 +1,6 @@
 [package]
 name = "airbender_prover"
+description = "ZKsync Airbender prover"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
