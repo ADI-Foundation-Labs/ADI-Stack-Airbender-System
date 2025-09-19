@@ -270,15 +270,15 @@ jobs:
         with:
           name: cli_with_verify
       - name: Setup
-        run: chmod +x ./cli && mkdir output
+        run: chmod +x ./airbender_cli && mkdir output
       - name: Run
-        run: ./cli run --bin examples/basic_fibonacci/app.bin --expected-results 144
+        run: ./airbender_cli run --bin examples/basic_fibonacci/app.bin --expected-results 144
       - name: Prove
-        run: ./cli prove --bin examples/basic_fibonacci/app.bin
+        run: ./airbender_cli prove --bin examples/basic_fibonacci/app.bin
       - name: Verify
-        run: ./cli verify --proof output/proof_0.json
+        run: ./airbender_cli verify --proof output/proof_0.json
       - name: Verify all
-        run: ./cli verify-all --metadata output/metadata.json
+        run: ./airbender_cli verify-all --metadata output/metadata.json
 
 
   large_example:
@@ -291,17 +291,17 @@ jobs:
         with:
           name: cli_with_verify
       - name: Setup
-        run: chmod +x ./cli && mkdir output
+        run: chmod +x ./airbender_cli && mkdir output
       - name: Run
-        run: ./cli run --bin examples/dynamic_fibonacci/app.bin --input-file examples/dynamic_fibonacci/input.txt --cycles 10000000 --expected-results 3291,500000
+        run: ./airbender_cli run --bin examples/dynamic_fibonacci/app.bin --input-file examples/dynamic_fibonacci/input.txt --cycles 10000000 --expected-results 3291,500000
       - name: Prove
-        run: ./cli prove --bin examples/dynamic_fibonacci/app.bin --input-file examples/dynamic_fibonacci/input.txt
+        run: ./airbender_cli prove --bin examples/dynamic_fibonacci/app.bin --input-file examples/dynamic_fibonacci/input.txt
       - name: Verify 0
-        run: ./cli verify --proof output/proof_0.json
+        run: ./airbender_cli verify --proof output/proof_0.json
       - name: Verify 1
-        run: ./cli verify --proof output/proof_1.json
+        run: ./airbender_cli verify --proof output/proof_1.json
       - name: Verify all
-        run:  ./cli verify-all --metadata output/metadata.json
+        run:  ./airbender_cli verify-all --metadata output/metadata.json
 
 
   delegation_example:
@@ -314,17 +314,17 @@ jobs:
         with:
           name: cli_with_verify
       - name: Setup
-        run: chmod +x ./cli && mkdir output
+        run: chmod +x ./airbender_cli && mkdir output
       - name: Run delegation
-        run: ./cli run --bin examples/hashed_fibonacci/app.bin --input-file examples/hashed_fibonacci/input.txt --expected-results 1597,15,2242890078
+        run: ./airbender_cli run --bin examples/hashed_fibonacci/app.bin --input-file examples/hashed_fibonacci/input.txt --expected-results 1597,15,2242890078
       - name: Prove delegation
-        run: ./cli prove --bin examples/hashed_fibonacci/app.bin --input-file examples/hashed_fibonacci/input.txt
+        run: ./airbender_cli prove --bin examples/hashed_fibonacci/app.bin --input-file examples/hashed_fibonacci/input.txt
       - name: Verify
-        run: ./cli verify --proof output/proof_0.json
+        run: ./airbender_cli verify --proof output/proof_0.json
       - name: Verify delegation
-        run: ./cli verify --proof output/delegation_proof_1991_0.json
+        run: ./airbender_cli verify --proof output/delegation_proof_1991_0.json
       - name: Verify all
-        run: ./cli verify-all --metadata output/metadata.json
+        run: ./airbender_cli verify-all --metadata output/metadata.json
 
   verification_example:
     name: verification_example
@@ -340,25 +340,25 @@ jobs:
         with:
           name: verifier
       - name: Setup
-        run: chmod +x ./cli && mkdir output
+        run: chmod +x ./airbender_cli && mkdir output
 
       - name: Create basic fibonacci proof
-        run: ./cli prove --bin examples/basic_fibonacci/app.bin
+        run: ./airbender_cli prove --bin examples/basic_fibonacci/app.bin
       - name: Flatten basic fibonacci proof
-        run: ./cli flatten --input-file  output/proof_0.json --output-file output/proof_flatten0.json
+        run: ./airbender_cli flatten --input-file  output/proof_0.json --output-file output/proof_flatten0.json
 
       - name: Run verification in riscV
-        run: ./cli run --bin app.bin --input-file  output/proof_flatten0.json --cycles 10000000 --machine reduced --expected-results 1,2,3,0,0,0,0,0
+        run: ./airbender_cli run --bin app.bin --input-file  output/proof_flatten0.json --cycles 10000000 --machine reduced --expected-results 1,2,3,0,0,0,0,0
       - name: Create recursion output dir
         run: mkdir recursion_proofs
 
       - name: Prove verification in riscV
-        run: ./cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten0.json --output-dir recursion_proofs/
+        run: ./airbender_cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten0.json --output-dir recursion_proofs/
       # now verify the recursion proofs..
       - name: Verify recursion delegation
-        run: ./cli verify --proof recursion_proofs/delegation_proof_1991_0.json
+        run: ./airbender_cli verify --proof recursion_proofs/delegation_proof_1991_0.json
       - name: Verify recursion basic
-        run: ./cli verify --proof recursion_proofs/reduced_proof_0.json
+        run: ./airbender_cli verify --proof recursion_proofs/reduced_proof_0.json
 
 
   # Test incremental proofs.
@@ -379,18 +379,18 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
       - name: Set permissions
-        run: chmod +x ./cli
+        run: chmod +x ./airbender_cli
 
       - name: Create output
         run: mkdir output
 
 
       - name: Create basic fibonacci proof
-        run: ./cli prove --bin examples/basic_fibonacci/app.bin  --until final-recursion --output-dir output
+        run: ./airbender_cli prove --bin examples/basic_fibonacci/app.bin  --until final-recursion --output-dir output
       - name: Flatten 2 basic fibonacci proofs
-        run: ./cli flatten-two --first-metadata  output/metadata.json --second-metadata output/metadata.json --output-file output/proof_merged_flatten.json
+        run: ./airbender_cli flatten-two --first-metadata  output/metadata.json --second-metadata output/metadata.json --output-file output/proof_merged_flatten.json
       - name: Run
-        run: ./cli run --bin app.bin --input-file  output/proof_merged_flatten.json --cycles 20000000 --machine reduced --expected-results  1454345518,1110133826,1035806769,2339543873,3120453366,2871045712,1011786604,901067344
+        run: ./airbender_cli run --bin app.bin --input-file  output/proof_merged_flatten.json --cycles 20000000 --machine reduced --expected-results  1454345518,1110133826,1035806769,2339543873,3120453366,2871045712,1011786604,901067344
 
 
   full_recursion:
@@ -410,45 +410,45 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
       - name: Set permissions
-        run: chmod +x ./cli
+        run: chmod +x ./airbender_cli
 
       - name: Create output
         run: mkdir output
 
 
       - name: Create basic fibonacci proof
-        run: ./cli prove --bin examples/basic_fibonacci/app.bin
+        run: ./airbender_cli prove --bin examples/basic_fibonacci/app.bin
 
       - name: Recursion 0 - create output dir
         run: mkdir recursion_proofs_0
       - name: Recursion 0 - Flatten
-        run: ./cli flatten-all --input-metadata output/metadata.json --output-file output/proof_flatten0.json
+        run: ./airbender_cli flatten-all --input-metadata output/metadata.json --output-file output/proof_flatten0.json
       - name: Recursion 0 - Run
-        run: ./cli run --bin app.bin --input-file  output/proof_flatten0.json --cycles 10000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
+        run: ./airbender_cli run --bin app.bin --input-file  output/proof_flatten0.json --cycles 10000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
       - name: Recursion 0 - Prove
-        run: ./cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten0.json --output-dir recursion_proofs_0/ --prev-metadata output/metadata.json
+        run: ./airbender_cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten0.json --output-dir recursion_proofs_0/ --prev-metadata output/metadata.json
       #- name: Recursion 0 - Verify (on cpu)
-      #  run: ./cli verify-all --metadata recursion_proofs_0/metadata.json
+      #  run: ./airbender_cli verify-all --metadata recursion_proofs_0/metadata.json
 
       - name: Recursion 1 - create output dir
         run: mkdir recursion_proofs_1
       - name: Recursion 1 - Flatten
-        run: ./cli flatten-all --input-metadata recursion_proofs_0/metadata.json --output-file output/proof_flatten1.json
+        run: ./airbender_cli flatten-all --input-metadata recursion_proofs_0/metadata.json --output-file output/proof_flatten1.json
       - name: Recursion 1 - Run
-        run: ./cli run --bin app.bin --input-file  output/proof_flatten1.json --cycles 32000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
+        run: ./airbender_cli run --bin app.bin --input-file  output/proof_flatten1.json --cycles 32000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
       - name: Recursion 1 - Prove
-        run: ./cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten1.json --output-dir recursion_proofs_1/ --prev-metadata recursion_proofs_0/metadata.json
+        run: ./airbender_cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten1.json --output-dir recursion_proofs_1/ --prev-metadata recursion_proofs_0/metadata.json
       #- name: Recursion 1 - Verify (on cpu)
-      #  run: ./cli verify-all --metadata recursion_proofs_1/metadata.json
+      #  run: ./airbender_cli verify-all --metadata recursion_proofs_1/metadata.json
 
 
       - name: Recursion 2 - create output dir
         run: mkdir recursion_proofs_2
       - name: Recursion 2 - Flatten
-        run: ./cli flatten-all --input-metadata recursion_proofs_1/metadata.json --output-file output/proof_flatten2.json
+        run: ./airbender_cli flatten-all --input-metadata recursion_proofs_1/metadata.json --output-file output/proof_flatten2.json
       - name: Recursion 2 - Run
-        run: ./cli run --bin app.bin --input-file  output/proof_flatten2.json --cycles 50000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
+        run: ./airbender_cli run --bin app.bin --input-file  output/proof_flatten2.json --cycles 50000000 --machine reduced --expected-results 144,0,0,0,0,0,0,0
       - name: Recursion 2 - Prove
-        run: ./cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten2.json --output-dir recursion_proofs_2/ --prev-metadata recursion_proofs_0/metadata.json
+        run: ./airbender_cli prove --machine reduced --bin app.bin --input-file  output/proof_flatten2.json --output-dir recursion_proofs_2/ --prev-metadata recursion_proofs_0/metadata.json
       #- name: Recursion 2 - Verify (on cpu)
-      #  run: ./cli verify-all --metadata recursion_proofs_2/metadata.json
+      #  run: ./airbender_cli verify-all --metadata recursion_proofs_2/metadata.json
