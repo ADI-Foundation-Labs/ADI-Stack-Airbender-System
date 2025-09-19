@@ -1,6 +1,9 @@
 use super::*;
 
-pub fn shift_binary_csr_all_delegations_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
+pub fn shift_binary_csr_all_delegations_circuit_setup<
+    A: GoodAllocator + 'static,
+    B: GoodAllocator,
+>(
     binary_image: &[u32],
     bytecode: &[u32],
     worker: &Worker,
@@ -14,8 +17,7 @@ pub fn shift_binary_csr_all_delegations_circuit_setup<A: GoodAllocator, B: GoodA
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 
-    let twiddles: Twiddles<_, A> =
-        Twiddles::new(::shift_binary_csr_all_delegations::DOMAIN_SIZE, &worker);
+    let twiddles = Twiddles::get(::shift_binary_csr_all_delegations::DOMAIN_SIZE, &worker);
     let lde_precomputations = LdePrecomputations::new(
         ::shift_binary_csr_all_delegations::DOMAIN_SIZE,
         ::shift_binary_csr_all_delegations::LDE_FACTOR,
