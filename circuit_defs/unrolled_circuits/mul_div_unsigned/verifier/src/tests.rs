@@ -72,7 +72,7 @@ fn test_unified_cycle_or_delegation() {
     match result {
         Ok(..) => {}
         Err(err) => {
-            panic!("Verifier thread failes with {}", err);
+            panic!("Verifier thread fails with {}", err);
         }
     }
 }
@@ -132,7 +132,7 @@ fn test_unrolled_circuit() {
     match result {
         Ok(..) => {}
         Err(err) => {
-            panic!("Verifier thread failes with {}", err);
+            panic!("Verifier thread fails with {}", err);
         }
     }
 }

@@ -336,7 +336,7 @@ pub fn define_keccak_special5_delegation_circuit<F: PrimeField, CS: Circuit<F>>(
 
         cs.add_constraint_allow_explicit_linear(Constraint::from(control_reg[0])); // we expect low 16 bits to be empty
         cs.add_constraint_allow_explicit_linear(Constraint::from(control_reg_next[0])); // we expect low 16 bits to be empty
-        (control_reg[1], control_reg_next[1]) // only the high 16 bits contain control info (to accomodate for LUI)
+        (control_reg[1], control_reg_next[1]) // only the high 16 bits contain control info (to accommodate for LUI)
     };
     let state_indexes = {
         // we can't assign to these variables by lookup since these variables belong to memory subtree

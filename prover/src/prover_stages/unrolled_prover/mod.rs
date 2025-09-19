@@ -64,7 +64,7 @@ pub fn prove_configured_for_unrolled_circuits<
     assert!(trace_len.is_power_of_two());
     let trace_width = exec_trace.width();
 
-    // VERY important - we will use the fact that final borrow value is unconstrainted
+    // VERY important - we will use the fact that final borrow value is unconstrained
     // when we will define lazy init/teardown padding constraint, so we manually right here write it
     // to the proper value - it must be `1`
     if compiled_circuit.lazy_init_address_aux_vars.len() > 0 {
