@@ -194,7 +194,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cli_with_verify
-          path: target/cli/cli
+          path: target/cli/airbender_cli
 
   build_cli_no_verifiers:
     runs-on: [matterlabs-ci-runner-highmem]
@@ -212,7 +212,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cli
-          path: target/release/cli
+          path: target/release/airbender_cli
 
 
   build_cli_no_verifiers_512:
@@ -231,7 +231,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cli_512
-          path: target/release/cli
+          path: target/release/airbender_cli
 
   build_verifier:
     runs-on: [matterlabs-ci-runner-c3d]
