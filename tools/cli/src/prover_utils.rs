@@ -2,8 +2,8 @@ use clap::ValueEnum;
 use execution_utils::Machine;
 use execution_utils::{
     generate_oracle_data_for_universal_verifier, generate_oracle_data_from_metadata_and_proof_list,
-    get_padded_binary, ProgramProof, ProofList, ProofMetadata, RecursionStrategy,
-    verifier_binaries::UNIVERSAL_CIRCUIT_VERIFIER,
+    get_padded_binary, verifier_binaries::UNIVERSAL_CIRCUIT_VERIFIER, ProgramProof, ProofList,
+    ProofMetadata, RecursionStrategy,
 };
 use verifier_common::parse_field_els_as_u32_from_u16_limbs_checked;
 
