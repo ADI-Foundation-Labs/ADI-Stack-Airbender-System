@@ -1,6 +1,9 @@
 use super::*;
 
-pub fn shift_binary_csr_blake_only_delegation_circuit_setup<A: GoodAllocator, B: GoodAllocator>(
+pub fn shift_binary_csr_blake_only_delegation_circuit_setup<
+    A: GoodAllocator + 'static,
+    B: GoodAllocator,
+>(
     binary_image: &[u32],
     bytecode: &[u32],
     worker: &Worker,
@@ -14,7 +17,7 @@ pub fn shift_binary_csr_blake_only_delegation_circuit_setup<A: GoodAllocator, B:
     use prover::cs::machine::ops::unrolled::materialize_flattened_decoder_table;
     let decoder_table = materialize_flattened_decoder_table::<Mersenne31Field>(&decoder_table_data);
 
-    let twiddles: Twiddles<_, A> = Twiddles::new(
+    let twiddles = Twiddles::get(
         ::shift_binary_csr_blake_only_delegation::DOMAIN_SIZE,
         &worker,
     );
