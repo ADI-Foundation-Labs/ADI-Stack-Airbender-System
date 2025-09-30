@@ -1,10 +1,10 @@
-use crate::verifier_binaries::{
-    UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER, UNIVERSAL_CIRCUIT_VERIFIER,
-};
-use crate::{get_padded_binary, Machine, ProofMetadata};
+use crate::proofs::ProofMetadata;
+use crate::recursion_strategy::RecursionStrategy;
+use crate::verifier_binaries::*;
+use crate::verifier_binaries::{get_padded_binary, Machine};
 use std::alloc::Global;
 
-use crate::{
+use crate::verifier_binaries::{
     compute_chain_encoding, recursion_layer_verifier_vk, recursion_log_23_layer_verifier_vk,
     universal_circuit_log_23_verifier_vk, universal_circuit_verifier_vk,
 };
@@ -22,30 +22,31 @@ pub fn generate_constants_for_binary(
     let (end_params, aux_values) = if universal_verifier {
         if recompute {
             match recursion_mode {
+                RecursionStrategy::UseFinalMachine => panic!(),
                 RecursionStrategy::UseReducedLog23Machine => generate_params_and_register_values(
                     &[
                         (&base_layer_bin, Machine::Standard),
-                        (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::Reduced),
+                        (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::Reduced),
                     ],
-                    (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
+                    (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
                 ),
                 RecursionStrategy::UseReducedLog23MachineMultiple => {
                     generate_params_and_register_values(
                         &[
                             (&base_layer_bin, Machine::Standard),
-                            (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::Reduced),
-                            (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
+                            (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::Reduced),
+                            (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
                         ],
-                        (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
+                        (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
                     )
                 }
                 RecursionStrategy::UseReducedLog23MachineOnly => {
                     generate_params_and_register_values(
                         &[
                             (&base_layer_bin, Machine::Standard),
-                            (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
+                            (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
                         ],
-                        (&crate::UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
+                        (&UNIVERSAL_CIRCUIT_VERIFIER, Machine::ReducedLog23),
                     )
                 }
             }
@@ -53,6 +54,7 @@ pub fn generate_constants_for_binary(
             let base_params = generate_params_for_binary(&base_layer_bin, Machine::Standard);
 
             match recursion_mode {
+                RecursionStrategy::UseFinalMachine => panic!(),
                 RecursionStrategy::UseReducedLog23Machine => {
                     let aux_values = compute_chain_encoding(vec![
                         [0u32; 8],
@@ -89,10 +91,10 @@ pub fn generate_constants_for_binary(
                 RecursionStrategy::UseReducedLog23Machine => generate_params_and_register_values(
                     &[
                         (&base_layer_bin, Machine::Standard),
-                        (&crate::BASE_LAYER_VERIFIER, Machine::Reduced),
-                        (&crate::RECURSION_LAYER_VERIFIER, Machine::Reduced),
+                        (&BASE_LAYER_VERIFIER, Machine::Reduced),
+                        (&RECURSION_LAYER_VERIFIER, Machine::Reduced),
                     ],
-                    (&crate::RECURSION_LAYER_VERIFIER, Machine::ReducedLog23),
+                    (&RECURSION_LAYER_VERIFIER, Machine::ReducedLog23),
                 ),
                 _ => panic!("This recursion strategy is not supported for non-universal verifier."),
             }
@@ -147,28 +149,28 @@ fn compute_commitment_for_chain_of_programs(
 pub fn generate_params_for_binary(bin: &[u8], machine: Machine) -> [u32; 8] {
     let worker = verifier_common::prover::worker::Worker::new();
 
-    let expected_final_pc = crate::find_binary_exit_point(&bin);
-    let binary: Vec<u32> = crate::get_padded_binary(&bin);
+    let expected_final_pc = find_binary_exit_point(&bin);
+    let binary: Vec<u32> = get_padded_binary(&bin);
     match machine {
-        Machine::Standard => crate::compute_end_parameters(
+        Machine::Standard => compute_end_parameters(
             expected_final_pc,
             &trace_and_split::setups::get_main_riscv_circuit_setup::<Global, Global>(
                 &binary, &worker,
             ),
         ),
-        Machine::Reduced => crate::compute_end_parameters(
+        Machine::Reduced => compute_end_parameters(
             expected_final_pc,
             &trace_and_split::setups::get_reduced_riscv_circuit_setup::<Global, Global>(
                 &binary, &worker,
             ),
         ),
-        Machine::ReducedLog23 => crate::compute_end_parameters(
+        Machine::ReducedLog23 => compute_end_parameters(
             expected_final_pc,
             &trace_and_split::setups::get_reduced_riscv_log_23_circuit_setup::<Global, Global>(
                 &binary, &worker,
             ),
         ),
-        Machine::ReducedFinal => crate::compute_end_parameters(
+        Machine::ReducedFinal => compute_end_parameters(
             expected_final_pc,
             &trace_and_split::setups::get_final_reduced_riscv_circuit_setup::<Global, Global>(
                 &binary, &worker,

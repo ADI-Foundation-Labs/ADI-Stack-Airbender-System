@@ -1,4 +1,5 @@
-use crate::Machine;
+use crate::*;
+use crate::verifier_binaries::*;
 use crate::ProofMetadata;
 use clap::ValueEnum;
 
@@ -68,7 +69,7 @@ impl RecursionStrategy {
         proof_level: usize,
     ) -> bool {
         let continue_second_layer = match self {
-            RecursionStrategy::UseFinalMachine => proof_metadata.final_proof_count > 1,
+            RecursionStrategy::UseFinalMachine => false, // proof_metadata.final_proof_count > 1,
             RecursionStrategy::UseReducedLog23Machine => {
                 // In this strategy we should run only one repetition of 2nd layer
                 assert!(proof_level == 0);
@@ -101,11 +102,12 @@ impl RecursionStrategy {
 
     #[cfg(feature = "verifier_binaries")]
     pub fn get_second_layer_binary(&self) -> Vec<u32> {
-        use crate::get_padded_binary;
+        use crate::verifier_binaries::get_padded_binary;
         match self {
-            RecursionStrategy::UseFinalMachine => get_padded_binary(
-                crate::verifier_binaries::UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER,
-            ),
+            RecursionStrategy::UseFinalMachine => panic!(),
+            // get_padded_binary(
+            //     crate::verifier_binaries::UNIVERSAL_CIRCUIT_NO_DELEGATION_VERIFIER,
+            // ),
             RecursionStrategy::UseReducedLog23Machine
             | RecursionStrategy::UseReducedLog23MachineMultiple
             | RecursionStrategy::UseReducedLog23MachineOnly => {

@@ -12,9 +12,10 @@ use cli_lib::prover_utils::{
 
 use cli_lib::vk::generate_vk;
 use execution_utils::{
-    generate_constants_for_binary, Machine, ProgramProof, RecursionStrategy,
+    generate_constants_for_binary, ProgramProof, RecursionStrategy,
     VerifierCircuitsIdentifiers,
 };
+use execution_utils::verifier_binaries::Machine;
 use reqwest::blocking::Client;
 use serde_json::Value;
 use std::path::Path;
