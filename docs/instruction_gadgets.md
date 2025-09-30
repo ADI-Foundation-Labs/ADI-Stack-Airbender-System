@@ -1,15 +1,14 @@
 # Instruction Gadget Circuits
 
-*ZKsync Airbender – Core circuits *
+In this document, key details about the *core circuits of ZKsync Airbender* are detailed. **Every RISC-V instruction circuit**  can be found under [`cs/src/machine/ops`](../cs/src/machine/ops).
 
-**every RISC-V instruction circuit** found under `cs/src/machine/ops`.  .
 ---
 
 ## Reading Conventions
 
 * **Gadget** – synonym for “instruction circuit implementation”.  A gadget consumes decoded operand variables and produces *state diffs* (changes to registers, memory, CSR, …).
-* **Lookup Table (LUT)** – a pre-computed table proved via a lookup constraint.  We rely on different tables for byte-wise Boolean ops, multiplication, division, etc.
-* **`OptimizationContext`** – a helper passed into every gadget that deduplicates identical lookups and merges per-byte relations, thus decreasing total constraint count.
+* **Lookup Table (LUT)** – a pre-computed table proved via a lookup constraint.  We rely on different tables for byte-wise boolean ops, multiplication, division, etc.
+* **`OptimizationContext`** – a helper passed into every gadget that deduplicates identical lookups and merges per-byte relations, thus decreasing the total constraint count.
 
 Every gadget follows roughly the same shape:
 
@@ -38,31 +37,31 @@ Implements `AND`, `OR`, `XOR` (and immediate forms).
 
 * Each byte pair of the operands is looked up in the `TableType::{And, Or, Xor}` LUTs.
 * The lookup itself enforces that the bytes are in `[0,255]`, hence earlier decomposition can skip explicit range checks.
-* Four byte results are recombined into two 16-bit limbs to form the resulting register value.
+* Four-byte results are recombined into two 16-bit limbs to form the resulting register value.
 
 ### 3. `shift.rs` – Logical & Arithmetic Shifts
 
 Covers `SLL`, `SRL`, `SRA` (plus immediates `SLLI`, `SRLI`, `SRAI`).
 
 * Shifts > 31 are masked to 5 bits as per the spec.
-* Logical shifts are routed to a generic barrel-shifter implemented with conditional rotations, incurring *O(log n)* constraints.
-* Arithmetic right shift re-uses logical shifter then conditionally ORs the vacated bits with the sign mask.
+* Logical shifts are routed to a generic barrel-shifter implemented with conditional rotations, incurring `O(log n)` constraints.
+* Arithmetic right shift re-uses the logical shifter, then conditionally ORs the vacated bits with the sign mask.
 
 ### 4. `mul_div.rs` – Multiply / Divide / Remainder
 
-The largest gadget in the folder – implements the complete RV32M extension: `MUL`, `MULH`, `MULHSU`, `MULHU`, `DIV`, `DIVU`, `REM`, `REMU`.
+The largest gadget in the folder, it implements the complete RV32M extension: `MUL`, `MULH`, `MULHSU`, `MULHU`, `DIV`, `DIVU`, `REM`, `REMU`.
 
 * 16×16-bit partial products reduced via Karatsuba for efficient constraint utilisation.
 * Division / remainder proven through a **reciprocal-based equality**: `quot * divisor + rem = dividend` plus range and sign conditions.
-* Over-flow cases like division by zero return the architecturally-defined results and optionally raise traps when `OUTPUT_EXACT_EXCEPTIONS` is enabled.
+* Overflow cases like division by zero return the architecturally-defined results and optionally raise traps when `OUTPUT_EXACT_EXCEPTIONS` is enabled.
 
 ### 5. `load.rs` – Memory Loads
 
 Handles all variants (`LB`, `LBU`, `LH`, `LHU`, `LW`).
 
-* Computes effective address with adder gadget, then feeds it into the MMU sub-system.
+* Computes effective address with adder gadget, then feeds it into the memory management unit (MMU) sub-system.
 * Byte/half-word loads rely on gadget-level selector logic to pick the requested offset from the fetched 32-bit word.
-* Sign extension for `LB` / `LH` is done per byte via Boolean logic without introducing extra range checks.
+* Sign extension for `LB` / `LH` is done per byte via boolean logic without introducing extra range checks.
 
 ### 6. `store.rs` – Memory Stores
 
@@ -95,18 +94,17 @@ Implements `LUI` and `AUIPC`.
 
 ### 10. `csr.rs` – Control-and-Status Registers
 
-Implements `CSRRW`, `CSRRS`, `CSRRC` and their immediate forms.
+Implements `CSRRW`, `CSRRS`, `CSRRC`, and their immediate forms.
 
-* Reads/Writes go through the CSR device; side-effects (e.g. privilege escalation) are encoded as traps.
+* Reads/Writes go through the CSR device; side-effects (e.g, privilege escalation) are encoded as traps.
 * Immediate zero optimisation avoids unnecessary CSR reads when the mask is zero.
 
 ### 11. `mop.rs` – Memory Ordering Primitives
 
 Currently covers `FENCE` and `FENCE_I` with placeholders for future atomics.
 
-* Proves that all in-flight memory ops are completed before continuing (modelled via a timestamp monotonicity constraint).
+* Proves that all in-flight memory ops are completed before continuing by modelling via a timestamp monotonicity constraint.
 
 ### 12. `common_impls/`
 
-Shared helper gadgets used by multiple instruction families, e.g. sign extension logic or optimised byte decomposition.
-
+Shared helper gadgets used by multiple instruction families, e.g, sign extension logic or optimized byte decomposition.

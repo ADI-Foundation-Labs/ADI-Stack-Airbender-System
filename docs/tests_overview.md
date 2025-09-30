@@ -1,8 +1,8 @@
 # Test Suites – Circuits & Proof System
 
-The *major* automated tests that exercise the arithmetic circuits, prover and verifier code.  It is **not** an exhaustive list of every `#[test]` function.  We focus on tests that validate correctness of the constraint systems, witness generation, proof production, and on-chain verifier skeletons.
+Below you will find some of the *main* automated tests covering the arithmetic circuits, prover, and verifier code.  It is **not** an exhaustive list of every `#[test]` function, but a subset of those that validate correctness of the constraint systems, witness generation, proof production, and on-chain verifier skeletons.
 
-> To run any of the tests below use Cargo’s standard interface, e.g.:
+> To run any of the tests below, use Cargo’s standard interface, e.g.:
 > ```bash
 > cargo test -p opcode_tests jalr::test_jalr_op   # Example of single opcode test
 > ```
@@ -11,43 +11,43 @@ The *major* automated tests that exercise the arithmetic circuits, prover and ve
 
 ## 1. Opcode-level functional tests (`opcode_tests` crate)
 
-**Location**: `circuit_defs/opcode_tests/`
+**Location**: [`circuit_defs/opcode_tests/`](../circuit_defs/opcode_tests/).
 
-Purpose: Ensure that the full-machine circuit correct compile every RISC-V instruction.
+**Purpose**: Ensure that the full-machine circuit correctly compiles every RISC-V instruction.
 
 How it works:
-1. Runs the reference RISC-V simulator for a *single instruction*  with randomised register/memory state.
+1. Runs the reference RISC-V simulator for a *single instruction*  with randomized register/memory state.
 2. Generates a witness for the *same* step using the circuit.
 3. Compares resulting register values, memory reads/writes, PC updates, etc.
 
 Highlights:
-- 40+ individual tests (`src/opcodes/*.rs`) – one per opcode (`add.rs`, `lb.rs`, `jal.rs`, …) each containing a `test_<opcode>` function.
+- 40+ individual tests (`src/opcodes/*.rs`) – one per opcode (`add.rs`, `lb.rs`, `jal.rs`, …), each containing a `test_<opcode>` function.
 - Additional tests in `src/lib.rs` (`test_single_opcode`, `broken_tests`, etc.) gather multiple opcodes.
 - Can be run with: `cargo test -p opcode_tests --profile test-release`.
 These tests provide **completeness coverage** – if an opcode is incorrectly constrained, the comparison with the simulator will fail.
 
 ---
 
-## 3. Program-level prover & delegation tests (`prover` crate)
+## 2. Program-level prover & delegation tests (`prover` crate)
 
-**Location**: `prover/src/tests/`
+**Location**: [`prover/src/tests/`](../prover/src/tests/)
 
-Purpose: Exercise the *entire* STARK proving pipeline, through witness generation, to proof creation and verification on small RISC-V programs and cryptographic delegation gadgets.
+**Purpose**: Exercise the *entire* STARK proving pipeline, through witness generation, to proof creation and verification on small RISC-V programs and cryptographic delegation gadgets.
 
 How it works:
 1. Embeds a short RISC-V binary or loads a `.bin` file.
-2. Calls `run_test_for_binary(...)` which  
-   - executes the program in the reference simulator,  
-   - synthesises the corresponding witness,  
-   - generates a proof, and  
-   - immediately verifies it.
-3. For delegation circuits a specialised helper `run_basic_delegation_test_impl(...)` performs the same end-to-end cycle.
+2. Calls `run_test_for_binary(...)` which: 
+   - Executes the program in the reference simulator.
+   - Synthesizes the corresponding witness.  
+   - Generates a proof.  
+   - Immediately verifies it.
+3. For delegation circuits, a specialized helper `run_basic_delegation_test_impl(...)` performs the same end-to-end cycle.
 
 Representative tests:
-- **`test_blake2_single_round`** – validates the Blake2 compression round delegation against known test-vectors.
-- **`test_extended_blake2_single_round`** – covers the extended Blake2 state transformation.
+- **`test_blake2_single_round`** – validates the BLAKE2 compression round delegation against known test-vectors.
+- **`test_extended_blake2_single_round`** – covers the extended BLAKE2 state transformation.
 - **`test_bigint_with_control_call`** – 256-bit arithmetic with the additional control selectors.
-- **`multiple_instances_test`** – runs batches of tiny programs (Fibonacci, arithmetic, jumps) to check that batched proof generation / verification works.
+- **`multiple_instances_test`** – runs batches of tiny programs (Fibonacci, arithmetic, jumps) to check that batched proof generation/verification works.
 - **`gpu_prover::basic_test`** – produces the same proof on CPU *and* GPU.
 
 Run with:
@@ -60,13 +60,13 @@ Why it matters: Sits one level *above* opcode-unit tests and therefore catches i
 
 ---
 
-## 4. Verifier-side skeleton tests (`verifier` and friends)
+## 3. Verifier-side skeleton tests (`verifier` and friends)
 
 Crates:
 * `verifier`
 * `circuit_defs/*/verifier` (one per machine configuration & delegation gadget)
 
-Key files: `verifier/src/tests.rs`, plus duplicated copies generated for each machine config.
+Key files: [`verifier/src/tests.rs`](../verifier/src/tests.rs), plus duplicated copies generated for each machine config.
 
 There are usually two flavours:
 - **`test_full_machine_verifier_out_of_simulator`** / `test_reduced_machine_verifier_out_of_simulator` – run the verifier directly in a Rust thread.
@@ -81,11 +81,12 @@ These tests are heavier – they perform full Merkle verifications and FRI check
 
 ---
 
-## 5. FFT & Field arithmetic correctness 
+## 4. FFT & Field arithmetic correctness 
+
 Examples:
 | Crate | File | Notes |
 |-------|------|-------|
-| `fft` | `src/row_major/tests.rs` & several functions marked `#[test]` in `src/grinded_fft/*` | Validate NTT/FFT forward & inverse consistency, coset conversions, butterfly kernels, etc. |
+| `fft` | [`src/row_major/tests.rs`](../fft/src/row_major/tests.rs) & several functions marked `#[test]` in [`src/grinded_fft/*`](../fft/src/grinded_fft) | Validate NTT/FFT forward & inverse consistency, coset conversions, butterfly kernels, etc. |
 | `field` | (many small `#[test]` items inline) | Check field arithmetic, inversion, serialization, randomness, etc. |
 
 Run with:
@@ -95,13 +96,13 @@ cargo test -p fft
 
 ---
 
-## 6. Prover integration ests (`prover_examples`)
+## 5. Prover integration ests (`prover_examples`)
 
-Crate **`circuit_defs/prover_examples`** contains:
-2. Runs the full staged prover pipeline.
-3. Optionally serialises the resulting proof for later use by verifier tests.
+Crate [**`circuit_defs/prover_examples`**](../circuit_defs/prover_examples) contains:
+1. Runs the full staged prover pipeline.
+2. Optionally serialises the resulting proof for later use by verifier tests.
 
-Because it exercises *all* prover stages together, it’s almost end-to-end check.  It is *slow*.
+Because it exercises **all** prover stages together, it's almost an end-to-end check.  It is **slow**.
 
 ---
 
