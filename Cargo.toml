@@ -58,6 +58,7 @@ members = [
     "circuit_defs/unrolled_circuits/load_store_subword_only",
     "circuit_defs/unrolled_circuits/shift_binary_csr_all_delegations",
     "circuit_defs/unrolled_circuits/shift_binary_csr_blake_only_delegation",
+    "riscv_transpiler",
 ]
 
 default-members = [

@@ -1,0 +1,10 @@
+mod add_sub;
+mod jal_jalr;
+mod lui_auipc;
+mod mop;
+mod mul_div;
+mod zicsr;
+mod binary;
+mod branch;
+mod slt;
+mod memory;
