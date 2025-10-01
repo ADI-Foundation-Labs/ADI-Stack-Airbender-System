@@ -664,9 +664,11 @@ fn run_binary(
     expected_results: &Option<Vec<u32>>,
     machine: &Machine,
 ) {
+    let cycles = cycles.unwrap_or(DEFAULT_CYCLES);
+
     let config = SimulatorConfig {
         bin: prover::risc_v_simulator::sim::BinarySource::Path(bin_path.into()),
-        cycles: cycles.unwrap_or(DEFAULT_CYCLES),
+        cycles: cycles,
         entry_point: 0,
         diagnostics: None,
     };
@@ -677,14 +679,14 @@ fn run_binary(
         }
     }
 
-    let registers = match machine {
+    let (registers, reached_end) = match machine {
         Machine::Standard => {
             let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
                 _,
                 IMStandardIsaConfig,
             >(config, non_determinism_source);
 
-            result.state.registers
+            (result.state.registers, result.reached_end)
         }
         Machine::Reduced => {
             let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
@@ -692,7 +694,7 @@ fn run_binary(
                 IWithoutByteAccessIsaConfigWithDelegation,
             >(config, non_determinism_source);
 
-            result.state.registers
+            (result.state.registers, result.reached_end)
         }
         Machine::ReducedLog23 => {
             let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
@@ -700,7 +702,7 @@ fn run_binary(
                 IWithoutByteAccessIsaConfigWithDelegation,
             >(config, non_determinism_source);
 
-            result.state.registers
+            (result.state.registers, result.reached_end)
         }
         Machine::ReducedFinal => {
             let result = run_simple_with_entry_point_and_non_determimism_source_for_config::<
@@ -708,9 +710,15 @@ fn run_binary(
                 IWithoutByteAccessIsaConfig,
             >(config, non_determinism_source);
 
-            result.state.registers
+            (result.state.registers, result.reached_end)
         }
     };
+
+    assert!(
+        reached_end,
+        "Program did not finish in {} cycles. Use --cycles N to set a higher maximum cycle count to attempt.",
+        cycles,
+    );
 
     // our convention is to return 32 bytes placed into registers x10-x17
 
