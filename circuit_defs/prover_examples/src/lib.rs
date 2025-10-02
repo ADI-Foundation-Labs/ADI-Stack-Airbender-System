@@ -440,115 +440,115 @@ pub fn prove_image_execution_for_machine_with_gpu_tracers<
 
     // now prove one by one
     let mut main_proofs = vec![];
-    // for (circuit_sequence, witness_chunk) in main_circuits_witness.iter().enumerate() {
-    //     let shuffle_rams = if circuit_sequence < num_paddings {
-    //         &padding_shuffle_ram_inits_and_teardowns
-    //     } else {
-    //         &inits_and_teardowns[circuit_sequence - num_paddings]
-    //     };
+    for (circuit_sequence, witness_chunk) in main_circuits_witness.iter().enumerate() {
+        let shuffle_rams = if circuit_sequence < num_paddings {
+            &padding_shuffle_ram_inits_and_teardowns
+        } else {
+            &inits_and_teardowns[circuit_sequence - num_paddings]
+        };
 
-    //     if should_dump_witness {
-    //         // bincode_serialize_to_file(
-    //         //     shuffle_rams,
-    //         //     &format!("riscv_shuffle_ram_inits_chunk_{}.bin", circuit_sequence),
-    //         // );
-    //         // bincode_serialize_to_file(
-    //         //     witness_chunk,
-    //         //     &format!("riscv_witness_chunk_{}.bin", circuit_sequence),
-    //         // );
-    //     }
+        if should_dump_witness {
+            // bincode_serialize_to_file(
+            //     shuffle_rams,
+            //     &format!("riscv_shuffle_ram_inits_chunk_{}.bin", circuit_sequence),
+            // );
+            // bincode_serialize_to_file(
+            //     witness_chunk,
+            //     &format!("riscv_witness_chunk_{}.bin", circuit_sequence),
+            // );
+        }
 
-    //     let oracle = MainRiscVOracle {
-    //         cycle_data: witness_chunk,
-    //     };
+        let oracle = MainRiscVOracle {
+            cycle_data: witness_chunk,
+        };
 
-    //     let now = std::time::Instant::now();
-    //     let witness_trace = evaluate_witness(
-    //         &risc_v_circuit_precomputations.compiled_circuit,
-    //         risc_v_circuit_precomputations.witness_eval_fn_for_gpu_tracer,
-    //         cycles_per_circuit,
-    //         &oracle,
-    //         &shuffle_rams.lazy_init_data,
-    //         &risc_v_circuit_precomputations.table_driver,
-    //         circuit_sequence,
-    //         worker,
-    //         A::default(),
-    //     );
-    //     #[cfg(feature = "timing_logs")]
-    //     println!(
-    //         "Witness generation for main RISC-V circuit ({}) took {:?}",
-    //         circuit_sequence,
-    //         now.elapsed()
-    //     );
+        let now = std::time::Instant::now();
+        let witness_trace = evaluate_witness(
+            &risc_v_circuit_precomputations.compiled_circuit,
+            risc_v_circuit_precomputations.witness_eval_fn_for_gpu_tracer,
+            cycles_per_circuit,
+            &oracle,
+            &shuffle_rams.lazy_init_data,
+            &risc_v_circuit_precomputations.table_driver,
+            circuit_sequence,
+            worker,
+            A::default(),
+        );
+        #[cfg(feature = "timing_logs")]
+        println!(
+            "Witness generation for main RISC-V circuit ({}) took {:?}",
+            circuit_sequence,
+            now.elapsed()
+        );
 
-    //     if PRECHECK_SATISFIED {
-    //         println!("Will evaluate basic satisfiability checks for main circuit");
+        if PRECHECK_SATISFIED {
+            println!("Will evaluate basic satisfiability checks for main circuit");
 
-    //         assert!(check_satisfied(
-    //             &risc_v_circuit_precomputations.compiled_circuit,
-    //             &witness_trace.exec_trace,
-    //             witness_trace.num_witness_columns
-    //         ));
-    //     }
+            assert!(check_satisfied(
+                &risc_v_circuit_precomputations.compiled_circuit,
+                &witness_trace.exec_trace,
+                witness_trace.num_witness_columns
+            ));
+        }
 
-    //     // and prove
-    //     let mut public_inputs = witness_trace.aux_data.first_row_public_inputs.clone();
-    //     public_inputs.extend_from_slice(&witness_trace.aux_data.one_before_last_row_public_inputs);
+        // and prove
+        let mut public_inputs = witness_trace.aux_data.first_row_public_inputs.clone();
+        public_inputs.extend_from_slice(&witness_trace.aux_data.one_before_last_row_public_inputs);
 
-    //     let aux_boundary_data = &witness_trace.aux_data.aux_boundary_data[0];
+        let aux_boundary_data = &witness_trace.aux_data.aux_boundary_data[0];
 
-    //     let external_values = ExternalValues {
-    //         challenges: external_challenges,
-    //         aux_boundary_values: AuxArgumentsBoundaryValues {
-    //             lazy_init_first_row: aux_boundary_data.lazy_init_first_row,
-    //             teardown_value_first_row: aux_boundary_data.teardown_value_first_row,
-    //             teardown_timestamp_first_row: aux_boundary_data.teardown_timestamp_first_row,
-    //             lazy_init_one_before_last_row: aux_boundary_data.lazy_init_one_before_last_row,
-    //             teardown_value_one_before_last_row: aux_boundary_data
-    //                 .teardown_value_one_before_last_row,
-    //             teardown_timestamp_one_before_last_row: aux_boundary_data
-    //                 .teardown_timestamp_one_before_last_row,
-    //         },
-    //     };
+        let external_values = ExternalValues {
+            challenges: external_challenges,
+            aux_boundary_values: AuxArgumentsBoundaryValues {
+                lazy_init_first_row: aux_boundary_data.lazy_init_first_row,
+                teardown_value_first_row: aux_boundary_data.teardown_value_first_row,
+                teardown_timestamp_first_row: aux_boundary_data.teardown_timestamp_first_row,
+                lazy_init_one_before_last_row: aux_boundary_data.lazy_init_one_before_last_row,
+                teardown_value_one_before_last_row: aux_boundary_data
+                    .teardown_value_one_before_last_row,
+                teardown_timestamp_one_before_last_row: aux_boundary_data
+                    .teardown_timestamp_one_before_last_row,
+            },
+        };
 
-    //     #[cfg(feature = "timing_logs")]
-    //     let now = std::time::Instant::now();
-    //     let (_, proof) = prove(
-    //         &risc_v_circuit_precomputations.compiled_circuit,
-    //         &public_inputs,
-    //         &external_values,
-    //         witness_trace,
-    //         &risc_v_circuit_precomputations.setup,
-    //         &risc_v_circuit_precomputations.twiddles,
-    //         &risc_v_circuit_precomputations.lde_precomputations,
-    //         circuit_sequence,
-    //         None,
-    //         lde_factor,
-    //         risc_v_cycles::TREE_CAP_SIZE,
-    //         NUM_QUERIES,
-    //         verifier_common::POW_BITS as u32,
-    //         worker,
-    //     );
-    //     #[cfg(feature = "timing_logs")]
-    //     println!(
-    //         "Proving for main RISC-V circuit ({}) took {:?}",
-    //         circuit_sequence,
-    //         now.elapsed()
-    //     );
+        #[cfg(feature = "timing_logs")]
+        let now = std::time::Instant::now();
+        let (_, proof) = prove(
+            &risc_v_circuit_precomputations.compiled_circuit,
+            &public_inputs,
+            &external_values,
+            witness_trace,
+            &risc_v_circuit_precomputations.setup,
+            &risc_v_circuit_precomputations.twiddles,
+            &risc_v_circuit_precomputations.lde_precomputations,
+            circuit_sequence,
+            None,
+            lde_factor,
+            risc_v_cycles::TREE_CAP_SIZE,
+            NUM_QUERIES,
+            verifier_common::POW_BITS as u32,
+            worker,
+        );
+        #[cfg(feature = "timing_logs")]
+        println!(
+            "Proving for main RISC-V circuit ({}) took {:?}",
+            circuit_sequence,
+            now.elapsed()
+        );
 
-    //     // {
-    //     //     serialize_to_file(&proof, &format!("riscv_proof_{}", circuit_sequence));
-    //     // }
+        // {
+        //     serialize_to_file(&proof, &format!("riscv_proof_{}", circuit_sequence));
+        // }
 
-    //     memory_grand_product.mul_assign(&proof.memory_grand_product_accumulator);
-    //     delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
+        memory_grand_product.mul_assign(&proof.memory_grand_product_accumulator);
+        delegation_argument_sum.add_assign(&proof.delegation_argument_accumulator.unwrap());
 
-    //     // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
+        // assert_eq!(&proof.memory_tree_caps, &memory_trees[circuit_sequence]);
 
-    //     aux_memory_trees.push(proof.memory_tree_caps.clone());
+        aux_memory_trees.push(proof.memory_tree_caps.clone());
 
-    //     main_proofs.push(proof);
-    // }
+        main_proofs.push(proof);
+    }
 
     if main_circuits_witness.len() > 0 {
         println!(

@@ -1,14 +1,14 @@
 #!/bin/sh
 
-rm base_layer.bin
-rm recursion_layer.bin
-rm final_recursion_layer.bin
-rm base_layer_with_output.bin
-rm recursion_layer_with_output.bin
-rm final_recursion_layer_with_output.bin
+# rm base_layer.bin
+# rm recursion_layer.bin
+# rm final_recursion_layer.bin
+# rm base_layer_with_output.bin
+# rm recursion_layer_with_output.bin
+# rm final_recursion_layer_with_output.bin
 rm universal.bin
-rm universal_no_delegation.bin
-rm verifier_test.bin
+# rm universal_no_delegation.bin
+# rm verifier_test.bin
 
 # Build something simple to check for errors
 # cargo build --release  -Z build-std=core,panic_abort,alloc -Z build-std-features=panic_immediate_abort  --features base_layer --no-default-features
