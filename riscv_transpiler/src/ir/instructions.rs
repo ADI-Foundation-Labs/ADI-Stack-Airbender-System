@@ -1,8 +1,3 @@
-pub enum InstructionImmArgs {
-    U32(u32),
-    U8U8U16 { a: u8, b: u8, c: u16 }
-}
-
 pub const OP_IMM_SUBMASK: u8 = 0b0010011;
 pub const OP_SUBMASK: u8 = 0b0110011;
 

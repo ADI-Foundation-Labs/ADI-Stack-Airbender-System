@@ -45,12 +45,7 @@ pub enum InstructionName {
     Xor,
     Or,
     And,
-    Beq,
-    Bne,
-    Blt,
-    Bge,
-    Bltu,
-    Bgeu,
+    Branch,
     Lhu,
     Lbu,
     Lw,
@@ -64,8 +59,12 @@ pub enum InstructionName {
     ZimopMul,
     ZicsrDelegation,
     ZicsrMarkerCsr,
-    ZicsrNonDeterminism,
+    ZicsrNonDeterminismRead,
+    ZicsrNonDeterminismWrite,
+    FormalEnd,
 }
+
+pub const NUM_OPCODE_HANDLERS: usize = InstructionName::FormalEnd as u8 as usize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C, align(8))]
@@ -80,13 +79,17 @@ pub struct Instruction {
 impl Instruction {
     #[inline(always)]
     const fn as_byte_slice(&self) -> &[u8; 8] {
-        unsafe {
-            core::mem::transmute::<_, _>(self)
-        }
+        unsafe { core::mem::transmute::<_, _>(self) }
     }
 
     pub fn new(name: InstructionName, rs1: u8, rs2: u8, rd: u8, imm: u32) -> Self {
-        Self { name, rs1, rs2, rd, imm }
+        Self {
+            name,
+            rs1,
+            rs2,
+            rd,
+            imm,
+        }
     }
 
     pub fn emit(&self, dst: &mut impl std::io::Write) -> Result<usize, String> {
@@ -96,6 +99,12 @@ impl Instruction {
     }
 
     pub fn from_imm(name: InstructionName, rs1: u8, rs2: u8, rd: u8, imm: u32) -> Self {
-        Self { name, rs1, rs2, rd, imm }
+        Self {
+            name,
+            rs1,
+            rs2,
+            rd,
+            imm,
+        }
     }
 }

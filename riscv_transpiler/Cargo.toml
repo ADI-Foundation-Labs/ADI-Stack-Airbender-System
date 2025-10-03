@@ -11,3 +11,4 @@ categories.workspace = true
 
 [dependencies]
 common_constants = { workspace = true }
+field = { workspace = true }
