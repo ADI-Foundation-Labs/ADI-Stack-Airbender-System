@@ -1,3 +1,4 @@
+use crate::ir::DelegationType;
 use crate::ir::Instruction;
 use crate::ir::InstructionName;
 use crate::ir::NUM_OPCODE_HANDLERS;
@@ -10,11 +11,18 @@ mod ram_with_rom_region;
 mod replay_snapshotter;
 mod simple_tape;
 
+mod delegations;
+
 pub use self::ram_with_rom_region::RamWithRomRegion;
 pub use self::replay_snapshotter::*;
 pub use self::simple_tape::SimpleTape;
 
-pub trait Counters: 'static + Clone + Copy + Debug {}
+pub trait Counters: 'static + Clone + Copy + Debug {
+    fn bump_bigint(&mut self);
+    fn bump_blake2_round_function(&mut self);
+    fn bump_keccak_special_5(&mut self);
+    fn bump_non_determinism(&mut self);
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C, align(16))]
@@ -73,7 +81,8 @@ pub trait RAM {
 
 pub struct VM<S: Snapshotter, R: RAM> {
     pub state: State<S::Counters>,
-    pub impls: [fn(&mut State<S::Counters>, &mut R, &mut S, Instruction); NUM_OPCODE_HANDLERS],
+    _marker: core::marker::PhantomData<R>,
+    // pub impls: [fn(&mut State<S::Counters>, &mut R, &mut S, Instruction); NUM_OPCODE_HANDLERS],
 }
 
 pub trait InstructionTape {
@@ -81,34 +90,34 @@ pub trait InstructionTape {
 }
 
 impl<S: Snapshotter, R: RAM> VM<S, R> {
-    pub fn run(
-        &mut self,
-        num_snapshots: usize,
-        ram: &mut R,
-        snapshotter: &mut S,
-        instruction_tape: &impl InstructionTape,
-        snapshot_period: usize,
-    ) {
-        for _ in 0..num_snapshots {
-            for _ in 0..snapshot_period {
-                unsafe {
-                    let pc = self.state.pc;
-                    let instr = instruction_tape.read_instruction(pc);
-                    let instr_impl = self.impls.get_unchecked(instr.name as u8 as usize);
-                    (instr_impl)(&mut self.state, ram, snapshotter, instr);
-                    if self.state.pc == pc {
-                        snapshotter.take_snapshot(&self.state);
-                        return;
-                    }
-                    self.state.timestamp += TIMESTAMP_STEP;
-                }
-            }
+    // pub fn run(
+    //     &mut self,
+    //     num_snapshots: usize,
+    //     ram: &mut R,
+    //     snapshotter: &mut S,
+    //     instruction_tape: &impl InstructionTape,
+    //     snapshot_period: usize,
+    // ) {
+    //     for _ in 0..num_snapshots {
+    //         for _ in 0..snapshot_period {
+    //             unsafe {
+    //                 let pc = self.state.pc;
+    //                 let instr = instruction_tape.read_instruction(pc);
+    //                 let instr_impl = self.impls.get_unchecked(instr.name as u8 as usize);
+    //                 (instr_impl)(&mut self.state, ram, snapshotter, instr);
+    //                 if self.state.pc == pc {
+    //                     snapshotter.take_snapshot(&self.state);
+    //                     return;
+    //                 }
+    //                 self.state.timestamp += TIMESTAMP_STEP;
+    //             }
+    //         }
 
-            snapshotter.take_snapshot(&self.state);
-        }
+    //         snapshotter.take_snapshot(&self.state);
+    //     }
 
-        panic!("out of cycles");
-    }
+    //     panic!("out of cycles");
+    // }
 
     pub fn run_basic_unrolled<ND: NonDeterminismCSRSource<R>>(
         state: &mut State<S::Counters>,
@@ -224,12 +233,42 @@ impl<S: Snapshotter, R: RAM> VM<S, R> {
                         InstructionName::Srai => {
                             shifts::sra::<_, _, true>(state, ram, snapshotter, instr)
                         }
+                        InstructionName::Mul => {
+                            mul_div::mul::<_, _>(state, ram, snapshotter, instr)
+                        }
+                        InstructionName::Mulhu => {
+                            mul_div::mulhu::<_, _>(state, ram, snapshotter, instr)
+                        }
+                        InstructionName::Divu => {
+                            mul_div::divu::<_, _>(state, ram, snapshotter, instr)
+                        }
+                        InstructionName::Remu => {
+                            mul_div::remu::<_, _>(state, ram, snapshotter, instr)
+                        }
                         InstructionName::ZicsrNonDeterminismRead => {
                             zicsr::nd_read::<_, _, ND>(state, ram, snapshotter, instr, nd)
                         }
                         InstructionName::ZicsrNonDeterminismWrite => {
                             zicsr::nd_write::<_, _, ND>(state, ram, snapshotter, instr, nd)
                         }
+                        InstructionName::ZicsrDelegation => match instr.imm {
+                            a if a == DelegationType::BigInt as u32 => {
+                                delegations::bigint::bigint_call(state, ram, snapshotter)
+                            }
+                            a if a == DelegationType::Blake as u32 => {
+                                delegations::blake2_round_function::blake2_round_function_call(
+                                    state,
+                                    ram,
+                                    snapshotter,
+                                )
+                            }
+                            a if a == DelegationType::Keccak as u32 => {
+                                todo!()
+                            }
+                            _ => {
+                                core::hint::unreachable_unchecked();
+                            }
+                        },
                         _ => core::hint::unreachable_unchecked(),
                     }
                     if state.pc == pc {

@@ -8,7 +8,24 @@ pub struct DelegationsCounters {
     pub keccak_calls: usize,
 }
 
-impl Counters for DelegationsCounters {}
+impl Counters for DelegationsCounters {
+    #[inline(always)]
+    fn bump_bigint(&mut self) {
+        self.bigint_calls += 1;
+    }
+    #[inline(always)]
+    fn bump_blake2_round_function(&mut self) {
+        self.blake_calls += 1;
+    }
+    #[inline(always)]
+    fn bump_keccak_special_5(&mut self) {
+        self.keccak_calls += 1;
+    }
+    #[inline(always)]
+    fn bump_non_determinism(&mut self) {
+        self.non_determinism_reads += 1;
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct SimpleSnapshot {

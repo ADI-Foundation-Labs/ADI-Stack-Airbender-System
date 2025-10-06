@@ -13,7 +13,7 @@ pub mod slt;
 pub mod zicsr;
 
 #[inline(always)]
-fn read_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
+pub(crate) fn read_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
     state: &mut State<S::Counters>,
     reg_idx: u8,
 ) -> u32 {
@@ -26,7 +26,7 @@ fn read_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
 }
 
 #[inline(always)]
-fn write_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
+pub(crate) fn write_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
     state: &mut State<S::Counters>,
     reg_idx: u8,
     mut value: u32,
@@ -43,7 +43,7 @@ fn write_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
 }
 
 #[inline(always)]
-fn default_increase_pc<S: Snapshotter>(state: &mut State<S::Counters>) {
+pub(crate) fn default_increase_pc<S: Snapshotter>(state: &mut State<S::Counters>) {
     state.pc = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32);
 }
 

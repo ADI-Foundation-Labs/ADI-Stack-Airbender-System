@@ -29,6 +29,7 @@ pub(crate) fn nd_read<S: Snapshotter, R: RAM, ND: NonDeterminismCSRSource<R>>(
     let _rs2_value = read_register::<S, 1>(state, instr.rs2); // formal
     let rd = nd.read();
     snapshotter.append_non_determinism_read(rd);
+    state.counters.bump_non_determinism();
     write_register::<S, 2>(state, instr.rd, rd);
     default_increase_pc::<S>(state);
 }
