@@ -5,11 +5,11 @@ use risc_v_simulator::machine_mode_only_unrolled::{
 };
 
 pub trait WitnessTracer {
-    fn write_non_memory_family_data<const FAMILY: usize>(
+    fn write_non_memory_family_data<const FAMILY: u8>(
         &mut self,
         data: NonMemoryOpcodeTracingDataWithTimestamp,
     );
-    fn write_memory_family_data<const FAMILY: usize>(
+    fn write_memory_family_data<const FAMILY: u8>(
         &mut self,
         data: MemoryOpcodeTracingDataWithTimestamp,
     );
@@ -59,12 +59,12 @@ impl<
         VARIABLE_OFFSETS,
     >
 {
-    fn write_non_memory_family_data<const FAMILY: usize>(
+    fn write_non_memory_family_data<const FAMILY: u8>(
         &mut self,
         _data: NonMemoryOpcodeTracingDataWithTimestamp,
     ) {
     }
-    fn write_memory_family_data<const FAMILY: usize>(
+    fn write_memory_family_data<const FAMILY: u8>(
         &mut self,
         _data: MemoryOpcodeTracingDataWithTimestamp,
     ) {
@@ -109,13 +109,13 @@ impl<
 
 // Holder for destination buffer for one particular delegation type. It may represent only part
 // of the destination circuit's capacity
-pub struct NonMemDestinationHolder<'a, const FAMILY: usize> {
+pub struct NonMemDestinationHolder<'a, const FAMILY: u8> {
     pub buffer: &'a mut [NonMemoryOpcodeTracingDataWithTimestamp],
 }
 
-impl<'a, const FAMILY: usize> WitnessTracer for NonMemDestinationHolder<'a, FAMILY> {
+impl<'a, const FAMILY: u8> WitnessTracer for NonMemDestinationHolder<'a, FAMILY> {
     #[inline(always)]
-    fn write_non_memory_family_data<const FAMILY_T: usize>(
+    fn write_non_memory_family_data<const FAMILY_T: u8>(
         &mut self,
         data: NonMemoryOpcodeTracingDataWithTimestamp,
     ) {
@@ -128,7 +128,7 @@ impl<'a, const FAMILY: usize> WitnessTracer for NonMemDestinationHolder<'a, FAMI
         } else {
         }
     }
-    fn write_memory_family_data<const FAMILY_T: usize>(
+    fn write_memory_family_data<const FAMILY_T: u8>(
         &mut self,
         _data: MemoryOpcodeTracingDataWithTimestamp,
     ) {
@@ -154,19 +154,19 @@ impl<'a, const FAMILY: usize> WitnessTracer for NonMemDestinationHolder<'a, FAMI
 
 // Holder for destination buffer for one particular delegation type. It may represent only part
 // of the destination circuit's capacity
-pub struct MemDestinationHolder<'a, const FAMILY: usize> {
+pub struct MemDestinationHolder<'a, const FAMILY: u8> {
     pub buffer: &'a mut [MemoryOpcodeTracingDataWithTimestamp],
 }
 
-impl<'a, const FAMILY: usize> WitnessTracer for MemDestinationHolder<'a, FAMILY> {
-    fn write_non_memory_family_data<const FAMILY_T: usize>(
+impl<'a, const FAMILY: u8> WitnessTracer for MemDestinationHolder<'a, FAMILY> {
+    fn write_non_memory_family_data<const FAMILY_T: u8>(
         &mut self,
         _data: NonMemoryOpcodeTracingDataWithTimestamp,
     ) {
     }
 
     #[inline(always)]
-    fn write_memory_family_data<const FAMILY_T: usize>(
+    fn write_memory_family_data<const FAMILY_T: u8>(
         &mut self,
         data: MemoryOpcodeTracingDataWithTimestamp,
     ) {

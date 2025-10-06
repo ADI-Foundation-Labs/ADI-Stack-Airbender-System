@@ -1,8 +1,6 @@
 use crate::ir::DelegationType;
 use crate::ir::Instruction;
 use crate::ir::InstructionName;
-use crate::ir::NUM_OPCODE_HANDLERS;
-use crate::vm::instructions::zicsr::NonDeterminismCSRSource;
 use common_constants::{TimestampScalar, INITIAL_TIMESTAMP, TIMESTAMP_STEP};
 use std::fmt::Debug;
 
@@ -27,8 +25,8 @@ pub trait Counters: 'static + Clone + Copy + Debug {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C, align(16))]
 pub struct Register {
-    timestamp: TimestampScalar,
-    value: u32,
+    pub timestamp: TimestampScalar,
+    pub value: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -71,6 +69,7 @@ pub trait Snapshotter: 'static {
 pub trait RAM {
     fn peek_word(&self, address: u32) -> u32;
     fn read_word(&mut self, address: u32, timestamp: TimestampScalar) -> (TimestampScalar, u32);
+    fn mask_read_value_for_witness(&self, address: u32, value: &mut u32);
     fn write_word(
         &mut self,
         address: u32,
@@ -79,46 +78,33 @@ pub trait RAM {
     ) -> (TimestampScalar, u32);
 }
 
-pub struct VM<S: Snapshotter, R: RAM> {
-    pub state: State<S::Counters>,
-    _marker: core::marker::PhantomData<R>,
-    // pub impls: [fn(&mut State<S::Counters>, &mut R, &mut S, Instruction); NUM_OPCODE_HANDLERS],
-}
-
 pub trait InstructionTape {
     fn read_instruction(&self, pc: u32) -> Instruction;
 }
 
+// there is no interpretation of methods here, it's just read/write and that's all
+pub trait NonDeterminismCSRSource<R: RAM + ?Sized> {
+    fn read(&mut self) -> u32;
+
+    // we in general can allow CSR source to peek into memory (readonly)
+    // to perform adhoc computations to prepare result. This will allow to save on
+    // passing large structures
+    fn write_with_memory_access(&mut self, ram: &R, value: u32);
+}
+
+impl<R: RAM> NonDeterminismCSRSource<R> for () {
+    fn read(&mut self) -> u32 {
+        0u32
+    }
+    fn write_with_memory_access(&mut self, _ram: &R, _value: u32) {}
+}
+
+pub struct VM<S: Snapshotter, R: RAM> {
+    pub state: State<S::Counters>,
+    _marker: core::marker::PhantomData<R>,
+}
+
 impl<S: Snapshotter, R: RAM> VM<S, R> {
-    // pub fn run(
-    //     &mut self,
-    //     num_snapshots: usize,
-    //     ram: &mut R,
-    //     snapshotter: &mut S,
-    //     instruction_tape: &impl InstructionTape,
-    //     snapshot_period: usize,
-    // ) {
-    //     for _ in 0..num_snapshots {
-    //         for _ in 0..snapshot_period {
-    //             unsafe {
-    //                 let pc = self.state.pc;
-    //                 let instr = instruction_tape.read_instruction(pc);
-    //                 let instr_impl = self.impls.get_unchecked(instr.name as u8 as usize);
-    //                 (instr_impl)(&mut self.state, ram, snapshotter, instr);
-    //                 if self.state.pc == pc {
-    //                     snapshotter.take_snapshot(&self.state);
-    //                     return;
-    //                 }
-    //                 self.state.timestamp += TIMESTAMP_STEP;
-    //             }
-    //         }
-
-    //         snapshotter.take_snapshot(&self.state);
-    //     }
-
-    //     panic!("out of cycles");
-    // }
-
     pub fn run_basic_unrolled<ND: NonDeterminismCSRSource<R>>(
         state: &mut State<S::Counters>,
         num_snapshots: usize,
@@ -353,7 +339,6 @@ mod test {
             period,
             &mut (),
         );
-        // simulator.run(num_snapshots, &mut ram, &mut snapshotter, &tape, period);
         let elapsed = now.elapsed();
 
         let total_snapshots = snapshotter.snapshots.len();

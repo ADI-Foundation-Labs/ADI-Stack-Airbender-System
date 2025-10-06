@@ -30,7 +30,8 @@ use crate::cycle::state::{CycleMarker, Mark, CYCLE_MARKER};
 mod delegations;
 
 use crate::cycle::opcode_formats::*;
-use cs::definitions::{TimestampData, TimestampScalar, INITIAL_TIMESTAMP, TIMESTAMP_STEP};
+pub use cs::definitions::TimestampData;
+use cs::definitions::{TimestampScalar, INITIAL_TIMESTAMP, TIMESTAMP_STEP};
 
 // In general we need to output decoder immediate output, but it's easier to just re-parse it in circuits,
 // so we just output PC and timestamp

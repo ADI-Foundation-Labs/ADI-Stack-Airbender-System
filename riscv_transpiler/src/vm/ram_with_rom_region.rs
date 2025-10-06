@@ -49,16 +49,37 @@ impl<const ROM_BOUND_SECOND_WORD_BITS: usize> RAM for RamWithRomRegion<ROM_BOUND
     }
 
     #[inline(always)]
+    fn mask_read_value_for_witness(&self, _address: u32, _value: &mut u32) {
+        // we do not do anything here
+    }
+
+    #[inline(always)]
     fn read_word(&mut self, address: u32, timestamp: TimestampScalar) -> (TimestampScalar, u32) {
         debug_assert_eq!(address % 4, 0);
         unsafe {
             let word_idx = (address / 4) as usize;
             debug_assert!(word_idx < self.backing.len());
-            let slot = self.backing.get_unchecked_mut(word_idx);
-            let value = slot.value;
-            let read_timestamp = slot.timestamp;
-            debug_assert!(read_timestamp < timestamp | 1);
-            slot.timestamp = timestamp | 1;
+            let value;
+            let read_timestamp;
+            if word_idx < 1 << (16 + ROM_BOUND_SECOND_WORD_BITS) / core::mem::size_of::<u32>() {
+                // value is from real slot, but we mask the access
+                value = self.backing.get_unchecked(word_idx).value;
+                // we should use one of 0 slot
+                let slot = self.backing.get_unchecked_mut(0);
+                read_timestamp = slot.timestamp;
+                debug_assert!(read_timestamp < timestamp | 1);
+                slot.timestamp = timestamp | 1;
+            } else {
+                let slot = self.backing.get_unchecked_mut(word_idx);
+                value = slot.value;
+                read_timestamp = slot.timestamp;
+                debug_assert!(read_timestamp < timestamp | 1);
+                slot.timestamp = timestamp | 1;
+            }
+
+            // NOTE: value here will allow us to replay based on log only,
+            // but timestamp will allow us to use it later on for witness gen
+            // when such reads would be masked into reading from 0 address
 
             (read_timestamp, value)
         }
