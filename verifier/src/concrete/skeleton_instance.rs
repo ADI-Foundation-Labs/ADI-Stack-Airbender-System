@@ -135,8 +135,7 @@ pub type QueryValuesInstance = QueryValues<
     NUM_FRI_STEPS,
 >;
 
-const NUM_QUERIES: usize = 1 // query_index
-    + LEAF_SIZE_SETUP
+const NUM_QUERIES: usize = LEAF_SIZE_SETUP
     + LEAF_SIZE_WITNESS_TREE
     + LEAF_SIZE_MEMORY_TREE
     + LEAF_SIZE_STAGE_2
@@ -445,10 +444,12 @@ impl QueryValuesInstance {
         );
         dst.write(query_index);
 
+        let mut i = 0;
         // leaf values are field elements
-        for i in BASE_CIRCUIT_QUERY_VALUES_OFFSETS {
-            dst = dst.add(i);
+        while i < NUM_QUERIES {
+            dst = dst.add(BASE_CIRCUIT_QUERY_VALUES_OFFSETS[i]);
             dst.write(I::read_reduced_field_element(modulus));
+            i += 1;
         }
 
         // for all except FRI the following is valid
