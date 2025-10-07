@@ -476,6 +476,7 @@ mod test {
             "minimal_machine_with_delegation",
             "blake_delegation",
             "keccak_delegation",
+            "bigint_delegation",
         ] {
             let compiled_circuit: CompiledCircuitArtifact<Mersenne31Field> =
                 deserialize_from_file(&format!("../cs/{}_layout.json", prefix));

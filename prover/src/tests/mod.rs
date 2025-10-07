@@ -15,6 +15,7 @@ use std::alloc::Global;
 use trace_holder::RowMajorTrace;
 use worker::Worker;
 
+
 pub mod full_machine_with_gpu_tracer {
     use crate::tracers::oracles::main_risc_v_circuit::MainRiscVOracle;
     use crate::witness_evaluator::SimpleWitnessProxy;
@@ -86,7 +87,7 @@ pub mod blake2s_delegation_with_gpu_tracer {
     use ::cs::cs::witness_placer::WitnessTypeSet;
     use ::cs::cs::witness_placer::{
         WitnessComputationCore, WitnessComputationalField, WitnessComputationalInteger,
-        WitnessComputationalU16, WitnessComputationalU32,
+        WitnessComputationalU16, WitnessComputationalU32, WitnessMask,
     };
     use ::field::Mersenne31Field;
     use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
@@ -112,7 +113,7 @@ pub mod keccak_special5_delegation_with_gpu_tracer {
     use ::cs::cs::witness_placer::WitnessTypeSet;
     use ::cs::cs::witness_placer::{
         WitnessComputationCore, WitnessComputationalField, WitnessComputationalInteger,
-        WitnessComputationalU16, WitnessComputationalU32,
+        WitnessComputationalU16, WitnessComputationalU32, WitnessMask,
     };
     use ::field::Mersenne31Field;
     use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
@@ -130,11 +131,38 @@ pub mod keccak_special5_delegation_with_gpu_tracer {
     }
 }
 
+pub mod bigint_with_control_delegation_with_gpu_tracer {
+    use crate::tracers::oracles::delegation_oracle::DelegationCircuitOracle;
+    use crate::witness_evaluator::SimpleWitnessProxy;
+    use crate::witness_proxy::WitnessProxy;
+
+    use ::cs::cs::witness_placer::WitnessTypeSet;
+    use ::cs::cs::witness_placer::{
+        WitnessComputationCore, WitnessComputationalField, WitnessComputationalInteger,
+        WitnessComputationalU16, WitnessComputationalU32, WitnessMask,
+    };
+    use ::field::Mersenne31Field;
+    use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
+
+    include!("../../bigint_delegation_generated.rs");
+
+    pub fn witness_eval_fn<'a, 'b>(
+        proxy: &'_ mut SimpleWitnessProxy<'a, DelegationCircuitOracle<'b>>,
+    ) {
+        let fn_ptr = evaluate_witness_fn::<
+            ScalarWitnessTypeSet<Mersenne31Field, true>,
+            SimpleWitnessProxy<'a, DelegationCircuitOracle<'b>>,
+        >;
+        (fn_ptr)(proxy);
+    }
+}
+
 use super::*;
 use std::collections::HashMap;
 
 mod delegation_test;
 mod keccak_test;
+mod big_int_test;
 mod unrolled;
 
 #[cfg(test)]
