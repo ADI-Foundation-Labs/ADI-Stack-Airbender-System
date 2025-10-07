@@ -26,7 +26,7 @@ pub trait LeafInclusionVerifier: 'static + Send + Sync + Debug {
         coset_index: u32,
         leaf_index: u32,
         depth: usize,
-        leaf_encoding: &AlignedSlice64<u32>,
+        leaf_encoding: AlignedSlice64<u32>,
         merkle_cap: &[MerkleTreeCap<CAP_SIZE>; NUM_COSETS],
     ) -> bool;
 }
