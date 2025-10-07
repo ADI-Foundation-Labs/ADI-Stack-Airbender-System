@@ -1,5 +1,10 @@
 use super::*;
 
+use risc_v_simulator::machine_mode_only_unrolled::{
+    LoadOpcodeTracingData, MemoryOpcodeTracingDataWithTimestamp, NonMemoryOpcodeTracingData,
+    NonMemoryOpcodeTracingDataWithTimestamp, StoreOpcodeTracingData,
+};
+
 pub mod add_sub;
 pub mod binary;
 pub mod branch;

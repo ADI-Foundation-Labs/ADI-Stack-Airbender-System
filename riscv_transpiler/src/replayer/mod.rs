@@ -101,133 +101,100 @@ impl<S: Snapshotter, R: RAM> ReplayerVM<S, R> {
                     let pc = state.pc;
                     let instr = instruction_tape.read_instruction(pc);
                     match instr.name {
-                        InstructionName::Illegal => illegal(state, ram, instr, tracer),
-                        InstructionName::Lui => lui_auipc::lui::<_, _>(state, ram, instr, tracer),
+                        InstructionName::Illegal => illegal::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Lui => lui_auipc::lui::<S, R>(state, ram, instr, tracer),
                         InstructionName::Auipc => {
-                            lui_auipc::auipc::<_, _>(state, ram, instr, tracer)
+                            lui_auipc::auipc::<S, R>(state, ram, instr, tracer)
                         }
 
-                        InstructionName::Jal => jal_jalr::jal::<_, _>(state, ram, instr, tracer),
-                        InstructionName::Jalr => jal_jalr::jalr::<_, _>(state, ram, instr, tracer),
+                        InstructionName::Jal => jal_jalr::jal::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Jalr => jal_jalr::jalr::<S, R>(state, ram, instr, tracer),
 
-                        InstructionName::Slt => {
-                            slt::slt::<_, _, false>(state, ram, snapshotter, instr)
-                        }
-                        InstructionName::Slti => {
-                            slt::slt::<_, _, true>(state, ram, snapshotter, instr)
-                        }
+                        InstructionName::Slt => slt::slt::<S, R, false>(state, ram, instr, tracer),
+                        InstructionName::Slti => slt::slt::<S, R, true>(state, ram, instr, tracer),
 
                         InstructionName::Sltu => {
-                            slt::sltu::<_, _, false>(state, ram, snapshotter, instr)
+                            slt::sltu::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Sltiu => {
-                            slt::sltu::<_, _, true>(state, ram, snapshotter, instr)
+                            slt::sltu::<S, R, true>(state, ram, instr, tracer)
                         }
 
                         InstructionName::Branch => {
-                            branch::branch::<_, _>(state, ram, snapshotter, instr)
+                            branch::branch::<S, R>(state, ram, instr, tracer)
                         }
 
-                        InstructionName::Sw => memory::sw::<_, _>(state, ram, snapshotter, instr),
-                        InstructionName::Lw => memory::lw::<_, _>(state, ram, snapshotter, instr),
+                        InstructionName::Sw => memory::sw::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Lw => memory::lw::<S, R>(state, ram, instr, tracer),
 
-                        InstructionName::Sh => memory::sh::<_, _>(state, ram, snapshotter, instr),
+                        InstructionName::Sh => memory::sh::<S, R>(state, ram, instr, tracer),
                         InstructionName::Lhu => {
-                            memory::lh::<_, _, false>(state, ram, snapshotter, instr)
+                            memory::lh::<S, R, false>(state, ram, instr, tracer)
                         }
-                        InstructionName::Lh => {
-                            memory::lh::<_, _, true>(state, ram, snapshotter, instr)
-                        }
+                        InstructionName::Lh => memory::lh::<S, R, true>(state, ram, instr, tracer),
 
-                        InstructionName::Sb => memory::sb::<_, _>(state, ram, snapshotter, instr),
+                        InstructionName::Sb => memory::sb::<S, R>(state, ram, instr, tracer),
                         InstructionName::Lbu => {
-                            memory::lb::<_, _, false>(state, ram, snapshotter, instr)
+                            memory::lb::<S, R, false>(state, ram, instr, tracer)
                         }
-                        InstructionName::Lb => {
-                            memory::lb::<_, _, true>(state, ram, snapshotter, instr)
-                        }
+                        InstructionName::Lb => memory::lb::<S, R, true>(state, ram, instr, tracer),
 
                         InstructionName::Add => {
-                            add_sub::add_op::<_, _, false>(state, ram, snapshotter, instr)
+                            add_sub::add_op::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Addi => {
-                            add_sub::add_op::<_, _, true>(state, ram, snapshotter, instr)
+                            add_sub::add_op::<S, R, true>(state, ram, instr, tracer)
                         }
-                        InstructionName::Sub => {
-                            add_sub::sub_op::<_, _>(state, ram, snapshotter, instr)
-                        }
+                        InstructionName::Sub => add_sub::sub_op::<S, R>(state, ram, instr, tracer),
                         InstructionName::Xor => {
-                            binary::xor::<_, _, false>(state, ram, snapshotter, instr)
+                            binary::xor::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Xori => {
-                            binary::xor::<_, _, true>(state, ram, snapshotter, instr)
+                            binary::xor::<S, R, true>(state, ram, instr, tracer)
                         }
                         InstructionName::And => {
-                            binary::and::<_, _, false>(state, ram, snapshotter, instr)
+                            binary::and::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Andi => {
-                            binary::and::<_, _, true>(state, ram, snapshotter, instr)
+                            binary::and::<S, R, true>(state, ram, instr, tracer)
                         }
                         InstructionName::Or => {
-                            binary::and::<_, _, false>(state, ram, snapshotter, instr)
+                            binary::and::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Ori => {
-                            binary::and::<_, _, true>(state, ram, snapshotter, instr)
+                            binary::and::<S, R, true>(state, ram, instr, tracer)
                         }
                         InstructionName::Sll => {
-                            shifts::sll::<_, _, false>(state, ram, snapshotter, instr)
+                            shifts::sll::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Slli => {
-                            shifts::sll::<_, _, true>(state, ram, snapshotter, instr)
+                            shifts::sll::<S, R, true>(state, ram, instr, tracer)
                         }
                         InstructionName::Srl => {
-                            shifts::srl::<_, _, false>(state, ram, snapshotter, instr)
+                            shifts::srl::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Srli => {
-                            shifts::srl::<_, _, true>(state, ram, snapshotter, instr)
+                            shifts::srl::<S, R, true>(state, ram, instr, tracer)
                         }
                         InstructionName::Sra => {
-                            shifts::sra::<_, _, false>(state, ram, snapshotter, instr)
+                            shifts::sra::<S, R, false>(state, ram, instr, tracer)
                         }
                         InstructionName::Srai => {
-                            shifts::sra::<_, _, true>(state, ram, snapshotter, instr)
+                            shifts::sra::<S, R, true>(state, ram, instr, tracer)
                         }
-                        InstructionName::Mul => {
-                            mul_div::mul::<_, _>(state, ram, snapshotter, instr)
-                        }
-                        InstructionName::Mulhu => {
-                            mul_div::mulhu::<_, _>(state, ram, snapshotter, instr)
-                        }
-                        InstructionName::Divu => {
-                            mul_div::divu::<_, _>(state, ram, snapshotter, instr)
-                        }
-                        InstructionName::Remu => {
-                            mul_div::remu::<_, _>(state, ram, snapshotter, instr)
-                        }
+                        InstructionName::Mul => mul_div::mul::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Mulhu => mul_div::mulhu::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Divu => mul_div::divu::<S, R>(state, ram, instr, tracer),
+                        InstructionName::Remu => mul_div::remu::<S, R>(state, ram, instr, tracer),
                         InstructionName::ZicsrNonDeterminismRead => {
-                            zicsr::nd_read::<_, _, ND>(state, ram, snapshotter, instr, nd)
+                            zicsr::nd_read::<S, R, ND>(state, ram, instr, tracer, nd)
                         }
                         InstructionName::ZicsrNonDeterminismWrite => {
-                            zicsr::nd_write::<_, _, ND>(state, ram, snapshotter, instr, nd)
+                            zicsr::nd_write::<S, R>(state, ram, instr, tracer)
                         }
-                        InstructionName::ZicsrDelegation => match instr.imm {
-                            a if a == DelegationType::BigInt as u32 => {
-                                delegations::bigint::bigint_call(state, ram, snapshotter)
-                            }
-                            a if a == DelegationType::Blake as u32 => {
-                                delegations::blake2_round_function::blake2_round_function_call(
-                                    state,
-                                    ram,
-                                    snapshotter,
-                                )
-                            }
-                            a if a == DelegationType::Keccak as u32 => {
-                                todo!()
-                            }
-                            _ => {
-                                core::hint::unreachable_unchecked();
-                            }
-                        },
+                        InstructionName::ZicsrDelegation => {
+                            zicsr::call_delegation::<S, R>(state, ram, instr, tracer)
+                        }
                         _ => core::hint::unreachable_unchecked(),
                     }
                     if state.pc == pc {

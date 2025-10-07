@@ -88,6 +88,18 @@ pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
     let a = peek_read_u256(x10, &*ram);
     let b = read_u256(x11, ram, snapshotter, write_ts);
 
+    let (result, of) = bigint_impl(a, b, x12);
+
+    // write back
+    write_register::<S, 3>(state, 12, of as u32);
+    write_back_u256::<S, R>(x10, ram, snapshotter, write_ts, &result);
+
+    state.counters.bump_bigint();
+    default_increase_pc::<S>(state);
+}
+
+#[inline(always)]
+pub(crate) fn bigint_impl(a: U256, b: U256, x12: u32) -> (U256, bool) {
     let mut result;
     let control_mask = x12;
     assert!(
@@ -155,10 +167,5 @@ pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
         }
     };
 
-    // write back
-    write_register::<S, 3>(state, 12, of as u32);
-    write_back_u256::<S, R>(x10, ram, snapshotter, write_ts, &result);
-
-    state.counters.bump_bigint();
-    default_increase_pc::<S>(state);
+    (result, of)
 }

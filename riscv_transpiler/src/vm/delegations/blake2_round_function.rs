@@ -82,6 +82,22 @@ pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
     let mut state_accesses: [u32; BLAKE2S_X10_NUM_WRITES] = peek_read_words(x10, ram);
     let input: [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS] = read_words(x11, ram, snapshotter, write_ts);
 
+    blake2_round_function_impl(&mut state_accesses, input, x12, x13);
+
+    // write back
+    write_back_words(x10, ram, snapshotter, write_ts, &state_accesses);
+
+    state.counters.bump_blake2_round_function();
+    default_increase_pc::<S>(state);
+}
+
+#[inline(always)]
+pub(crate) fn blake2_round_function_impl(
+    state_accesses: &mut [u32; BLAKE2S_X10_NUM_WRITES],
+    input: [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS],
+    x12: u32,
+    x13: u32,
+) {
     unsafe {
         let (blake_state, extended_state) =
             state_accesses.split_at_mut_unchecked(BLAKE2S_STATE_WIDTH_IN_U32_WORDS);
@@ -158,11 +174,5 @@ pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
                 blake_state[i] ^= extended_state[i] ^ extended_state[i + 8];
             }
         }
-
-        // write back
-        write_back_words(x10, ram, snapshotter, write_ts, &state_accesses);
-
-        state.counters.bump_blake2_round_function();
-        default_increase_pc::<S>(state);
     }
 }

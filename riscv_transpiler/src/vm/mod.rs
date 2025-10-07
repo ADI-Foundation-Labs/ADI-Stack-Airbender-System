@@ -9,7 +9,7 @@ mod ram_with_rom_region;
 mod replay_snapshotter;
 mod simple_tape;
 
-mod delegations;
+pub(crate) mod delegations;
 
 pub use self::ram_with_rom_region::RamWithRomRegion;
 pub use self::replay_snapshotter::*;
@@ -237,24 +237,9 @@ impl<S: Snapshotter, R: RAM> VM<S, R> {
                         InstructionName::ZicsrNonDeterminismWrite => {
                             zicsr::nd_write::<_, _, ND>(state, ram, snapshotter, instr, nd)
                         }
-                        InstructionName::ZicsrDelegation => match instr.imm {
-                            a if a == DelegationType::BigInt as u32 => {
-                                delegations::bigint::bigint_call(state, ram, snapshotter)
-                            }
-                            a if a == DelegationType::Blake as u32 => {
-                                delegations::blake2_round_function::blake2_round_function_call(
-                                    state,
-                                    ram,
-                                    snapshotter,
-                                )
-                            }
-                            a if a == DelegationType::Keccak as u32 => {
-                                todo!()
-                            }
-                            _ => {
-                                core::hint::unreachable_unchecked();
-                            }
-                        },
+                        InstructionName::ZicsrDelegation => {
+                            zicsr::call_delegation::<_, _>(state, ram, snapshotter, instr)
+                        }
                         _ => core::hint::unreachable_unchecked(),
                     }
                     if state.pc == pc {

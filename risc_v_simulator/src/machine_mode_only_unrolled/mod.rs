@@ -46,7 +46,7 @@ pub struct TracingDecoderData {
 #[repr(C)]
 pub struct NonMemoryOpcodeTracingData {
     pub initial_pc: u32,
-    pub opcode: u32,
+    pub opcode: u32, // TODO: delete
     pub rs1_value: u32,
     pub rs2_value: u32,
     pub rd_old_value: u32,
@@ -59,7 +59,7 @@ pub struct NonMemoryOpcodeTracingData {
 #[repr(C)]
 pub struct LoadOpcodeTracingData {
     pub initial_pc: u32,
-    pub opcode: u32,
+    pub opcode: u32, // TODO: delete
     pub rs1_value: u32,
     pub aligned_ram_address: u32,
     pub aligned_ram_read_value: u32,
@@ -71,7 +71,7 @@ pub struct LoadOpcodeTracingData {
 #[repr(C)]
 pub struct StoreOpcodeTracingData {
     pub initial_pc: u32,
-    pub opcode: u32,
+    pub opcode: u32, // TODO: delete
     pub rs1_value: u32,
     pub aligned_ram_address: u32,
     pub aligned_ram_old_value: u32,

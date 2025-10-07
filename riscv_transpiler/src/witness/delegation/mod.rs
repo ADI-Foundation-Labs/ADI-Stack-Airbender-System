@@ -16,8 +16,25 @@ pub struct DelegationWitness<
 > {
     pub reg_accesses: [RegisterOrIndirectReadWriteData; REG_ACCESSES],
     pub indirect_reads: [RegisterOrIndirectReadData; INDIRECT_READS],
-    pub indirect_writes: [RegisterOrIndirectReadData; INDIRECT_WRITES],
+    pub indirect_writes: [RegisterOrIndirectReadWriteData; INDIRECT_WRITES],
     pub variables_offsets: [u16; VARIABLE_OFFSETS],
+}
+
+impl<
+        const REG_ACCESSES: usize,
+        const INDIRECT_READS: usize,
+        const INDIRECT_WRITES: usize,
+        const VARIABLE_OFFSETS: usize,
+    > DelegationWitness<REG_ACCESSES, INDIRECT_READS, INDIRECT_WRITES, VARIABLE_OFFSETS>
+{
+    pub fn empty() -> Self {
+        Self {
+            reg_accesses: [RegisterOrIndirectReadWriteData::EMPTY; REG_ACCESSES],
+            indirect_reads: [RegisterOrIndirectReadData::EMPTY; INDIRECT_READS],
+            indirect_writes: [RegisterOrIndirectReadWriteData::EMPTY; INDIRECT_WRITES],
+            variables_offsets: [0u16; VARIABLE_OFFSETS],
+        }
+    }
 }
 
 pub trait DelegationAbiDescription: 'static + Clone + Copy + Debug + Send + Sync {
