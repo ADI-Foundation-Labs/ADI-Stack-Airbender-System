@@ -19,6 +19,7 @@ mod stage_5;
 pub mod trace_holder;
 pub mod tracing_data;
 pub mod transfer;
+pub(crate) mod unrolled_prover;
 
 use field::{Mersenne31Complex, Mersenne31Field, Mersenne31Quartic};
 

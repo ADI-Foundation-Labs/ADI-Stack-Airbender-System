@@ -1,5 +1,13 @@
 use super::arg_utils::*;
 use super::context::DeviceProperties;
+use super::unrolled_prover::stage_2_shared::{
+    stage2_process_range_check_16_trivial_checks,
+    stage2_process_range_check_16_expressions,
+    stage2_process_timestamp_range_check_expressions,
+    stage2_process_lazy_init_range_checks,
+    stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution,
+    stage2_process_generic_lookup_intermediate_polys,
+};
 use crate::device_structures::{
     DeviceMatrix, DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
     DeviceMatrixChunkMutImpl, DeviceMatrixMut, MutPtrAndStride, PtrAndStride,
@@ -84,31 +92,30 @@ cuda_kernel!(
 
 delegation_aux_poly!(ab_delegation_aux_poly_kernel);
 
-cuda_kernel!(
-    LookupArgs,
-    lookup_args,
-    range_check_16_layout: RangeCheck16ArgsLayout,
-    expressions: FlattenedLookupExpressionsLayout,
-    expressions_for_shuffle_ram: FlattenedLookupExpressionsForShuffleRamLayout,
-    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
-    setup_cols: PtrAndStride<BF>,
-    witness_cols: PtrAndStride<BF>,
-    memory_cols: PtrAndStride<BF>,
-    aggregated_entry_invs_for_range_check_16: *const E4,
-    aggregated_entry_invs_for_timestamp_range_checks: *const E4,
-    aggregated_entry_invs_for_generic_lookups: *const E4,
-    generic_args_start: u32,
-    num_generic_args: u32,
-    generic_lookups_args_to_table_entries_map: PtrAndStride<u32>,
-    stage_2_bf_cols: MutPtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    memory_timestamp_high_from_circuit_idx: BF,
-    num_stage_2_bf_cols: u32,
-    num_stage_2_e4_cols: u32,
-    log_n: u32,
-);
-
-lookup_args!(ab_lookup_args_kernel);
+// cuda_kernel!(
+//     LookupArgs,
+//     lookup_args,
+//     // expressions: FlattenedLookupExpressionsLayout,
+//     // expressions_for_shuffle_ram: FlattenedLookupExpressionsForShuffleRamLayout,
+//     // lazy_init_teardown_layouts: LazyInitTeardownLayouts,
+//     setup_cols: PtrAndStride<BF>,
+//     witness_cols: PtrAndStride<BF>,
+//     memory_cols: PtrAndStride<BF>,
+//     aggregated_entry_invs_for_range_check_16: *const E4,
+//     aggregated_entry_invs_for_timestamp_range_checks: *const E4,
+//     aggregated_entry_invs_for_generic_lookups: *const E4,
+//     generic_args_start: u32,
+//     num_generic_args: u32,
+//     generic_lookups_args_to_table_entries_map: PtrAndStride<u32>,
+//     stage_2_bf_cols: MutPtrAndStride<BF>,
+//     stage_2_e4_cols: MutPtrAndStride<BF>,
+//     memory_timestamp_high_from_circuit_idx: BF,
+//     num_stage_2_bf_cols: u32,
+//     num_stage_2_e4_cols: u32,
+//     log_n: u32,
+// );
+// 
+// lookup_args!(ab_lookup_args_kernel);
 
 // Q: Why not use a unified memory and lookup args kernel?
 // Possible advantages of unified kernel:
@@ -286,11 +293,6 @@ pub fn compute_stage_2_args_on_main_domain(
     assert_eq!(witness_cols.cols(), num_witness_cols,);
     assert_eq!(memory_cols.rows(), n);
     assert_eq!(memory_cols.cols(), num_memory_cols,);
-    assert_eq!(generic_lookups_args_to_table_entries_map.rows(), n);
-    assert_eq!(
-        generic_lookups_args_to_table_entries_map.cols(),
-        num_generic_args,
-    );
     assert_eq!(stage_2_cols.rows(), n);
     assert_eq!(stage_2_cols.cols(), circuit.stage_2_layout.total_width);
     assert_eq!(
@@ -459,6 +461,7 @@ pub fn compute_stage_2_args_on_main_domain(
     let witness_cols = witness_cols.as_ptr_and_stride();
     let memory_cols = memory_cols.as_ptr_and_stride();
     let d_stage_2_e4_cols = stage_2_e4_cols.as_mut_ptr_and_stride();
+    let d_stage_2_bf_cols = stage_2_bf_cols.as_mut_ptr_and_stride();
     let (aggregated_entry_invs_for_range_check_16, aggregated_entry_invs) =
         scratch_for_aggregated_entry_invs.split_at_mut(1 << 16);
     let (aggregated_entry_invs_for_timestamp_range_checks, aggregated_entry_invs) =
@@ -605,89 +608,174 @@ pub fn compute_stage_2_args_on_main_domain(
     // CPU code doesn't fully support an isolated (odd-tail) remainder col yet.
     // For now, we assert the number of cols is even such that all cols can be paired,
     // and add support for a lone remainder col when the CPU does.
-    let range_check_16_layout = RangeCheck16ArgsLayout::new(
+    // let range_check_16_layout = RangeCheck16ArgsLayout::new(
+    //     circuit,
+    //     &range_check_16_width_1_lookups_access,
+    //     &range_check_16_width_1_lookups_access_via_expressions,
+    //     &translate_e4_offset,
+    // );
+
+    // let expressions_layout = if range_check_16_width_1_lookups_access_via_expressions.len() > 0
+    //     || timestamp_range_check_width_1_lookups_access_via_expressions.len() > 0
+    // {
+    //     let expect_constant_terms_are_zero = process_shuffle_ram_init;
+    //     FlattenedLookupExpressionsLayout::new(
+    //         &range_check_16_width_1_lookups_access_via_expressions,
+    //         &timestamp_range_check_width_1_lookups_access_via_expressions,
+    //         num_stage_2_bf_cols,
+    //         num_stage_2_e4_cols,
+    //         expect_constant_terms_are_zero,
+    //         &translate_e4_offset,
+    //     )
+    // } else {
+    //     FlattenedLookupExpressionsLayout::default()
+    // };
+
+
+    // let expressions_for_shuffle_ram_layout =
+    //     if timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram.len() > 0 {
+    //         FlattenedLookupExpressionsForShuffleRamLayout::new(
+    //             &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
+    //             num_stage_2_bf_cols,
+    //             num_stage_2_e4_cols,
+    //             &translate_e4_offset,
+    //         )
+    //     } else {
+    //         FlattenedLookupExpressionsForShuffleRamLayout::default()
+    //     };
+
+    // 32-bit lazy init addresses are treated as a pair of range check 16 cols
+    // let lazy_init_teardown_layouts = if process_shuffle_ram_init {
+    //     LazyInitTeardownLayouts::new(
+    //         circuit,
+    //         &lazy_init_address_range_check_16,
+    //         &shuffle_ram_inits_and_teardowns,
+    //         &translate_e4_offset,
+    //     )
+    // } else {
+    //     LazyInitTeardownLayouts::default();
+    // };
+
+    stage2_process_range_check_16_trivial_checks(
         circuit,
         &range_check_16_width_1_lookups_access,
         &range_check_16_width_1_lookups_access_via_expressions,
+        witness_cols,
+        aggregated_entry_invs_for_range_check_16,
+        d_stage_2_bf_cols,
+        d_stage_2_e4_cols,
+        log_n,
         &translate_e4_offset,
-    );
-    let expressions_layout = if range_check_16_width_1_lookups_access_via_expressions.len() > 0
-        || timestamp_range_check_width_1_lookups_access_via_expressions.len() > 0
-    {
-        let expect_constant_terms_are_zero = process_shuffle_ram_init;
-        FlattenedLookupExpressionsLayout::new(
-            &range_check_16_width_1_lookups_access_via_expressions,
-            &timestamp_range_check_width_1_lookups_access_via_expressions,
-            num_stage_2_bf_cols,
-            num_stage_2_e4_cols,
-            expect_constant_terms_are_zero,
-            &translate_e4_offset,
-        )
-    } else {
-        FlattenedLookupExpressionsLayout::default()
-    };
-    let expressions_for_shuffle_ram_layout =
-        if timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram.len() > 0 {
-            FlattenedLookupExpressionsForShuffleRamLayout::new(
-                &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
-                num_stage_2_bf_cols,
-                num_stage_2_e4_cols,
-                &translate_e4_offset,
-            )
-        } else {
-            FlattenedLookupExpressionsForShuffleRamLayout::default()
-        };
-    // 32-bit lazy init addresses are treated as a pair of range check 16 cols
+        stream,
+    )?;
+
+    stage2_process_range_check_16_expressions(
+        &range_check_16_width_1_lookups_access_via_expressions,
+        witness_cols,
+        memory_cols,
+        aggregated_entry_invs_for_range_check_16,
+        d_stage_2_bf_cols,
+        d_stage_2_e4_cols,
+        num_stage_2_bf_cols,
+        num_stage_2_e4_cols,
+        process_shuffle_ram_init,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
     let lazy_init_teardown_layouts = if process_shuffle_ram_init {
-        LazyInitTeardownLayouts::new(
+        let lazy_init_teardown_layouts = LazyInitTeardownLayouts::new(
             circuit,
             &lazy_init_address_range_check_16,
             &shuffle_ram_inits_and_teardowns,
             &translate_e4_offset,
-        )
+        );
+        stage2_process_lazy_init_range_checks(
+            lazy_init_teardown_layouts.clone(),
+            memory_cols,
+            aggregated_entry_invs_for_range_check_16,
+            d_stage_2_bf_cols,
+            d_stage_2_e4_cols,
+            log_n,
+            stream,
+        )?;
+        lazy_init_teardown_layouts
     } else {
         LazyInitTeardownLayouts::default()
     };
-    // Width-3 lookups
-    let generic_args_start = if num_generic_args > 0 {
-        translate_e4_offset(
-            circuit
-                .stage_2_layout
-                .intermediate_polys_for_generic_lookup
-                .start(),
-        )
-    } else {
-        0
-    };
-    let generic_lookups_args_to_table_entries_map =
-        generic_lookups_args_to_table_entries_map.as_ptr_and_stride();
-    let d_stage_2_bf_cols = stage_2_bf_cols.as_mut_ptr_and_stride();
-    let lazy_init_teardown_layouts_copy = lazy_init_teardown_layouts.clone();
-    let block_dim = 128;
-    let grid_dim = (n as u32 + 127) / 128;
-    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-    let args = LookupArgsArguments::new(
-        range_check_16_layout,
-        expressions_layout,
-        expressions_for_shuffle_ram_layout,
-        lazy_init_teardown_layouts_copy,
+
+    stage2_process_timestamp_range_check_expressions(
+        &timestamp_range_check_width_1_lookups_access_via_expressions,
+        witness_cols,
+        memory_cols,
+        aggregated_entry_invs_for_timestamp_range_checks,
+        d_stage_2_bf_cols,
+        d_stage_2_e4_cols,
+        num_stage_2_bf_cols,
+        num_stage_2_e4_cols,
+        true, // process_shuffle_ram_init,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
+    stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution(
+        &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
         setup_cols,
         witness_cols,
         memory_cols,
-        aggregated_entry_invs_for_range_check_16,
         aggregated_entry_invs_for_timestamp_range_checks,
-        aggregated_entry_invs_for_generic_lookups,
-        generic_args_start as u32,
-        num_generic_args as u32,
-        generic_lookups_args_to_table_entries_map,
         d_stage_2_bf_cols,
         d_stage_2_e4_cols,
+        num_stage_2_bf_cols,
+        num_stage_2_e4_cols,
         memory_timestamp_high_from_circuit_idx,
-        num_stage_2_bf_cols as u32,
-        num_stage_2_e4_cols as u32,
-        log_n as u32,
-    );
-    LookupArgsFunction(ab_lookup_args_kernel).launch(&config, &args)?;
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
+    stage2_process_generic_lookup_intermediate_polys(
+        circuit,
+        generic_lookups_args_to_table_entries_map,
+        aggregated_entry_invs_for_generic_lookups,
+        d_stage_2_bf_cols,
+        d_stage_2_e4_cols,
+        num_stage_2_bf_cols,
+        num_stage_2_e4_cols,
+        num_generic_args,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
+    // let block_dim = 128;
+    // let grid_dim = (n as u32 + 127) / 128;
+    // let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    // let args = LookupArgsArguments::new(
+    //     // range_check_16_layout,
+    //     // expressions_layout,
+    //     // expressions_for_shuffle_ram_layout,
+    //     // lazy_init_teardown_layouts_copy,
+    //     setup_cols,
+    //     witness_cols,
+    //     memory_cols,
+    //     aggregated_entry_invs_for_range_check_16,
+    //     aggregated_entry_invs_for_timestamp_range_checks,
+    //     aggregated_entry_invs_for_generic_lookups,
+    //     generic_args_start as u32,
+    //     num_generic_args as u32,
+    //     generic_lookups_args_to_table_entries_map,
+    //     d_stage_2_bf_cols,
+    //     d_stage_2_e4_cols,
+    //     memory_timestamp_high_from_circuit_idx,
+    //     num_stage_2_bf_cols as u32,
+    //     num_stage_2_e4_cols as u32,
+    //     log_n as u32,
+    // );
+    // LookupArgsFunction(ab_lookup_args_kernel).launch(&config, &args)?;
+
     // Pack metadata for memory args
     let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);
     let raw_memory_args_start = circuit

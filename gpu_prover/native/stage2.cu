@@ -159,17 +159,146 @@ EXTERN __launch_bounds__(128, 8) __global__
 }
 
 EXTERN __launch_bounds__(128, 8) __global__
-    void ab_lookup_args_kernel(__grid_constant__ const RangeCheckArgsLayout range_check_16_layout,
-                               __grid_constant__ const FlattenedLookupExpressionsLayout expressions,
-                               __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
-                               __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts, matrix_getter<bf, ld_modifier::cs> setup_cols,
-                               matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> memory_cols,
+    void ab_range_check_16_trivial_checks_kernel(
+                               __grid_constant__ const RangeCheckArgsLayout range_check_16_layout,
+                               matrix_getter<bf, ld_modifier::cs> witness_cols,
                                vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
-                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_timestamp_range_checks,
-                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups, const unsigned generic_args_start,
-                               const unsigned num_generic_args, matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
-                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                               const bf memory_timestamp_high_from_circuit_idx, const unsigned num_stage_2_bf_cols, const unsigned num_stage_2_e4_cols,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= n - 1)
+    return;
+
+  stage_2_bf_cols.add_row(gid);
+  stage_2_e4_cols.add_row(gid);
+  witness_cols.add_row(gid);
+
+  for (unsigned i = 0; i < range_check_16_layout.num_dst_cols; i++) {
+    const unsigned src = 2 * i + range_check_16_layout.src_cols_start;
+    const bf val0 = bf::into_canonical(witness_cols.get_at_col(src));
+    const bf val1 = bf::into_canonical(witness_cols.get_at_col(src + 1));
+    const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
+    const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
+    const auto bf_arg = bf::mul(val0, val1);
+    const auto e4_arg = e4::add(entry0, entry1);
+    stage_2_bf_cols.set_at_col(range_check_16_layout.bf_args_start + i, bf_arg);
+    stage_2_e4_cols.set_at_col(range_check_16_layout.e4_args_start + i, e4_arg);
+  }
+}
+
+
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_range_check_expressions_kernel(
+                               __grid_constant__ const TEMPORARYFlattenedLookupExpressionsLayout expressions,
+                               matrix_getter<bf, ld_modifier::cs> witness_cols,
+                               matrix_getter<bf, ld_modifier::cs> memory_cols,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= n - 1)
+    return;
+
+  stage_2_bf_cols.add_row(gid);
+  stage_2_e4_cols.add_row(gid);
+  witness_cols.add_row(gid);
+  memory_cols.add_row(gid);
+
+  for (unsigned i = 0, expression_idx = 0, flat_term_idx = 0; i < expressions.num_expression_pairs; i++) {
+    bf a_and_b[2];
+    eval_a_and_b<true>(a_and_b, expressions, expression_idx, flat_term_idx, witness_cols, memory_cols, expressions.constant_terms_are_zero);
+    a_and_b[0] = bf::into_canonical(a_and_b[0]);
+    a_and_b[1] = bf::into_canonical(a_and_b[1]);
+    const e4 entry_a = aggregated_entry_invs.get(a_and_b[0].limb);
+    const e4 entry_b = aggregated_entry_invs.get(a_and_b[1].limb);
+    const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
+    const e4 e4_arg = e4::add(entry_a, entry_b);
+    stage_2_bf_cols.set_at_col(expressions.bf_dst_cols[i], bf_arg);
+    stage_2_e4_cols.set_at_col(expressions.e4_dst_cols[i], e4_arg);
+  }
+}
+
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_range_check_expressions_for_shuffle_ram_kernel(
+                               __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
+                               matrix_getter<bf, ld_modifier::cs> setup_cols,
+                               matrix_getter<bf, ld_modifier::cs> witness_cols,
+                               matrix_getter<bf, ld_modifier::cs> memory_cols,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const bf memory_timestamp_high_from_circuit_idx,
+                               const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= n - 1)
+    return;
+
+  stage_2_bf_cols.add_row(gid);
+  stage_2_e4_cols.add_row(gid);
+  setup_cols.add_row(gid);
+  witness_cols.add_row(gid);
+  memory_cols.add_row(gid);
+
+  for (unsigned i = 0, expression_idx = 0, flat_term_idx = 0; i < expressions_for_shuffle_ram.num_expression_pairs; i++) {
+    bf a_and_b[2];
+    eval_a_and_b<true>(a_and_b, expressions_for_shuffle_ram, expression_idx, flat_term_idx, setup_cols, witness_cols, memory_cols);
+    a_and_b[1] = bf::sub(a_and_b[1], memory_timestamp_high_from_circuit_idx);
+    a_and_b[0] = bf::into_canonical(a_and_b[0]);
+    a_and_b[1] = bf::into_canonical(a_and_b[1]);
+    const e4 entry_a = aggregated_entry_invs.get(a_and_b[0].limb);
+    const e4 entry_b = aggregated_entry_invs.get(a_and_b[1].limb);
+    const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
+    const e4 e4_arg = e4::add(entry_a, entry_b);
+    stage_2_bf_cols.set_at_col(expressions_for_shuffle_ram.bf_dst_cols[i], bf_arg);
+    stage_2_e4_cols.set_at_col(expressions_for_shuffle_ram.e4_dst_cols[i], e4_arg);
+  }
+}
+
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_lazy_init_range_checks_kernel(
+                               __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
+                               matrix_getter<bf, ld_modifier::cs> memory_cols,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= n - 1)
+    return;
+
+  stage_2_bf_cols.add_row(gid);
+  stage_2_e4_cols.add_row(gid);
+  memory_cols.add_row(gid);
+
+  for (unsigned i = 0; i < lazy_init_teardown_layouts.num_init_teardown_sets; i++) {
+    const auto &lazy_init_teardown_layout = lazy_init_teardown_layouts.layouts[i];
+    const bf val0 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start));
+    const bf val1 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1));
+    const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
+    const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
+    const auto bf_arg = bf::mul(val0, val1);
+    const auto e4_arg = e4::add(entry0, entry1);
+    stage_2_bf_cols.set_at_col(lazy_init_teardown_layout.bf_arg_col, bf_arg);
+    stage_2_e4_cols.set_at_col(lazy_init_teardown_layout.e4_arg_col, e4_arg);
+  }
+}
+
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_generic_lookup_intermediate_polys_kernel(
+                               matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups,
+                               matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const unsigned generic_args_start,
+                               const unsigned num_generic_args,
+                               const unsigned num_stage_2_bf_cols,
+                               const unsigned num_stage_2_e4_cols,
                                const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -189,91 +318,139 @@ EXTERN __launch_bounds__(128, 8) __global__
     return;
   }
 
-  setup_cols.add_row(gid);
-  witness_cols.add_row(gid);
-  memory_cols.add_row(gid);
   generic_lookups_args_to_table_entries_map.add_row(gid);
 
-  // aggregated_entry_invs loads are uncoalesced e4, but should hit in L2 (or L1 if we're lucky)
-
-  // range check 16 args
-  for (unsigned i = 0; i < range_check_16_layout.num_dst_cols; i++) {
-    const unsigned src = 2 * i + range_check_16_layout.src_cols_start;
-    const bf val0 = bf::into_canonical(witness_cols.get_at_col(src));
-    const bf val1 = bf::into_canonical(witness_cols.get_at_col(src + 1));
-    const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
-    const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
-    const auto bf_arg = bf::mul(val0, val1);
-    const auto e4_arg = e4::add(entry0, entry1);
-    stage_2_bf_cols.set_at_col(range_check_16_layout.bf_args_start + i, bf_arg);
-    stage_2_e4_cols.set_at_col(range_check_16_layout.e4_args_start + i, e4_arg);
-  }
-
-  // Lookup expressions. These don't use setup cols.
-  {
-    unsigned i{0}, expression_idx{0}, flat_term_idx{0};
-    for (; i < expressions.num_range_check_16_expression_pairs; i++) {
-      bf a_and_b[2];
-      eval_a_and_b<true>(a_and_b, expressions, expression_idx, flat_term_idx, witness_cols, memory_cols, expressions.range_check_16_constant_terms_are_zero);
-      a_and_b[0] = bf::into_canonical(a_and_b[0]);
-      a_and_b[1] = bf::into_canonical(a_and_b[1]);
-      const e4 entry_a = aggregated_entry_invs_for_range_check_16.get(a_and_b[0].limb);
-      const e4 entry_b = aggregated_entry_invs_for_range_check_16.get(a_and_b[1].limb);
-      const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
-      const e4 e4_arg = e4::add(entry_a, entry_b);
-      stage_2_bf_cols.set_at_col(expressions.bf_dst_cols[i], bf_arg);
-      stage_2_e4_cols.set_at_col(expressions.e4_dst_cols[i], e4_arg);
-    }
-
-    for (; i < expressions.num_range_check_16_expression_pairs + expressions.num_timestamp_expression_pairs; i++) {
-      bf a_and_b[2];
-      eval_a_and_b<true>(a_and_b, expressions, expression_idx, flat_term_idx, witness_cols, memory_cols, expressions.timestamp_constant_terms_are_zero);
-      a_and_b[0] = bf::into_canonical(a_and_b[0]);
-      a_and_b[1] = bf::into_canonical(a_and_b[1]);
-      const e4 entry_a = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[0].limb);
-      const e4 entry_b = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[1].limb);
-      const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
-      const e4 e4_arg = e4::add(entry_a, entry_b);
-      stage_2_bf_cols.set_at_col(expressions.bf_dst_cols[i], bf_arg);
-      stage_2_e4_cols.set_at_col(expressions.e4_dst_cols[i], e4_arg);
-    }
-  }
-
-  // Lookup expressions for shuffle ram. Unlike the expressions above, these may use setup cols.
-  for (unsigned i = 0, expression_idx = 0, flat_term_idx = 0; i < expressions_for_shuffle_ram.num_expression_pairs; i++) {
-    bf a_and_b[2];
-    eval_a_and_b<true>(a_and_b, expressions_for_shuffle_ram, expression_idx, flat_term_idx, setup_cols, witness_cols, memory_cols);
-    a_and_b[1] = bf::sub(a_and_b[1], memory_timestamp_high_from_circuit_idx);
-    a_and_b[0] = bf::into_canonical(a_and_b[0]);
-    a_and_b[1] = bf::into_canonical(a_and_b[1]);
-    const e4 entry_a = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[0].limb);
-    const e4 entry_b = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[1].limb);
-    const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
-    const e4 e4_arg = e4::add(entry_a, entry_b);
-    stage_2_bf_cols.set_at_col(expressions_for_shuffle_ram.bf_dst_cols[i], bf_arg);
-    stage_2_e4_cols.set_at_col(expressions_for_shuffle_ram.e4_dst_cols[i], e4_arg);
-  }
-
-  // 32-bit lazy init address cols, treated as an extra pair of range check 16 cols
-  for (unsigned i = 0; i < lazy_init_teardown_layouts.num_init_teardown_sets; i++) {
-    const auto &lazy_init_teardown_layout = lazy_init_teardown_layouts.layouts[i];
-    const bf val0 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start));
-    const bf val1 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1));
-    const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
-    const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
-    const auto bf_arg = bf::mul(val0, val1);
-    const auto e4_arg = e4::add(entry0, entry1);
-    stage_2_bf_cols.set_at_col(lazy_init_teardown_layout.bf_arg_col, bf_arg);
-    stage_2_e4_cols.set_at_col(lazy_init_teardown_layout.e4_arg_col, e4_arg);
-  }
-
-  // width-3 generic args with fixed table ids. The map makes this simple.
   for (unsigned i = 0; i < num_generic_args; i++) {
     const unsigned absolute_row_index = generic_lookups_args_to_table_entries_map.get_at_col(i);
     const e4 aggregated_entry_inv = aggregated_entry_invs_for_generic_lookups.get(absolute_row_index);
     stage_2_e4_cols.set_at_col(generic_args_start + i, aggregated_entry_inv);
   }
 }
+
+// EXTERN __launch_bounds__(128, 8) __global__
+//     void ab_lookup_args_kernel(
+//                                // __grid_constant__ const RangeCheckArgsLayout range_check_16_layout,
+//                                // __grid_constant__ const FlattenedLookupExpressionsLayout expressions,
+//                                // __grid_constant__ const FlattenedLookupExpressionsForShuffleRamLayout expressions_for_shuffle_ram,
+//                                // __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
+//                                matrix_getter<bf, ld_modifier::cs> setup_cols,
+//                                matrix_getter<bf, ld_modifier::cs> witness_cols,
+//                                matrix_getter<bf, ld_modifier::cs> memory_cols,
+//                                // vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_range_check_16,
+//                                // vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_timestamp_range_checks,
+//                                vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups,
+//                                const unsigned generic_args_start,
+//                                const unsigned num_generic_args,
+//                                matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
+//                                matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
+//                                vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+//                                const bf memory_timestamp_high_from_circuit_idx,
+//                                const unsigned num_stage_2_bf_cols,
+//                                const unsigned num_stage_2_e4_cols,
+//                                const unsigned log_n) {
+//   const unsigned n = 1u << log_n;
+//   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+//   if (gid >= n)
+//     return;
+// 
+//   stage_2_bf_cols.add_row(gid);
+//   stage_2_e4_cols.add_row(gid);
+// 
+//   // For bf cols, the final row is reserved for c0 = 0 adjustments.
+//   // Here we take the opportunity to zero the final row for all stage 2 arg cols.
+//   if (gid == n - 1) {
+//     for (unsigned i = 0; i < num_stage_2_bf_cols; i++)
+//       stage_2_bf_cols.set_at_col(i, bf::zero());
+//     for (unsigned i = 0; i < num_stage_2_e4_cols; i++)
+//       stage_2_e4_cols.set_at_col(i, e4::zero());
+//     return;
+//   }
+// 
+//   setup_cols.add_row(gid);
+//   witness_cols.add_row(gid);
+//   memory_cols.add_row(gid);
+//   generic_lookups_args_to_table_entries_map.add_row(gid);
+// 
+//   // aggregated_entry_invs loads are uncoalesced e4, but should hit in L2 (or L1 if we're lucky)
+// 
+//   // // range check 16 args
+//   // for (unsigned i = 0; i < range_check_16_layout.num_dst_cols; i++) {
+//   //   const unsigned src = 2 * i + range_check_16_layout.src_cols_start;
+//   //   const bf val0 = bf::into_canonical(witness_cols.get_at_col(src));
+//   //   const bf val1 = bf::into_canonical(witness_cols.get_at_col(src + 1));
+//   //   const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
+//   //   const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
+//   //   const auto bf_arg = bf::mul(val0, val1);
+//   //   const auto e4_arg = e4::add(entry0, entry1);
+//   //   stage_2_bf_cols.set_at_col(range_check_16_layout.bf_args_start + i, bf_arg);
+//   //   stage_2_e4_cols.set_at_col(range_check_16_layout.e4_args_start + i, e4_arg);
+//   // }
+// 
+//   // // Lookup expressions. These don't use setup cols.
+//   // {
+//   //   unsigned i{0}, expression_idx{0}, flat_term_idx{0};
+//   //   for (; i < expressions.num_range_check_16_expression_pairs; i++) {
+//   //     bf a_and_b[2];
+//   //     eval_a_and_b<true>(a_and_b, expressions, expression_idx, flat_term_idx, witness_cols, memory_cols, expressions.range_check_16_constant_terms_are_zero);
+//   //     a_and_b[0] = bf::into_canonical(a_and_b[0]);
+//   //     a_and_b[1] = bf::into_canonical(a_and_b[1]);
+//   //     const e4 entry_a = aggregated_entry_invs_for_range_check_16.get(a_and_b[0].limb);
+//   //     const e4 entry_b = aggregated_entry_invs_for_range_check_16.get(a_and_b[1].limb);
+//   //     const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
+//   //     const e4 e4_arg = e4::add(entry_a, entry_b);
+//   //     stage_2_bf_cols.set_at_col(expressions.bf_dst_cols[i], bf_arg);
+//   //     stage_2_e4_cols.set_at_col(expressions.e4_dst_cols[i], e4_arg);
+//   //   }
+// 
+//   //   for (; i < expressions.num_range_check_16_expression_pairs + expressions.num_timestamp_expression_pairs; i++) {
+//   //     bf a_and_b[2];
+//   //     eval_a_and_b<true>(a_and_b, expressions, expression_idx, flat_term_idx, witness_cols, memory_cols, expressions.timestamp_constant_terms_are_zero);
+//   //     a_and_b[0] = bf::into_canonical(a_and_b[0]);
+//   //     a_and_b[1] = bf::into_canonical(a_and_b[1]);
+//   //     const e4 entry_a = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[0].limb);
+//   //     const e4 entry_b = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[1].limb);
+//   //     const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
+//   //     const e4 e4_arg = e4::add(entry_a, entry_b);
+//   //     stage_2_bf_cols.set_at_col(expressions.bf_dst_cols[i], bf_arg);
+//   //     stage_2_e4_cols.set_at_col(expressions.e4_dst_cols[i], e4_arg);
+//   //   }
+//   // }
+// 
+//   // // Lookup expressions for shuffle ram. Unlike the expressions above, these may use setup cols.
+//   // for (unsigned i = 0, expression_idx = 0, flat_term_idx = 0; i < expressions_for_shuffle_ram.num_expression_pairs; i++) {
+//   //   bf a_and_b[2];
+//   //   eval_a_and_b<true>(a_and_b, expressions_for_shuffle_ram, expression_idx, flat_term_idx, setup_cols, witness_cols, memory_cols);
+//   //   a_and_b[1] = bf::sub(a_and_b[1], memory_timestamp_high_from_circuit_idx);
+//   //   a_and_b[0] = bf::into_canonical(a_and_b[0]);
+//   //   a_and_b[1] = bf::into_canonical(a_and_b[1]);
+//   //   const e4 entry_a = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[0].limb);
+//   //   const e4 entry_b = aggregated_entry_invs_for_timestamp_range_checks.get(a_and_b[1].limb);
+//   //   const bf bf_arg = bf::mul(a_and_b[0], a_and_b[1]);
+//   //   const e4 e4_arg = e4::add(entry_a, entry_b);
+//   //   stage_2_bf_cols.set_at_col(expressions_for_shuffle_ram.bf_dst_cols[i], bf_arg);
+//   //   stage_2_e4_cols.set_at_col(expressions_for_shuffle_ram.e4_dst_cols[i], e4_arg);
+//   // }
+// 
+//   // // 32-bit lazy init address cols, treated as an extra pair of range check 16 cols
+//   // for (unsigned i = 0; i < lazy_init_teardown_layouts.num_init_teardown_sets; i++) {
+//   //   const auto &lazy_init_teardown_layout = lazy_init_teardown_layouts.layouts[i];
+//   //   const bf val0 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start));
+//   //   const bf val1 = bf::into_canonical(memory_cols.get_at_col(lazy_init_teardown_layout.init_address_start + 1));
+//   //   const auto entry0 = aggregated_entry_invs_for_range_check_16.get(val0.limb);
+//   //   const auto entry1 = aggregated_entry_invs_for_range_check_16.get(val1.limb);
+//   //   const auto bf_arg = bf::mul(val0, val1);
+//   //   const auto e4_arg = e4::add(entry0, entry1);
+//   //   stage_2_bf_cols.set_at_col(lazy_init_teardown_layout.bf_arg_col, bf_arg);
+//   //   stage_2_e4_cols.set_at_col(lazy_init_teardown_layout.e4_arg_col, e4_arg);
+//   // }
+// 
+//   // width-3 generic args with fixed table ids. The map makes this simple.
+//   for (unsigned i = 0; i < num_generic_args; i++) {
+//     const unsigned absolute_row_index = generic_lookups_args_to_table_entries_map.get_at_col(i);
+//     const e4 aggregated_entry_inv = aggregated_entry_invs_for_generic_lookups.get(absolute_row_index);
+//     stage_2_e4_cols.set_at_col(generic_args_start + i, aggregated_entry_inv);
+//   }
+// }
 
 EXTERN __launch_bounds__(128, 8) __global__
     void ab_shuffle_ram_memory_args_kernel(__grid_constant__ const MemoryChallenges challenges, __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,

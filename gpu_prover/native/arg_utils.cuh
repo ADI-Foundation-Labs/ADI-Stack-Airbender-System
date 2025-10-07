@@ -76,6 +76,18 @@ constexpr unsigned MAX_EXPRESSIONS = 2 * MAX_EXPRESSION_PAIRS;
 constexpr unsigned MAX_TERMS_PER_EXPRESSION = 4;
 constexpr unsigned MAX_EXPRESSION_TERMS = MAX_TERMS_PER_EXPRESSION * MAX_EXPRESSIONS;
 
+// Temporary for stage 2 refactor, until I can also use it for stage 3.
+struct TEMPORARYFlattenedLookupExpressionsLayout {
+  const unsigned coeffs[MAX_EXPRESSION_TERMS];
+  const u16 col_idxs[MAX_EXPRESSION_TERMS];
+  const bf constant_terms[MAX_EXPRESSIONS];
+  const u8 num_terms_per_expression[MAX_EXPRESSIONS];
+  const u8 bf_dst_cols[MAX_EXPRESSION_PAIRS];
+  const u8 e4_dst_cols[MAX_EXPRESSION_PAIRS];
+  const unsigned num_expression_pairs;
+  const bool constant_terms_are_zero;
+};
+
 struct FlattenedLookupExpressionsLayout {
   const unsigned coeffs[MAX_EXPRESSION_TERMS];
   const u16 col_idxs[MAX_EXPRESSION_TERMS];
@@ -146,6 +158,27 @@ DEVICE_FORCEINLINE void apply_coeff(const unsigned coeff, bf &val) {
   }
 }
 
+template <bool APPLY_CONSTANT_TERMS, typename T>
+DEVICE_FORCEINLINE void eval_a_and_b(bf a_and_b[2], const TEMPORARYFlattenedLookupExpressionsLayout &expressions, unsigned &expression_idx, unsigned &flat_term_idx,
+                                     const T &witness_cols, const T &memory_cols, const bool constant_terms_are_zero) {
+#pragma unroll
+  for (int j = 0; j < 2; j++, expression_idx++) {
+    const unsigned lim = flat_term_idx + expressions.num_terms_per_expression[expression_idx];
+    a_and_b[j] = get_witness_or_memory(expressions.col_idxs[flat_term_idx], witness_cols, memory_cols);
+    apply_coeff(expressions.coeffs[flat_term_idx], a_and_b[j]);
+    flat_term_idx++;
+    for (; flat_term_idx < lim; flat_term_idx++) {
+      bf val = get_witness_or_memory(expressions.col_idxs[flat_term_idx], witness_cols, memory_cols);
+      apply_coeff(expressions.coeffs[flat_term_idx], val);
+      a_and_b[j] = bf::add(a_and_b[j], val);
+    }
+    if (APPLY_CONSTANT_TERMS && !constant_terms_are_zero) {
+      a_and_b[j] = bf::add(a_and_b[j], expressions.constant_terms[expression_idx]);
+    }
+  }
+}
+
+// Temporary to support stage 3 while im refactoring stage 2
 template <bool APPLY_CONSTANT_TERMS, typename T>
 DEVICE_FORCEINLINE void eval_a_and_b(bf a_and_b[2], const FlattenedLookupExpressionsLayout &expressions, unsigned &expression_idx, unsigned &flat_term_idx,
                                      const T &witness_cols, const T &memory_cols, const bool constant_terms_are_zero) {

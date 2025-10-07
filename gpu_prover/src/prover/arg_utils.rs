@@ -287,8 +287,123 @@ impl ColTypeFlags {
     pub const SETUP: u16 = 1 << 15;
 }
 
+#[derive(Clone)]
+#[repr(C)]
+pub struct TEMPORARYFlattenedLookupExpressionsLayout {
+    pub coeffs: [u32; MAX_EXPRESSION_TERMS],
+    pub col_idxs: [u16; MAX_EXPRESSION_TERMS],
+    pub constant_terms: [BF; MAX_EXPRESSIONS],
+    pub num_terms_per_expression: [u8; MAX_EXPRESSIONS],
+    pub bf_dst_cols: [u8; MAX_EXPRESSION_PAIRS],
+    pub e4_dst_cols: [u8; MAX_EXPRESSION_PAIRS],
+    pub num_expression_pairs: u32,
+    pub constant_terms_are_zero: bool,
+}
+
+impl TEMPORARYFlattenedLookupExpressionsLayout {
+    pub fn new<F: Fn(usize) -> usize>(
+        expression_pairs: &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+        num_stage_2_bf_cols: usize,
+        num_stage_2_e4_cols: usize,
+        expect_constant_terms_are_zero: bool,
+        translate_e4_offset: &F,
+    ) -> Self {
+        assert!(expression_pairs.len() < MAX_EXPRESSION_PAIRS);
+        let mut coeffs = [0 as u32; MAX_EXPRESSION_TERMS];
+        let mut col_idxs = [0 as u16; MAX_EXPRESSION_TERMS];
+        let mut constant_terms = [BF::ZERO; MAX_EXPRESSIONS];
+        let mut num_terms_per_expression = [0 as u8; MAX_EXPRESSIONS];
+        let mut bf_dst_cols = [0 as u8; MAX_EXPRESSION_PAIRS];
+        let mut e4_dst_cols = [0 as u8; MAX_EXPRESSION_PAIRS];
+        let mut constant_terms_are_zero: bool = true;
+        let mut expression_idx: usize = 0;
+        let mut flat_term_idx: usize = 0;
+        let mut stash_expr = |expr: &LookupExpression<BF>,
+                              expression_idx: &mut usize,
+                              flat_term_idx: &mut usize,
+                              constant_terms_are_zero: &mut bool| {
+            let LookupExpression::Expression(a) = expr else {
+                unreachable!()
+            };
+            let num_terms = a.linear_terms.len();
+            assert!(num_terms > 0);
+            assert!(num_terms <= MAX_TERMS_PER_EXPRESSION);
+            if expect_constant_terms_are_zero {
+                assert_eq!(a.constant_term, BF::ZERO);
+            } else {
+                if a.constant_term != BF::ZERO {
+                    *constant_terms_are_zero = false;
+                }
+                constant_terms[*expression_idx] = a.constant_term;
+            };
+            num_terms_per_expression[*expression_idx] = u8::try_from(num_terms).unwrap();
+            for (coeff, column_address) in a.linear_terms.iter() {
+                coeffs[*flat_term_idx] = coeff.0;
+                col_idxs[*flat_term_idx] = match column_address {
+                    ColumnAddress::WitnessSubtree(col) => *col as u16,
+                    ColumnAddress::MemorySubtree(col) => (*col as u16) | ColTypeFlags::MEMORY,
+                    _ => panic!(
+                        "Non-shuffle-ram expressions are expected to use witness and memory cols only",
+                    ),
+                };
+                *flat_term_idx = *flat_term_idx + 1;
+            }
+            *expression_idx = *expression_idx + 1;
+        };
+        let mut i = 0; // expression pair idx
+        for lookup_set in expression_pairs.iter() {
+            stash_expr(
+                &lookup_set.a_expr,
+                &mut expression_idx,
+                &mut flat_term_idx,
+                &mut constant_terms_are_zero,
+            );
+            stash_expr(
+                &lookup_set.b_expr,
+                &mut expression_idx,
+                &mut flat_term_idx,
+                &mut constant_terms_are_zero,
+            );
+            let bf_dst_col = lookup_set.base_field_quadratic_oracle_col;
+            assert!(bf_dst_col < num_stage_2_bf_cols);
+            bf_dst_cols[i] = u8::try_from(bf_dst_col).unwrap();
+            let e4_dst_col = translate_e4_offset(lookup_set.ext4_field_inverses_columns_start);
+            assert!(e4_dst_col < num_stage_2_e4_cols);
+            e4_dst_cols[i] = u8::try_from(e4_dst_col).unwrap();
+            i += 1;
+        }
+        // assert_eq!(timestamp_constant_terms_are_zero, true); // just testing a theory
+        Self {
+            coeffs,
+            col_idxs,
+            constant_terms,
+            num_terms_per_expression,
+            bf_dst_cols,
+            e4_dst_cols,
+            num_expression_pairs: expression_pairs.len() as u32,
+            constant_terms_are_zero,
+        }
+    }
+}
+
+impl Default for TEMPORARYFlattenedLookupExpressionsLayout {
+    fn default() -> Self {
+        Self {
+            coeffs: [0; MAX_EXPRESSION_TERMS],
+            col_idxs: [0; MAX_EXPRESSION_TERMS],
+            constant_terms: [BF::ZERO; MAX_EXPRESSIONS],
+            num_terms_per_expression: [0; MAX_EXPRESSIONS],
+            bf_dst_cols: [0; MAX_EXPRESSION_PAIRS],
+            e4_dst_cols: [0; MAX_EXPRESSION_PAIRS],
+            num_expression_pairs: 0,
+            constant_terms_are_zero: true,
+        }
+    }
+}
+
 // We expect (and assert) that non-shuffle-ram expressions have constant_term = 0
 // and use only memory and witness (not setup) columns.
+// temporary, to support stage 3 while i refactor stage 2
 #[derive(Clone)]
 #[repr(C)]
 pub struct FlattenedLookupExpressionsLayout {
@@ -304,8 +419,6 @@ pub struct FlattenedLookupExpressionsLayout {
     pub timestamp_constant_terms_are_zero: bool,
 }
 
-// I could make separate instances for the range check 16 and timestamp expressions,
-// but flattening them both together is more space-efficient and not too difficult.
 impl FlattenedLookupExpressionsLayout {
     pub fn new<F: Fn(usize) -> usize>(
         range_check_16_expression_pairs: &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
