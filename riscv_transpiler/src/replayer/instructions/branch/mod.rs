@@ -9,8 +9,7 @@ pub(crate) fn branch<C: Counters, R: RAM>(
 ) {
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
-    let rd = 0;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, 0, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, 0, &mut 0);
 
     let jump_address = state.pc.wrapping_add(instr.imm);
     // do unsigned comparison and then resolve it
@@ -40,7 +39,7 @@ pub(crate) fn branch<C: Counters, R: RAM>(
             rs1_value,
             rs2_value,
             rd_old_value,
-            rd_value: rd,
+            rd_value: 0,
             new_pc: jump_address,
             delegation_type: 0,
         },

@@ -14,6 +14,10 @@ pub(crate) fn sw<C: Counters, R: RAM>(
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2);
     let address = rs1_value.wrapping_add(instr.imm);
+    debug_assert!(address % 4 == 0);
+    // if address == 0x041eff8c {
+    //     panic!("{:?}", state);
+    // }
     let (ram_timestamp, ram_old_value) = ram.write_word(address, rs2_value, state.timestamp | 2);
 
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
@@ -47,10 +51,11 @@ pub(crate) fn lw<C: Counters, R: RAM>(
 ) {
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
+    debug_assert!(address % 4 == 0);
     // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
     let (ram_timestamp, ram_old_value) = ram.read_word(address, state.timestamp | 1);
-    let rd = ram_old_value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = ram_old_value;
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value
@@ -86,6 +91,7 @@ pub(crate) fn sh<C: Counters, R: RAM>(
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2);
     let address = rs1_value.wrapping_add(instr.imm);
+    debug_assert!(address % 2 == 0);
     let aligned_address = address & !3;
     let value = rs2_value & 0x0000_ffff;
     let existing_value = ram.peek_word(aligned_address);
@@ -175,6 +181,7 @@ pub(crate) fn lh<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
 ) {
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
+    debug_assert!(address % 4 == 0);
     let aligned_address = address & !3;
     // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
     let (ram_timestamp, ram_old_value) = ram.read_word(aligned_address, state.timestamp | 1);
@@ -182,8 +189,8 @@ pub(crate) fn lh<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
     if SIGN_EXTEND {
         value = (((value as u16) as i16) as i32) as u32;
     }
-    let rd = value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = value;
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value
@@ -225,8 +232,8 @@ pub(crate) fn lb<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
     if SIGN_EXTEND {
         value = (((value as u8) as i8) as i32) as u32;
     }
-    let rd = value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = value;
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value

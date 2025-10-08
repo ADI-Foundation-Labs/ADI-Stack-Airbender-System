@@ -9,8 +9,8 @@ pub(crate) fn jal<C: Counters, R: RAM>(
 ) {
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
-    let rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     let jump_address = state.pc.wrapping_add(instr.imm);
 
@@ -43,8 +43,8 @@ pub(crate) fn jalr<C: Counters, R: RAM>(
 ) {
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
-    let rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     let jump_address = rs1_value.wrapping_add(instr.imm) & !0x1;
 

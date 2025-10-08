@@ -24,9 +24,11 @@ pub(crate) fn read_register_with_ts<C: Counters, const TIMESTAMP_OFFSET: Timesta
 ) -> (u32, TimestampScalar) {
     unsafe {
         let reg = state.registers.get_unchecked_mut(reg_idx as usize);
-        debug_assert!(reg.timestamp < (state.timestamp | TIMESTAMP_OFFSET));
+        let existing_value = reg.value;
+        let ts = reg.timestamp;
+        debug_assert!(ts < (state.timestamp | TIMESTAMP_OFFSET));
         reg.timestamp = state.timestamp | TIMESTAMP_OFFSET;
-        (reg.value, reg.timestamp)
+        (existing_value, ts)
     }
 }
 
@@ -34,18 +36,18 @@ pub(crate) fn read_register_with_ts<C: Counters, const TIMESTAMP_OFFSET: Timesta
 pub(crate) fn write_register_with_ts<C: Counters, const TIMESTAMP_OFFSET: TimestampScalar>(
     state: &mut State<C>,
     reg_idx: u8,
-    mut value: u32,
+    value: &mut u32,
 ) -> (u32, TimestampScalar) {
     unsafe {
         if reg_idx == 0 {
-            value = 0;
+            *value = 0;
         }
         let reg = state.registers.get_unchecked_mut(reg_idx as usize);
         debug_assert!(reg.timestamp < (state.timestamp | TIMESTAMP_OFFSET));
         let existing_value = reg.value;
         let ts = reg.timestamp;
         reg.timestamp = state.timestamp | TIMESTAMP_OFFSET;
-        reg.value = value;
+        reg.value = *value;
 
         (existing_value, ts)
     }

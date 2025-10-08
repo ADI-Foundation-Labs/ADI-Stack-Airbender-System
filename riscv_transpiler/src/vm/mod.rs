@@ -100,6 +100,18 @@ impl<R: RAM> NonDeterminismCSRSource<R> for () {
     fn write_with_memory_access(&mut self, _ram: &R, _value: u32) {}
 }
 
+impl<R: RAM> NonDeterminismCSRSource<R>
+    for risc_v_simulator::abstractions::non_determinism::QuasiUARTSource
+{
+    fn read(&mut self) -> u32 {
+        self.oracle.pop_front().unwrap_or_default()
+    }
+
+    fn write_with_memory_access(&mut self, _ram: &R, value: u32) {
+        self.write_state.process_write(value);
+    }
+}
+
 pub struct VM<C: Counters> {
     pub state: State<C>,
 }
@@ -250,11 +262,11 @@ impl<C: Counters> VM<C> {
                         }
                         _ => core::hint::unreachable_unchecked(),
                     }
+                    state.timestamp += TIMESTAMP_STEP;
                     if state.pc == pc {
                         snapshotter.take_snapshot(&*state);
                         return;
                     }
-                    state.timestamp += TIMESTAMP_STEP;
                 }
             }
 

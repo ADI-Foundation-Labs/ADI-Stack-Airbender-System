@@ -14,8 +14,8 @@ pub(crate) fn mop_addmod<C: Counters, R: RAM>(
     let mut operand_1 = Mersenne31Field::from_nonreduced_u32(rs1_value);
     let operand_2 = Mersenne31Field::from_nonreduced_u32(rs2_value);
     operand_1.add_assign(&operand_2);
-    let rd = operand_1.to_reduced_u32();
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = operand_1.to_reduced_u32();
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -49,8 +49,8 @@ pub(crate) fn mop_submod<C: Counters, R: RAM>(
     let mut operand_1 = Mersenne31Field::from_nonreduced_u32(rs1_value);
     let operand_2 = Mersenne31Field::from_nonreduced_u32(rs2_value);
     operand_1.sub_assign(&operand_2);
-    let rd = operand_1.to_reduced_u32();
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = operand_1.to_reduced_u32();
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -84,8 +84,8 @@ pub(crate) fn mop_mulmod<C: Counters, R: RAM>(
     let mut operand_1 = Mersenne31Field::from_nonreduced_u32(rs1_value);
     let operand_2 = Mersenne31Field::from_nonreduced_u32(rs2_value);
     operand_1.mul_assign(&operand_2);
-    let rd = operand_1.to_reduced_u32();
-    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
+    let mut rd = operand_1.to_reduced_u32();
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {

@@ -32,6 +32,6 @@ pub(crate) fn branch<C: Counters, S: Snapshotter<C>, R: RAM>(
     } else {
         default_increase_pc::<C>(state);
     }
-    write_register::<C, 2>(state, 0, 0);
+    write_register::<C, 2>(state, 0, &mut 0);
     increment_family_counter::<C, JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX>(state);
 }

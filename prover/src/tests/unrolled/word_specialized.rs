@@ -27,27 +27,30 @@ const INITIAL_PC: u32 = 0;
 const NUM_INIT_AND_TEARDOWN_SETS: usize = 16;
 const NUM_DELEGATION_CYCLES: usize = (1 << 20) - 1;
 
-unsafe fn read_u32(trace_row: &[Mersenne31Field], columns: ColumnSet<2>) -> u32 {
+pub(crate) unsafe fn read_u32(trace_row: &[Mersenne31Field], columns: ColumnSet<2>) -> u32 {
     let low = trace_row[columns.start()].to_reduced_u32();
     let high = trace_row[columns.start() + 1].to_reduced_u32();
 
     (high << 16) | low
 }
 
-unsafe fn read_u16(trace_row: &[Mersenne31Field], columns: ColumnSet<1>) -> u16 {
+pub(crate) unsafe fn read_u16(trace_row: &[Mersenne31Field], columns: ColumnSet<1>) -> u16 {
     let low = trace_row[columns.start()].to_reduced_u32();
 
     low as u16
 }
 
-unsafe fn read_timestamp(trace_row: &[Mersenne31Field], columns: ColumnSet<2>) -> TimestampScalar {
+pub(crate) unsafe fn read_timestamp(
+    trace_row: &[Mersenne31Field],
+    columns: ColumnSet<2>,
+) -> TimestampScalar {
     let low = trace_row[columns.start()].to_reduced_u32();
     let high = trace_row[columns.start() + 1].to_reduced_u32();
 
     ((high as TimestampScalar) << TIMESTAMP_COLUMNS_NUM_BITS) | (low as TimestampScalar)
 }
 
-unsafe fn parse_state_permutation_elements(
+pub(crate) unsafe fn parse_state_permutation_elements(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     trace_row: &[Mersenne31Field],
     write_set: &mut BTreeSet<(u32, TimestampScalar)>,
@@ -80,7 +83,7 @@ unsafe fn parse_state_permutation_elements(
     }
 }
 
-unsafe fn parse_shuffle_ram_accesses(
+pub(crate) unsafe fn parse_shuffle_ram_accesses(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     trace_row: &[Mersenne31Field],
     write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
@@ -146,7 +149,7 @@ unsafe fn parse_shuffle_ram_accesses(
     }
 }
 
-unsafe fn parse_delegation_ram_accesses(
+pub(crate) unsafe fn parse_delegation_ram_accesses(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     trace_row: &[Mersenne31Field],
     write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
@@ -296,7 +299,7 @@ unsafe fn parse_delegation_ram_accesses(
     }
 }
 
-fn parse_state_permutation_elements_from_full_trace<const N: usize>(
+pub(crate) fn parse_state_permutation_elements_from_full_trace<const N: usize>(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     witness: &WitnessEvaluationDataForExecutionFamily<N, Global>,
     write_set: &mut BTreeSet<(u32, TimestampScalar)>,
@@ -314,7 +317,7 @@ fn parse_state_permutation_elements_from_full_trace<const N: usize>(
     }
 }
 
-fn parse_shuffle_ram_accesses_from_full_trace<const N: usize>(
+pub(crate) fn parse_shuffle_ram_accesses_from_full_trace<const N: usize>(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     witness: &WitnessEvaluationDataForExecutionFamily<N, Global>,
     write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
@@ -332,7 +335,7 @@ fn parse_shuffle_ram_accesses_from_full_trace<const N: usize>(
     }
 }
 
-fn parse_delegation_ram_accesses_from_full_trace<const N: usize>(
+pub(crate) fn parse_delegation_ram_accesses_from_full_trace<const N: usize>(
     compiled_circuit: &CompiledCircuitArtifact<Mersenne31Field>,
     witness: &WitnessEvaluationData<N, Global>,
     write_set: &mut BTreeSet<(bool, u32, TimestampScalar, u32)>,
@@ -834,6 +837,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         }
         assert!(proof.delegation_argument_accumulator.is_none());
 
+        dbg!(proof.witness_tree_caps[0].cap[0]);
+
         serialize_to_file(&proof, "add_sub_lui_auipc_mop_unrolled_proof.json");
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
@@ -966,6 +971,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         }
         assert!(proof.delegation_argument_accumulator.is_none());
 
+        dbg!(proof.witness_tree_caps[0].cap[0]);
+
         serialize_to_file(&proof, "jump_branch_slt_unrolled_proof.json");
 
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
@@ -1015,6 +1022,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             decoder_table: witness_gen_data,
             default_pc_value_in_padding: 4,
         };
+
+        dbg!(oracle.inner[2]);
 
         let is_empty = oracle.inner.is_empty();
 
@@ -1124,6 +1133,8 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         delegation_argument_accumulator.add_assign(&proof.delegation_argument_accumulator.unwrap());
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
+
+    panic!();
 
     if true {
         println!("Will try to prove MUL/DIV circuit");

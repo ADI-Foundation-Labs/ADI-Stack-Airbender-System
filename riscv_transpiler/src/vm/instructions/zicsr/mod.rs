@@ -10,10 +10,10 @@ pub(crate) fn nd_read<C: Counters, S: Snapshotter<C>, R: RAM, ND: NonDeterminism
 ) {
     let _rs1_value = read_register::<C, 0>(state, instr.rs1);
     let _rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
-    let rd = nd.read();
+    let mut rd = nd.read();
     snapshotter.append_non_determinism_read(rd);
     state.counters.bump_non_determinism();
-    write_register::<C, 2>(state, instr.rd, rd);
+    write_register::<C, 2>(state, instr.rd, &mut rd);
     default_increase_pc::<C>(state);
     increment_family_counter::<C, SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX>(state);
 }
@@ -29,7 +29,7 @@ pub(crate) fn nd_write<C: Counters, S: Snapshotter<C>, R: RAM, ND: NonDeterminis
     let rs1_value = read_register::<C, 0>(state, instr.rs1);
     let _rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
     nd.write_with_memory_access(&*ram, rs1_value);
-    write_register::<C, 2>(state, instr.rd, 0);
+    write_register::<C, 2>(state, instr.rd, &mut 0);
     default_increase_pc::<C>(state);
     increment_family_counter::<C, SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX>(state);
 }
@@ -44,7 +44,7 @@ pub(crate) fn call_delegation<C: Counters, S: Snapshotter<C>, R: RAM>(
     // NOTE: we still need to touch registers
     let _rs1_value = read_register::<C, 0>(state, instr.rs1);
     let _rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
-    write_register::<C, 2>(state, instr.rd, 0);
+    write_register::<C, 2>(state, instr.rd, &mut 0);
     // and then trigger delegation
     match instr.imm {
         a if a == DelegationType::BigInt as u32 => {

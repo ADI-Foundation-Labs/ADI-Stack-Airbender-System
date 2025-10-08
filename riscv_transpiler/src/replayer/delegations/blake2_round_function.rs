@@ -108,5 +108,5 @@ pub(crate) fn blake2_round_function_call<C: Counters, R: RAM>(
 
     tracer.write_delegation::<{common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as u16}, _, _, _, _>(witness);
 
-    state.counters.bump_blake2_round_function();
+    // state.counters.bump_blake2_round_function();
 }

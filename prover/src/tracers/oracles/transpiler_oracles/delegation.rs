@@ -22,7 +22,7 @@ pub struct DelegationOracle<
 
 pub type BigintDelegationOracle<'a> = DelegationOracle<'a, BigintAbiDescription, 3, 8, 8, 0>;
 pub type Blake2sDelegationOracle<'a> =
-    DelegationOracle<'a, Blake2sRoundFunctionAbiDescription, 3, 8, 8, 0>;
+    DelegationOracle<'a, Blake2sRoundFunctionAbiDescription, 4, 16, 24, 0>;
 
 impl<
         'a,

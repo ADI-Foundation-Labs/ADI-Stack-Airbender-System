@@ -91,7 +91,7 @@ pub(crate) fn bigint_call<C: Counters, S: Snapshotter<C>, R: RAM>(
     let (result, of) = bigint_impl(a, b, x12);
 
     // write back
-    write_register::<C, 3>(state, 12, of as u32);
+    write_register::<C, 3>(state, 12, &mut (of as u32));
     write_back_u256::<C, S, R>(x10, ram, snapshotter, write_ts, &result);
 
     state.counters.bump_bigint();

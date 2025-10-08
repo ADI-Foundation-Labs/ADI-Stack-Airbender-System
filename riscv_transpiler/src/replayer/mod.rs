@@ -38,6 +38,7 @@ impl<'a, const ROM_BOUND_SECOND_WORD_BITS: usize> RAM
         }
     }
 
+    #[track_caller]
     #[inline(always)]
     fn read_word(&mut self, address: u32, timestamp: TimestampScalar) -> (TimestampScalar, u32) {
         debug_assert_eq!(address % 4, 0);
@@ -45,9 +46,11 @@ impl<'a, const ROM_BOUND_SECOND_WORD_BITS: usize> RAM
         unsafe {
             let (value, (low, high)) = *self.ram_log.get_unchecked(0);
             self.ram_log = core::mem::transmute(self.ram_log.get_unchecked(1..));
-            let read_ts = (low as TimestampScalar) | ((high as TimestampScalar) << 32);
-            debug_assert!(read_ts < timestamp);
-            (read_ts, value)
+            let read_timestamp = (low as TimestampScalar) | ((high as TimestampScalar) << 32);
+            debug_assert!(read_timestamp < timestamp, "trying to read replay log at address 0x{:08x} with timestamp {}, but read timestamp is {}", address, timestamp, read_timestamp);
+
+            // println!("Read at address 0x{:08x} at timestamp {} into value {} and read timestamp {}", address, timestamp, value, read_timestamp);
+            (read_timestamp, value)
         }
     }
 
@@ -71,11 +74,13 @@ impl<'a, const ROM_BOUND_SECOND_WORD_BITS: usize> RAM
         debug_assert_eq!(address % 4, 0);
         debug_assert!(self.ram_log.len() > 0);
         unsafe {
-            let (value, (low, high)) = *self.ram_log.get_unchecked(0);
+            let (old_value, (low, high)) = *self.ram_log.get_unchecked(0);
             self.ram_log = core::mem::transmute(self.ram_log.get_unchecked(1..));
-            let read_ts = (low as TimestampScalar) | ((high as TimestampScalar) << 32);
-            debug_assert!(read_ts < timestamp);
-            (read_ts, value)
+            let read_timestamp = (low as TimestampScalar) | ((high as TimestampScalar) << 32);
+            debug_assert!(read_timestamp < timestamp, "trying to write replay log at address 0x{:08x} with timestamp {}, but read timestamp is {}", address, timestamp, read_timestamp);
+
+            // println!("Write at address 0x{:08x} at timestamp {} of value {} into value {} and read timestamp {}", address, timestamp, _word, old_value, read_timestamp);
+            (read_timestamp, old_value)
         }
     }
 }
