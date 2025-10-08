@@ -7,6 +7,9 @@ use super::unrolled_prover::stage_2_shared::{
     stage2_process_lazy_init_range_checks,
     stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution,
     stage2_process_generic_lookup_intermediate_polys,
+    stage2_process_range_check_16_entry_invs_and_multiplicity,
+    stage2_process_timestamp_range_check_entry_invs_and_multiplicity,
+    stage2_process_generic_lookup_entry_invs_and_multiplicity,
 };
 use crate::device_structures::{
     DeviceMatrix, DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
@@ -37,46 +40,6 @@ type BF = BaseField;
 type E4 = Ext4Field;
 
 cuda_kernel!(
-    RangeCheckAggregatedEntryInvsAndMultiplicitiesArg,
-    range_check_aggregated_entry_invs_and_multiplicities_arg,
-    lookup_challenges: *const LookupChallenges,
-    witness_cols: PtrAndStride<BF>,
-    setup_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    aggregated_entry_invs: *mut E4,
-    start_col_in_setup: u32,
-    multiplicities_src_cols_start: u32,
-    multiplicities_dst_cols_start: u32,
-    num_multiplicities_cols: u32,
-    num_table_rows_tail: u32,
-    log_n: u32,
-);
-
-range_check_aggregated_entry_invs_and_multiplicities_arg!(
-    ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel
-);
-
-cuda_kernel!(
-    GenericAggregatedEntryInvsAndMultiplicitiesArg,
-    generic_aggregated_entry_invs_and_multiplicities_arg,
-    lookup_challenges: *const LookupChallenges,
-    witness_cols: PtrAndStride<BF>,
-    setup_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    aggregated_entry_invs: *mut E4,
-    start_col_in_setup: u32,
-    multiplicities_src_cols_start: u32,
-    multiplicities_dst_cols_start: u32,
-    num_multiplicities_cols: u32,
-    num_table_rows_tail: u32,
-    log_n: u32,
-);
-
-generic_aggregated_entry_invs_and_multiplicities_arg!(
-    ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel
-);
-
-cuda_kernel!(
     DelegationAuxPoly,
     delegation_aux_poly,
     delegation_challenge: DelegationChallenges,
@@ -92,43 +55,6 @@ cuda_kernel!(
 
 delegation_aux_poly!(ab_delegation_aux_poly_kernel);
 
-// cuda_kernel!(
-//     LookupArgs,
-//     lookup_args,
-//     // expressions: FlattenedLookupExpressionsLayout,
-//     // expressions_for_shuffle_ram: FlattenedLookupExpressionsForShuffleRamLayout,
-//     // lazy_init_teardown_layouts: LazyInitTeardownLayouts,
-//     setup_cols: PtrAndStride<BF>,
-//     witness_cols: PtrAndStride<BF>,
-//     memory_cols: PtrAndStride<BF>,
-//     aggregated_entry_invs_for_range_check_16: *const E4,
-//     aggregated_entry_invs_for_timestamp_range_checks: *const E4,
-//     aggregated_entry_invs_for_generic_lookups: *const E4,
-//     generic_args_start: u32,
-//     num_generic_args: u32,
-//     generic_lookups_args_to_table_entries_map: PtrAndStride<u32>,
-//     stage_2_bf_cols: MutPtrAndStride<BF>,
-//     stage_2_e4_cols: MutPtrAndStride<BF>,
-//     memory_timestamp_high_from_circuit_idx: BF,
-//     num_stage_2_bf_cols: u32,
-//     num_stage_2_e4_cols: u32,
-//     log_n: u32,
-// );
-// 
-// lookup_args!(ab_lookup_args_kernel);
-
-// Q: Why not use a unified memory and lookup args kernel?
-// Possible advantages of unified kernel:
-//   - Lookup args are probably memory bound and memory args are probably compute bound,
-//     so putting them in one kernel might use resources more evenly.
-//   - They both read 2 BF "lazy init address" cols. Unification allows avoiding this (small)
-//     redundant load.
-// Possible disadvantage of unified kernel:
-//   - Lookup args want aggregated_entry_invs to persist in L2 as much as possible.
-//     Unrelated memory arg traffic could hurt the persistence.
-// Turns out it's a wash: I tried a unified kernel and its runtime was roughly
-// equal to the total runtime of the two separate kernels, at least on L4.
-// I decided to just keep the kernels separate for organizational clarity.
 cuda_kernel!(
     ShuffleRamMemoryArgs,
     shuffle_ram_memory_args,
@@ -271,8 +197,6 @@ pub fn compute_stage_2_args_on_main_domain(
     let num_setup_cols = circuit.setup_layout.total_width;
     let num_witness_cols = circuit.witness_layout.total_width;
     let num_memory_cols = circuit.memory_layout.total_width;
-    // NB: num_generic_args might be 0.
-    // Subsequent code should handle that case gracefully (I hope)
     let num_generic_args = circuit
         .stage_2_layout
         .intermediate_polys_for_generic_lookup
@@ -475,95 +399,49 @@ pub fn compute_stage_2_args_on_main_domain(
     let aggregated_entry_invs_for_generic_lookups =
         aggregated_entry_invs_for_generic_lookups.as_mut_ptr();
     let lookup_challenges = lookup_challenges.as_ptr();
-    // range check table values are just row indexes,
-    // so i don't need to read their setup entries
-    let dummy_setup_column = 0;
-    let num_range_check_16_rows = 1 << 16;
-    assert!(num_range_check_16_rows < n); // just in case
-    let num_range_check_16_multiplicities_cols = 1;
-    let range_check_16_multiplicities_dst_col =
-        translate_e4_offset(range_check_16_multiplicities_dst);
-    let block_dim = WARP_SIZE * 4;
-    let grid_dim = (n as u32 + block_dim - 1) / block_dim;
-    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-    let args = RangeCheckAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
+
+    stage2_process_range_check_16_entry_invs_and_multiplicity(
         lookup_challenges,
-        witness_cols,
         setup_cols,
-        d_stage_2_e4_cols,
+        witness_cols,
         aggregated_entry_invs_for_range_check_16,
-        dummy_setup_column,
-        range_check_16_multiplicities_src as u32,
-        range_check_16_multiplicities_dst_col as u32,
-        num_range_check_16_multiplicities_cols as u32,
-        num_range_check_16_rows as u32,
-        log_n as u32,
-    );
-    RangeCheckAggregatedEntryInvsAndMultiplicitiesArgFunction(
-        ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel,
-    )
-    .launch(&config, &args)?;
-    let num_timestamp_range_check_rows = 1 << TIMESTAMP_COLUMNS_NUM_BITS;
-    assert!(num_timestamp_range_check_rows < n); // just in case
-    let num_timestamp_multiplicities_cols = 1;
-    let timestamp_range_check_multiplicities_dst_col =
-        translate_e4_offset(timestamp_range_check_multiplicities_dst);
-    let block_dim = WARP_SIZE * 4;
-    let grid_dim = (n as u32 + block_dim - 1) / block_dim;
-    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-    let args = RangeCheckAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
-        lookup_challenges,
-        witness_cols,
-        setup_cols,
         d_stage_2_e4_cols,
+        range_check_16_multiplicities_src,
+        range_check_16_multiplicities_dst,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
+    stage2_process_timestamp_range_check_entry_invs_and_multiplicity(
+        lookup_challenges,
+        setup_cols,
+        witness_cols,
         aggregated_entry_invs_for_timestamp_range_checks,
-        dummy_setup_column,
-        timestamp_range_check_multiplicities_src as u32,
-        timestamp_range_check_multiplicities_dst_col as u32,
-        num_timestamp_multiplicities_cols as u32,
-        num_timestamp_range_check_rows as u32,
-        log_n as u32,
-    );
-    RangeCheckAggregatedEntryInvsAndMultiplicitiesArgFunction(
-        ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel,
-    )
-    .launch(&config, &args)?;
-    if num_generic_table_rows > 0 {
-        // In theory the following assert is not a hard requirement:
-        // a circuit could have a non-empty width-3 table but not actually
-        // use it to create any args. But such a circuit wouldn't make sense,
-        // and we don't expect our circuits to be like that in practice.
-        assert!(num_generic_args > 0);
-        let generic_lookup_multiplicities_dst_cols_start =
-            translate_e4_offset(generic_lookup_multiplicities_dst_start);
-        let lookup_encoding_capacity = n - 1;
-        let num_generic_table_rows_tail = num_generic_table_rows % lookup_encoding_capacity;
-        assert_eq!(
-            num_generic_multiplicities_cols,
-            (num_generic_table_rows + lookup_encoding_capacity - 1) / lookup_encoding_capacity
-        );
-        let grid_dim = (n as u32 + block_dim - 1) / block_dim;
-        let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-        let args = GenericAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
-            lookup_challenges,
-            witness_cols,
-            setup_cols,
-            d_stage_2_e4_cols,
-            aggregated_entry_invs_for_generic_lookups,
-            generic_lookup_setup_columns_start as u32,
-            generic_lookup_multiplicities_src_start as u32,
-            generic_lookup_multiplicities_dst_cols_start as u32,
-            num_generic_multiplicities_cols as u32,
-            num_generic_table_rows_tail as u32,
-            log_n as u32,
-        );
-        GenericAggregatedEntryInvsAndMultiplicitiesArgFunction(
-            ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel,
-        )
-        .launch(&config, &args)?;
-    } else {
-        assert_eq!(num_generic_args, 0);
-    }
+        d_stage_2_e4_cols,
+        timestamp_range_check_multiplicities_src,
+        timestamp_range_check_multiplicities_dst,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
+    stage2_process_generic_lookup_entry_invs_and_multiplicity(
+        lookup_challenges,
+        setup_cols,
+        witness_cols,
+        aggregated_entry_invs_for_generic_lookups,
+        d_stage_2_e4_cols,
+        generic_lookup_setup_columns_start,
+        num_generic_multiplicities_cols,
+        num_generic_table_rows,
+        generic_lookup_multiplicities_src_start,
+        generic_lookup_multiplicities_dst_start,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
+
     // Compute delegation aux poly
     // first, a check on zksync_airbender's own layout, copied from zksync_airbenders's stage2.rs
     if circuit.memory_layout.delegation_processor_layout.is_none()
@@ -604,57 +482,6 @@ pub fn compute_stage_2_args_on_main_domain(
         );
         DelegationAuxPolyFunction(ab_delegation_aux_poly_kernel).launch(&config, &args)?;
     }
-    // Identify range check 16 src (witness) cols, bf args, and e4 args
-    // CPU code doesn't fully support an isolated (odd-tail) remainder col yet.
-    // For now, we assert the number of cols is even such that all cols can be paired,
-    // and add support for a lone remainder col when the CPU does.
-    // let range_check_16_layout = RangeCheck16ArgsLayout::new(
-    //     circuit,
-    //     &range_check_16_width_1_lookups_access,
-    //     &range_check_16_width_1_lookups_access_via_expressions,
-    //     &translate_e4_offset,
-    // );
-
-    // let expressions_layout = if range_check_16_width_1_lookups_access_via_expressions.len() > 0
-    //     || timestamp_range_check_width_1_lookups_access_via_expressions.len() > 0
-    // {
-    //     let expect_constant_terms_are_zero = process_shuffle_ram_init;
-    //     FlattenedLookupExpressionsLayout::new(
-    //         &range_check_16_width_1_lookups_access_via_expressions,
-    //         &timestamp_range_check_width_1_lookups_access_via_expressions,
-    //         num_stage_2_bf_cols,
-    //         num_stage_2_e4_cols,
-    //         expect_constant_terms_are_zero,
-    //         &translate_e4_offset,
-    //     )
-    // } else {
-    //     FlattenedLookupExpressionsLayout::default()
-    // };
-
-
-    // let expressions_for_shuffle_ram_layout =
-    //     if timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram.len() > 0 {
-    //         FlattenedLookupExpressionsForShuffleRamLayout::new(
-    //             &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
-    //             num_stage_2_bf_cols,
-    //             num_stage_2_e4_cols,
-    //             &translate_e4_offset,
-    //         )
-    //     } else {
-    //         FlattenedLookupExpressionsForShuffleRamLayout::default()
-    //     };
-
-    // 32-bit lazy init addresses are treated as a pair of range check 16 cols
-    // let lazy_init_teardown_layouts = if process_shuffle_ram_init {
-    //     LazyInitTeardownLayouts::new(
-    //         circuit,
-    //         &lazy_init_address_range_check_16,
-    //         &shuffle_ram_inits_and_teardowns,
-    //         &translate_e4_offset,
-    //     )
-    // } else {
-    //     LazyInitTeardownLayouts::default();
-    // };
 
     stage2_process_range_check_16_trivial_checks(
         circuit,
@@ -714,7 +541,7 @@ pub fn compute_stage_2_args_on_main_domain(
         d_stage_2_e4_cols,
         num_stage_2_bf_cols,
         num_stage_2_e4_cols,
-        true, // process_shuffle_ram_init,
+        true, // expect_constant_terms_are_zero
         log_n,
         &translate_e4_offset,
         stream,
@@ -749,32 +576,6 @@ pub fn compute_stage_2_args_on_main_domain(
         &translate_e4_offset,
         stream,
     )?;
-
-    // let block_dim = 128;
-    // let grid_dim = (n as u32 + 127) / 128;
-    // let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-    // let args = LookupArgsArguments::new(
-    //     // range_check_16_layout,
-    //     // expressions_layout,
-    //     // expressions_for_shuffle_ram_layout,
-    //     // lazy_init_teardown_layouts_copy,
-    //     setup_cols,
-    //     witness_cols,
-    //     memory_cols,
-    //     aggregated_entry_invs_for_range_check_16,
-    //     aggregated_entry_invs_for_timestamp_range_checks,
-    //     aggregated_entry_invs_for_generic_lookups,
-    //     generic_args_start as u32,
-    //     num_generic_args as u32,
-    //     generic_lookups_args_to_table_entries_map,
-    //     d_stage_2_bf_cols,
-    //     d_stage_2_e4_cols,
-    //     memory_timestamp_high_from_circuit_idx,
-    //     num_stage_2_bf_cols as u32,
-    //     num_stage_2_e4_cols as u32,
-    //     log_n as u32,
-    // );
-    // LookupArgsFunction(ab_lookup_args_kernel).launch(&config, &args)?;
 
     // Pack metadata for memory args
     let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);

@@ -3,6 +3,7 @@ use crate::device_structures::{DeviceMatrixChunkImpl, MutPtrAndStride, PtrAndStr
 use crate::field::{BaseField, Ext4Field};
 use crate::utils::WARP_SIZE;
 
+use cs::definitions::{TIMESTAMP_COLUMNS_NUM_BITS};
 use cs::one_row_compiler::{
     CompiledCircuitArtifact, LookupWidth1SourceDestInformation,
     LookupWidth1SourceDestInformationForExpressions,
@@ -14,6 +15,46 @@ use era_cudart::stream::CudaStream;
 
 type BF = BaseField;
 type E4 = Ext4Field;
+
+cuda_kernel!(
+    RangeCheckAggregatedEntryInvsAndMultiplicitiesArg,
+    range_check_aggregated_entry_invs_and_multiplicities_arg,
+    lookup_challenges: *const LookupChallenges,
+    witness_cols: PtrAndStride<BF>,
+    setup_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    aggregated_entry_invs: *mut E4,
+    start_col_in_setup: u32,
+    multiplicities_src_cols_start: u32,
+    multiplicities_dst_cols_start: u32,
+    num_multiplicities_cols: u32,
+    num_table_rows_tail: u32,
+    log_n: u32,
+);
+
+range_check_aggregated_entry_invs_and_multiplicities_arg!(
+    ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel
+);
+
+cuda_kernel!(
+    GenericAggregatedEntryInvsAndMultiplicitiesArg,
+    generic_aggregated_entry_invs_and_multiplicities_arg,
+    lookup_challenges: *const LookupChallenges,
+    witness_cols: PtrAndStride<BF>,
+    setup_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    aggregated_entry_invs: *mut E4,
+    start_col_in_setup: u32,
+    multiplicities_src_cols_start: u32,
+    multiplicities_dst_cols_start: u32,
+    num_multiplicities_cols: u32,
+    num_table_rows_tail: u32,
+    log_n: u32,
+);
+
+generic_aggregated_entry_invs_and_multiplicities_arg!(
+    ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel
+);
 
 cuda_kernel!(
     ProcessRangeCheck16TrivialChecks,
@@ -226,7 +267,6 @@ pub(crate) fn stage2_process_timestamp_range_check_expressions<F: Fn(usize) -> u
     )
 }
 
-
 pub(crate) fn stage2_process_lazy_init_range_checks(
     lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     memory_cols: PtrAndStride<BF>,
@@ -342,4 +382,135 @@ pub(crate) fn stage2_process_generic_lookup_intermediate_polys<F: Fn(usize) -> u
     );
     ProcessGenericLookupIntermediatePolysFunction(ab_generic_lookup_intermediate_polys_kernel)
         .launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_range_check_16_entry_invs_and_multiplicity<F: Fn(usize) -> usize>(
+    lookup_challenges: *const LookupChallenges,
+    setup_cols: PtrAndStride<BF>,
+    witness_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_range_check_16: *mut E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    range_check_16_multiplicities_src: usize,
+    range_check_16_multiplicities_dst: usize,
+    log_n: u32,
+    translate_e4_offset: &F,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    // range check table values are just row indexes,
+    // so i don't need to read their setup entries
+    let dummy_setup_column = 0;
+    let num_range_check_16_rows = 1 << 16;
+    assert!(num_range_check_16_rows < (1 << log_n as usize)); // just in case
+    let num_range_check_16_multiplicities_cols = 1;
+    let range_check_16_multiplicities_dst_col =
+        translate_e4_offset(range_check_16_multiplicities_dst);
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = RangeCheckAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
+        lookup_challenges,
+        witness_cols,
+        setup_cols,
+        stage_2_e4_cols,
+        aggregated_entry_invs_for_range_check_16,
+        dummy_setup_column,
+        range_check_16_multiplicities_src as u32,
+        range_check_16_multiplicities_dst_col as u32,
+        num_range_check_16_multiplicities_cols as u32,
+        num_range_check_16_rows as u32,
+        log_n as u32,
+    );
+    RangeCheckAggregatedEntryInvsAndMultiplicitiesArgFunction(
+        ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel,
+    )
+    .launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_timestamp_range_check_entry_invs_and_multiplicity<F: Fn(usize) -> usize>(
+    lookup_challenges: *const LookupChallenges,
+    setup_cols: PtrAndStride<BF>,
+    witness_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_timestamp_range_checks: *mut E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    timestamp_range_check_multiplicities_src: usize,
+    timestamp_range_check_multiplicities_dst: usize,
+    log_n: u32,
+    translate_e4_offset: &F,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    // timestamp table values are just row indexes,
+    // so i don't need to read their setup entries
+    let dummy_setup_column = 0;
+    let num_timestamp_range_check_rows = 1 << TIMESTAMP_COLUMNS_NUM_BITS;
+    assert!(num_timestamp_range_check_rows < (1 << log_n as usize)); // just in case
+    let num_timestamp_multiplicities_cols = 1;
+    let timestamp_range_check_multiplicities_dst_col =
+        translate_e4_offset(timestamp_range_check_multiplicities_dst);
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1<< log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = RangeCheckAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
+        lookup_challenges,
+        witness_cols,
+        setup_cols,
+        stage_2_e4_cols,
+        aggregated_entry_invs_for_timestamp_range_checks,
+        dummy_setup_column,
+        timestamp_range_check_multiplicities_src as u32,
+        timestamp_range_check_multiplicities_dst_col as u32,
+        num_timestamp_multiplicities_cols as u32,
+        num_timestamp_range_check_rows as u32,
+        log_n as u32,
+    );
+    RangeCheckAggregatedEntryInvsAndMultiplicitiesArgFunction(
+        ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel,
+    )
+    .launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_generic_lookup_entry_invs_and_multiplicity<F: Fn(usize) -> usize>(
+    lookup_challenges: *const LookupChallenges,
+    setup_cols: PtrAndStride<BF>,
+    witness_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_generic_lookups: *mut E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    generic_lookup_setup_columns_start: usize,
+    num_generic_multiplicities_cols: usize,
+    num_generic_table_rows: usize,
+    generic_lookup_multiplicities_src_start: usize,
+    generic_lookup_multiplicities_dst_start: usize,
+    log_n: u32,
+    translate_e4_offset: &F,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    // If we ever need a circuit without generic args, I can refactor.
+    assert!(num_generic_table_rows > 0);
+    let generic_lookup_multiplicities_dst_cols_start =
+        translate_e4_offset(generic_lookup_multiplicities_dst_start);
+    let lookup_encoding_capacity = (1 << log_n as usize) - 1;
+    let num_generic_table_rows_tail = num_generic_table_rows % lookup_encoding_capacity;
+    assert_eq!(
+        num_generic_multiplicities_cols,
+        (num_generic_table_rows + lookup_encoding_capacity - 1) / lookup_encoding_capacity
+    );
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = GenericAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
+        lookup_challenges,
+        witness_cols,
+        setup_cols,
+        stage_2_e4_cols,
+        aggregated_entry_invs_for_generic_lookups,
+        generic_lookup_setup_columns_start as u32,
+        generic_lookup_multiplicities_src_start as u32,
+        generic_lookup_multiplicities_dst_cols_start as u32,
+        num_generic_multiplicities_cols as u32,
+        num_generic_table_rows_tail as u32,
+        log_n as u32,
+    );
+    GenericAggregatedEntryInvsAndMultiplicitiesArgFunction(
+        ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel,
+    )
+    .launch(&config, &args)
 }
