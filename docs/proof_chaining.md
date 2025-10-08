@@ -14,7 +14,7 @@ Then we do steps to "wrap it" in a SNARK proof:
 -> "final" proof (couple rounds) -> boojum verifier -> compressor -> snark.
 ```
 
-This flow works correclty, but in production it can become too slow & expensive if we applied it for each block separately (as this means that we'd have to pay SNARK generation & L1 verification costs for each block).
+This flow works correctly, but in production it can become too slow & expensive if we applied it for each block separately (as this means that we'd have to pay SNARK generation & L1 verification costs for each block).
 
 Instead, what we can do, is try to combine a bunch of program FRI proofs, into a single FRI, and than wrap that one instead.
 
