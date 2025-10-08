@@ -1,14 +1,14 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn sw<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sw<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
-    let rs2_value = read_register::<S, 1>(state, instr.rs2); // formal
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
+    let rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
     let address = rs1_value.wrapping_add(instr.imm);
     if address % 4 != 0 {
         panic!("Unaligned memory access at PC = 0x{:08x}", state.pc);
@@ -16,37 +16,39 @@ pub(crate) fn sw<S: Snapshotter, R: RAM>(
     let (read_timestamp, old_value) = ram.write_word(address, rs2_value, state.timestamp | 2);
     // do not touch registers for write at all
     snapshotter.append_memory_read(address, old_value, read_timestamp, state.timestamp | 2);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lw<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lw<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     if address % 4 != 0 {
         panic!("Unaligned memory access at PC = 0x{:08x}", state.pc);
     }
     let (read_timestamp, old_value) = ram.read_word(address, state.timestamp | 1);
     let rd = old_value;
-    write_register::<S, 2>(state, instr.rd, rd);
+    write_register::<C, 2>(state, instr.rd, rd);
     snapshotter.append_memory_read(address, old_value, read_timestamp, state.timestamp | 1);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sh<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sh<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
-    let rs2_value = read_register::<S, 1>(state, instr.rs2); // formal
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
+    let rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
     let address = rs1_value.wrapping_add(instr.imm);
     if address % 2 != 0 {
         panic!("Unaligned memory access at PC = 0x{:08x}", state.pc);
@@ -69,18 +71,19 @@ pub(crate) fn sh<S: Snapshotter, R: RAM>(
         read_timestamp,
         state.timestamp | 2,
     );
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sb<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sb<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
-    let rs2_value = read_register::<S, 1>(state, instr.rs2); // formal
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
+    let rs2_value = read_register::<C, 1>(state, instr.rs2); // formal
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
     let value = rs2_value & 0x0000_00ff;
@@ -102,17 +105,18 @@ pub(crate) fn sb<S: Snapshotter, R: RAM>(
         read_timestamp,
         state.timestamp | 2,
     );
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lh<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lh<C: Counters, S: Snapshotter<C>, R: RAM, const SIGN_EXTEND: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     if address % 2 != 0 {
         panic!("Unaligned memory access at PC = 0x{:08x}", state.pc);
@@ -124,24 +128,25 @@ pub(crate) fn lh<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
         value = (((value as u16) as i16) as i32) as u32;
     }
     let rd = value;
-    write_register::<S, 2>(state, instr.rd, rd);
+    write_register::<C, 2>(state, instr.rd, rd);
     snapshotter.append_memory_read(
         aligned_address,
         old_value,
         read_timestamp,
         state.timestamp | 1,
     );
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lb<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lb<C: Counters, S: Snapshotter<C>, R: RAM, const SIGN_EXTEND: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,
 ) {
-    let rs1_value = read_register::<S, 0>(state, instr.rs1);
+    let rs1_value = read_register::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
     let (read_timestamp, old_value) = ram.read_word(aligned_address, state.timestamp | 1);
@@ -150,12 +155,13 @@ pub(crate) fn lb<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
         value = (((value as u8) as i8) as i32) as u32;
     }
     let rd = value;
-    write_register::<S, 2>(state, instr.rd, rd);
+    write_register::<C, 2>(state, instr.rd, rd);
     snapshotter.append_memory_read(
         aligned_address,
         old_value,
         read_timestamp,
         state.timestamp | 1,
     );
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
+    increment_family_counter::<C, LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(state);
 }

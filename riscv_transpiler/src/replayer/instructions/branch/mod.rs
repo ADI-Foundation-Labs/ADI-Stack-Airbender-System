@@ -1,16 +1,16 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn branch<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn branch<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = 0;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, 0, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, 0, rd);
 
     let jump_address = state.pc.wrapping_add(instr.imm);
     // do unsigned comparison and then resolve it

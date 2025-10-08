@@ -1,19 +1,19 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn add_op<S: Snapshotter, R: RAM, const USE_IMM: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn add_op<C: Counters, R: RAM, const USE_IMM: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (mut rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (mut rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     if USE_IMM {
         rs2_value = instr.imm;
     }
     let rd = rs1_value.wrapping_add(rs2_value);
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -32,20 +32,20 @@ pub(crate) fn add_op<S: Snapshotter, R: RAM, const USE_IMM: bool>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sub_op<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sub_op<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = rs1_value.wrapping_sub(rs2_value);
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -64,5 +64,5 @@ pub(crate) fn sub_op<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }

@@ -5,14 +5,14 @@ use risc_v_simulator::machine_mode_only_unrolled::{
 use super::*;
 
 #[inline(always)]
-pub(crate) fn sw<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sw<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2);
     let address = rs1_value.wrapping_add(instr.imm);
     let (ram_timestamp, ram_old_value) = ram.write_word(address, rs2_value, state.timestamp | 2);
 
@@ -35,29 +35,34 @@ pub(crate) fn sw<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lw<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lw<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
+    // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
     let (ram_timestamp, ram_old_value) = ram.read_word(address, state.timestamp | 1);
     let rd = ram_old_value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
+    // NOTE: we may access ROM, that is modeled as accessing address 0,
+    // that is never written, so we ask for masking into some default value
+    let mut ram_value_after_masking = ram_old_value;
+    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
             aligned_ram_address: address,
-            aligned_ram_read_value: ram_old_value,
+            aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,
         },
@@ -68,18 +73,18 @@ pub(crate) fn lw<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sh<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sh<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2);
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
     let value = rs2_value & 0x0000_ffff;
@@ -112,18 +117,18 @@ pub(crate) fn sh<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sb<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sb<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2);
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
     let value = rs2_value & 0x0000_00ff;
@@ -158,34 +163,39 @@ pub(crate) fn sb<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lh<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lh<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
+    // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
     let (ram_timestamp, ram_old_value) = ram.read_word(aligned_address, state.timestamp | 1);
     let mut value = ram_old_value >> ((address % 4) * 8);
     if SIGN_EXTEND {
         value = (((value as u16) as i16) as i32) as u32;
     }
     let rd = value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
+    // NOTE: we may access ROM, that is modeled as accessing address 0,
+    // that is never written, so we ask for masking into some default value
+    let mut ram_value_after_masking = ram_old_value;
+    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
             aligned_ram_address: aligned_address,
-            aligned_ram_read_value: ram_old_value,
+            aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,
         },
@@ -196,34 +206,39 @@ pub(crate) fn lh<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn lb<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn lb<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     let aligned_address = address & !3;
+    // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
     let (ram_timestamp, ram_old_value) = ram.read_word(aligned_address, state.timestamp | 1);
     let mut value = ram_old_value >> ((address % 4) * 8);
     if SIGN_EXTEND {
         value = (((value as u8) as i8) as i32) as u32;
     }
     let rd = value;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
+    // NOTE: we may access ROM, that is modeled as accessing address 0,
+    // that is never written, so we ask for masking into some default value
+    let mut ram_value_after_masking = ram_old_value;
+    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
             aligned_ram_address: aligned_address,
-            aligned_ram_read_value: ram_old_value,
+            aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,
         },
@@ -234,5 +249,5 @@ pub(crate) fn lb<S: Snapshotter, R: RAM, const SIGN_EXTEND: bool>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_memory_family_data::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }

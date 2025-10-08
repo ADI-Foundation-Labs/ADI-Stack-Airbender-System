@@ -21,7 +21,7 @@ fn peek_read_u256<R: RAM>(offset: u32, ram: &R) -> U256 {
 }
 
 #[inline(always)]
-fn read_u256<S: Snapshotter, R: RAM>(
+fn read_u256<C: Counters, S: Snapshotter<C>, R: RAM>(
     offset: u32,
     ram: &mut R,
     snapshotter: &mut S,
@@ -45,7 +45,7 @@ fn read_u256<S: Snapshotter, R: RAM>(
 }
 
 #[inline(always)]
-fn write_back_u256<S: Snapshotter, R: RAM>(
+fn write_back_u256<C: Counters, S: Snapshotter<C>, R: RAM>(
     offset: u32,
     ram: &mut R,
     snapshotter: &mut S,
@@ -66,13 +66,13 @@ fn write_back_u256<S: Snapshotter, R: RAM>(
 }
 
 #[inline(never)]
-pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn bigint_call<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
 ) {
-    let x10 = read_register::<S, 3>(state, 10);
-    let x11 = read_register::<S, 3>(state, 11);
+    let x10 = read_register::<C, 3>(state, 10);
+    let x11 = read_register::<C, 3>(state, 11);
     let x12 = state.registers[12].value;
 
     assert!(x10 >= 1 << 21);
@@ -91,11 +91,10 @@ pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
     let (result, of) = bigint_impl(a, b, x12);
 
     // write back
-    write_register::<S, 3>(state, 12, of as u32);
-    write_back_u256::<S, R>(x10, ram, snapshotter, write_ts, &result);
+    write_register::<C, 3>(state, 12, of as u32);
+    write_back_u256::<C, S, R>(x10, ram, snapshotter, write_ts, &result);
 
     state.counters.bump_bigint();
-    default_increase_pc::<S>(state);
 }
 
 #[inline(always)]

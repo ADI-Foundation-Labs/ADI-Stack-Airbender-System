@@ -13,8 +13,8 @@ pub mod slt;
 pub mod zicsr;
 
 #[inline(always)]
-pub(crate) fn read_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
-    state: &mut State<S::Counters>,
+pub(crate) fn read_register<C: Counters, const TIMESTAMP_OFFSET: TimestampScalar>(
+    state: &mut State<C>,
     reg_idx: u8,
 ) -> u32 {
     unsafe {
@@ -26,8 +26,8 @@ pub(crate) fn read_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampSca
 }
 
 #[inline(always)]
-pub(crate) fn write_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
-    state: &mut State<S::Counters>,
+pub(crate) fn write_register<C: Counters, const TIMESTAMP_OFFSET: TimestampScalar>(
+    state: &mut State<C>,
     reg_idx: u8,
     mut value: u32,
 ) {
@@ -43,13 +43,18 @@ pub(crate) fn write_register<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampSc
 }
 
 #[inline(always)]
-pub(crate) fn default_increase_pc<S: Snapshotter>(state: &mut State<S::Counters>) {
+pub(crate) fn default_increase_pc<C: Counters>(state: &mut State<C>) {
     state.pc = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32);
 }
 
 #[inline(always)]
-pub(crate) fn illegal<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn increment_family_counter<C: Counters, const FAMILY: u8>(state: &mut State<C>) {
+    state.counters.log_circuit_family::<FAMILY>();
+}
+
+#[inline(always)]
+pub(crate) fn illegal<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
     instr: Instruction,

@@ -55,17 +55,17 @@ fn read_words_for_update<R: RAM, const N: usize>(
 }
 
 #[inline(never)]
-pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn blake2_round_function_call<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     tracer: &mut impl WitnessTracer,
 ) {
     let mut witness = Blake2sRoundFunctionDelegationWitness::empty();
 
-    let (x10, x10_ts) = read_register_with_ts::<S, 3>(state, 10);
-    let (x11, x11_ts) = read_register_with_ts::<S, 3>(state, 11);
-    let (x12, x12_ts) = read_register_with_ts::<S, 3>(state, 11);
-    let (x13, x13_ts) = read_register_with_ts::<S, 3>(state, 11);
+    let (x10, x10_ts) = read_register_with_ts::<C, 3>(state, 10);
+    let (x11, x11_ts) = read_register_with_ts::<C, 3>(state, 11);
+    let (x12, x12_ts) = read_register_with_ts::<C, 3>(state, 11);
+    let (x13, x13_ts) = read_register_with_ts::<C, 3>(state, 11);
 
     witness.reg_accesses[0] = RegisterOrIndirectReadWriteData {
         read_value: x10,
@@ -109,5 +109,4 @@ pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
     tracer.write_delegation::<{common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as u16}, _, _, _, _>(witness);
 
     state.counters.bump_blake2_round_function();
-    default_increase_pc::<S>(state);
 }

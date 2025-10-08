@@ -1,16 +1,16 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn jal<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn jal<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let jump_address = state.pc.wrapping_add(instr.imm);
 
@@ -35,16 +35,16 @@ pub(crate) fn jal<S: Snapshotter, R: RAM>(
 }
 
 #[inline(always)]
-pub(crate) fn jalr<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn jalr<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32); // address of next opcode
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let jump_address = rs1_value.wrapping_add(instr.imm) & !0x1;
 

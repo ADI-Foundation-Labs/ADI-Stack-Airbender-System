@@ -72,14 +72,14 @@ fn read_u256_for_update<R: RAM>(
 }
 
 #[inline(never)]
-pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn bigint_call<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     tracer: &mut impl WitnessTracer,
 ) {
     let mut witness = BigintDelegationWitness::empty();
-    let (x10, x10_ts) = read_register_with_ts::<S, 3>(state, 10);
-    let (x11, x11_ts) = read_register_with_ts::<S, 3>(state, 11);
+    let (x10, x10_ts) = read_register_with_ts::<C, 3>(state, 10);
+    let (x11, x11_ts) = read_register_with_ts::<C, 3>(state, 11);
     let x12 = state.registers[12].value;
 
     witness.reg_accesses[0] = RegisterOrIndirectReadWriteData {
@@ -101,7 +101,7 @@ pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
     let (_, of) = bigint_impl(a, b, x12);
 
     // write back is not needed for RAM, only for register
-    let (_old_x12, x12_ts) = write_register_with_ts::<S, 3>(state, 12, of as u32);
+    let (_old_x12, x12_ts) = write_register_with_ts::<C, 3>(state, 12, of as u32);
     witness.reg_accesses[2] = RegisterOrIndirectReadWriteData {
         read_value: x12,
         write_value: x12,
@@ -111,5 +111,4 @@ pub(crate) fn bigint_call<S: Snapshotter, R: RAM>(
     tracer.write_delegation::<{common_constants::bigint_with_control::BIGINT_OPS_WITH_CONTROL_CSR_REGISTER as u16}, _, _, _, _>(witness);
 
     state.counters.bump_bigint();
-    default_increase_pc::<S>(state);
 }

@@ -1,17 +1,17 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn nd_read<S: Snapshotter, R: RAM, ND: NonDeterminismCSRSource<R>>(
-    state: &mut State<S::Counters>,
+pub(crate) fn nd_read<C: Counters, R: RAM, ND: NonDeterminismCSRSource<R>>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
     nd: &mut ND,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = nd.read();
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -30,20 +30,20 @@ pub(crate) fn nd_read<S: Snapshotter, R: RAM, ND: NonDeterminismCSRSource<R>>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn nd_write<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn nd_write<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = 0;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -62,20 +62,20 @@ pub(crate) fn nd_write<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn call_delegation<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn call_delegation<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     let rd = 0;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let delegation_type = match instr.imm {
         a if a == DelegationType::BigInt as u32 => {
@@ -106,15 +106,15 @@ pub(crate) fn call_delegation<S: Snapshotter, R: RAM>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 
     // and then trigger delegation
     match instr.imm {
         a if a == DelegationType::BigInt as u32 => {
-            delegations::bigint::bigint_call::<S, R>(state, ram, tracer)
+            delegations::bigint::bigint_call::<C, R>(state, ram, tracer)
         }
         a if a == DelegationType::Blake as u32 => {
-            delegations::blake2_round_function::blake2_round_function_call::<S, R>(
+            delegations::blake2_round_function::blake2_round_function_call::<C, R>(
                 state, ram, tracer,
             )
         }
@@ -123,5 +123,5 @@ pub(crate) fn call_delegation<S: Snapshotter, R: RAM>(
         }
         _ => unsafe { core::hint::unreachable_unchecked() },
     }
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }

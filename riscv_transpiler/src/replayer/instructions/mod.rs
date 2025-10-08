@@ -18,8 +18,8 @@ pub mod slt;
 pub mod zicsr;
 
 #[inline(always)]
-pub(crate) fn read_register_with_ts<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
-    state: &mut State<S::Counters>,
+pub(crate) fn read_register_with_ts<C: Counters, const TIMESTAMP_OFFSET: TimestampScalar>(
+    state: &mut State<C>,
     reg_idx: u8,
 ) -> (u32, TimestampScalar) {
     unsafe {
@@ -31,8 +31,8 @@ pub(crate) fn read_register_with_ts<S: Snapshotter, const TIMESTAMP_OFFSET: Time
 }
 
 #[inline(always)]
-pub(crate) fn write_register_with_ts<S: Snapshotter, const TIMESTAMP_OFFSET: TimestampScalar>(
-    state: &mut State<S::Counters>,
+pub(crate) fn write_register_with_ts<C: Counters, const TIMESTAMP_OFFSET: TimestampScalar>(
+    state: &mut State<C>,
     reg_idx: u8,
     mut value: u32,
 ) -> (u32, TimestampScalar) {
@@ -52,13 +52,13 @@ pub(crate) fn write_register_with_ts<S: Snapshotter, const TIMESTAMP_OFFSET: Tim
 }
 
 #[inline(always)]
-pub(crate) fn default_increase_pc<S: Snapshotter>(state: &mut State<S::Counters>) {
+pub(crate) fn default_increase_pc<C: Counters>(state: &mut State<C>) {
     state.pc = state.pc.wrapping_add(core::mem::size_of::<u32>() as u32);
 }
 
 #[inline(always)]
-pub(crate) fn illegal<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn illegal<C: Counters, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,

@@ -1,19 +1,19 @@
 use super::*;
 
 #[inline(always)]
-pub(crate) fn slt<S: Snapshotter, R: RAM, const USE_IMM: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn slt<C: Counters, R: RAM, const USE_IMM: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (mut rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (mut rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     if USE_IMM {
         rs2_value = instr.imm;
     }
     let rd = ((rs1_value as i32) < (rs2_value as i32)) as u32;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -32,23 +32,23 @@ pub(crate) fn slt<S: Snapshotter, R: RAM, const USE_IMM: bool>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }
 
 #[inline(always)]
-pub(crate) fn sltu<S: Snapshotter, R: RAM, const USE_IMM: bool>(
-    state: &mut State<S::Counters>,
+pub(crate) fn sltu<C: Counters, R: RAM, const USE_IMM: bool>(
+    state: &mut State<C>,
     ram: &mut R,
     instr: Instruction,
     tracer: &mut impl WitnessTracer,
 ) {
-    let (rs1_value, rs1_ts) = read_register_with_ts::<S, 0>(state, instr.rs1);
-    let (mut rs2_value, rs2_ts) = read_register_with_ts::<S, 1>(state, instr.rs2); // formal
+    let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
+    let (mut rs2_value, rs2_ts) = read_register_with_ts::<C, 1>(state, instr.rs2); // formal
     if USE_IMM {
         rs2_value = instr.imm;
     }
     let rd = (rs1_value < rs2_value) as u32;
-    let (rd_old_value, rd_ts) = write_register_with_ts::<S, 2>(state, instr.rd, rd);
+    let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, rd);
 
     let traced_data = NonMemoryOpcodeTracingDataWithTimestamp {
         opcode_data: NonMemoryOpcodeTracingData {
@@ -67,5 +67,5 @@ pub(crate) fn sltu<S: Snapshotter, R: RAM, const USE_IMM: bool>(
         cycle_timestamp: TimestampData::from_scalar(state.timestamp),
     };
     tracer.write_non_memory_family_data::<JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX>(traced_data);
-    default_increase_pc::<S>(state);
+    default_increase_pc::<C>(state);
 }

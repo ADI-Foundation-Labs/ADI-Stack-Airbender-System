@@ -21,7 +21,7 @@ fn peek_read_words<R: RAM, const N: usize>(offset: u32, ram: &R) -> [u32; N] {
 }
 
 #[inline(always)]
-fn read_words<S: Snapshotter, R: RAM, const N: usize>(
+fn read_words<C: Counters, S: Snapshotter<C>, R: RAM, const N: usize>(
     offset: u32,
     ram: &mut R,
     snapshotter: &mut S,
@@ -42,7 +42,7 @@ fn read_words<S: Snapshotter, R: RAM, const N: usize>(
 }
 
 #[inline(always)]
-fn write_back_words<S: Snapshotter, R: RAM, const N: usize>(
+fn write_back_words<C: Counters, S: Snapshotter<C>, R: RAM, const N: usize>(
     offset: u32,
     ram: &mut R,
     snapshotter: &mut S,
@@ -59,15 +59,15 @@ fn write_back_words<S: Snapshotter, R: RAM, const N: usize>(
 }
 
 #[inline(never)]
-pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
-    state: &mut State<S::Counters>,
+pub(crate) fn blake2_round_function_call<C: Counters, S: Snapshotter<C>, R: RAM>(
+    state: &mut State<C>,
     ram: &mut R,
     snapshotter: &mut S,
 ) {
-    let x10 = read_register::<S, 3>(state, 10);
-    let x11 = read_register::<S, 3>(state, 11);
-    let x12 = read_register::<S, 3>(state, 12);
-    let x13 = read_register::<S, 3>(state, 13);
+    let x10 = read_register::<C, 3>(state, 10);
+    let x11 = read_register::<C, 3>(state, 11);
+    let x12 = read_register::<C, 3>(state, 12);
+    let x13 = read_register::<C, 3>(state, 13);
 
     assert!(x10 >= 1 << 21);
     assert!(x11 >= 1 << 21);
@@ -88,7 +88,6 @@ pub(crate) fn blake2_round_function_call<S: Snapshotter, R: RAM>(
     write_back_words(x10, ram, snapshotter, write_ts, &state_accesses);
 
     state.counters.bump_blake2_round_function();
-    default_increase_pc::<S>(state);
 }
 
 #[inline(always)]
