@@ -1,6 +1,11 @@
 use crate::prover::arg_utils::*;
-use crate::device_structures::{DeviceMatrixChunkImpl, MutPtrAndStride, PtrAndStride};
+use crate::device_structures::{
+    DeviceMatrix, DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
+    DeviceMatrixChunkMutImpl, DeviceMatrixMut, MutPtrAndStride, PtrAndStride,
+};
 use crate::field::{BaseField, Ext4Field};
+use crate::ops_complex::transpose;
+use crate::ops_cub::device_scan::{scan, ScanOperation};
 use crate::utils::WARP_SIZE;
 
 use cs::definitions::{TIMESTAMP_COLUMNS_NUM_BITS};
@@ -11,6 +16,7 @@ use cs::one_row_compiler::{
 use era_cudart::cuda_kernel;
 use era_cudart::execution::{CudaLaunchConfig, KernelFunction};
 use era_cudart::result::CudaResult;
+use era_cudart::slice::DeviceSlice;
 use era_cudart::stream::CudaStream;
 
 type BF = BaseField;
@@ -513,4 +519,70 @@ pub(crate) fn stage2_process_generic_lookup_entry_invs_and_multiplicity<F: Fn(us
         ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel,
     )
     .launch(&config, &args)
+}
+
+pub(crate) fn stage2_compute_grand_product(
+    circuit: &CompiledCircuitArtifact<BF>,
+    stage_2_e4_cols: &mut (impl DeviceMatrixChunkMutImpl<BF> + ?Sized),
+    scratch_for_aggregated_entry_invs: &mut DeviceSlice<E4>,
+    scratch_for_cub_ops: &mut DeviceSlice<u8>,
+    grand_product_scratch_bytes: usize,
+    memory_args_start: usize,
+    num_memory_args: usize,
+    n: usize,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    // last memory arg is the grand product of the second-to-last memory arg
+    // Args are vectorized E4, so I need to transpose the second-to-last col
+    // to a col of E4 tuples, do the grand product, then transpose back.
+    let grand_product_offset_in_e4_cols = get_grand_product_col(circuit);
+    // TODO: double-check that the following is actually the grand product input
+    // for unrolled circuits
+    let last_memory_arg_offset_in_e4_cols = memory_args_start + num_memory_args - 1;
+    assert!(grand_product_offset_in_e4_cols > last_memory_arg_offset_in_e4_cols);
+    // TODO: this assert in particular is not necessary for correctness.
+    // It's a sanity check for non-unrolled circuits and a reminder to double-check
+    // the layout for unrolled circuits.
+    assert_eq!(
+        grand_product_offset_in_e4_cols - 1,
+        last_memory_arg_offset_in_e4_cols
+    );
+    let stride = stage_2_e4_cols.stride();
+    let offset = stage_2_e4_cols.offset();
+    let last_memory_arg_slice_start = 4 * last_memory_arg_offset_in_e4_cols * stride;
+    let (_, rest) = stage_2_e4_cols
+        .slice_mut()
+        .split_at_mut(last_memory_arg_slice_start);
+    let (last_memory_arg_slice, rest) = rest.split_at_mut(4 * stride);
+    let grand_product_slice_start_in_rest =
+        4 * (grand_product_offset_in_e4_cols - last_memory_arg_offset_in_e4_cols - 1);
+    let (_, rest) = rest.split_at_mut(grand_product_slice_start_in_rest);
+    let (grand_product_slice, _) = rest.split_at_mut(4 * stride);
+    let last_memory_arg = DeviceMatrixChunk::new(last_memory_arg_slice, stride, offset, n);
+    let mut grand_product = DeviceMatrixChunkMut::new(grand_product_slice, stride, offset, n);
+    // Repurposes aggregated_entry_inv scratch space, which should have
+    // an underlying allocation of size >= 2 * n E4 elements
+    // I think 2 size-n scratch arrays is the best we can do, keeping in mind that device scan
+    // is out-of-place and we don't want to clobber the vectorized second to last column:
+    //   Vectorized e4 second to last column -> nonvectorized e4 scratch ->
+    //   nonvectorized grand product scratch -> vectorized last column
+    let (transposed_scratch_slice, grand_product_e4_scratch_slice) =
+        scratch_for_aggregated_entry_invs.split_at_mut(n);
+    let (grand_product_e4_scratch_slice, _) = grand_product_e4_scratch_slice.split_at_mut(n);
+    let transposed_scratch_slice = unsafe { transposed_scratch_slice.transmute_mut::<BF>() };
+    let mut last_memory_arg_transposed = DeviceMatrixMut::new(transposed_scratch_slice, 4);
+    transpose(&last_memory_arg, &mut last_memory_arg_transposed, stream)?;
+    let transposed_scratch_slice = unsafe { transposed_scratch_slice.transmute_mut::<E4>() };
+    scan(
+        ScanOperation::Product,
+        false,
+        &mut scratch_for_cub_ops[0..grand_product_scratch_bytes],
+        transposed_scratch_slice,
+        grand_product_e4_scratch_slice,
+        stream,
+    )?;
+    let grand_product_e4_scratch_slice =
+        unsafe { grand_product_e4_scratch_slice.transmute_mut::<BF>() };
+    let grand_product_transposed = DeviceMatrix::new(grand_product_e4_scratch_slice, 4);
+    transpose(&grand_product_transposed, &mut grand_product, stream)
 }
