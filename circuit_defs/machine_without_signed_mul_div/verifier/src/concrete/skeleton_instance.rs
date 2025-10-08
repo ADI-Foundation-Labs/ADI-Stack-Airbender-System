@@ -135,8 +135,7 @@ pub type QueryValuesInstance = QueryValues<
     NUM_FRI_STEPS,
 >;
 
-const NUM_QUERIES: usize = 1 // query_index
-    + LEAF_SIZE_SETUP
+const NUM_QUERIES: usize = LEAF_SIZE_SETUP
     + LEAF_SIZE_WITNESS_TREE
     + LEAF_SIZE_MEMORY_TREE
     + LEAF_SIZE_STAGE_2
@@ -146,95 +145,90 @@ const NUM_QUERIES: usize = 1 // query_index
 /// offsets of each query word from the previous one
 /// e.g. `BASE_CIRCUIT_QUERY_VALUES_OFFSETS[0]` is the offset between `setup_leaf` and `query_index`
 pub const BASE_CIRCUIT_QUERY_VALUES_OFFSETS: [usize; NUM_QUERIES] = const {
-    let mut offsets = [1usize; NUM_QUERIES];
+    let mut offsets = [0; NUM_QUERIES];
 
     const fn round_up_to_64(addr: usize) -> usize {
         (addr + 63) & !63
     }
 
-    // offset from query_index to setup_leaf
     let query_index_end =
         offset_of!(QueryValuesInstance, query_index) + core::mem::size_of::<u32>();
     let setup_leaf_start = offset_of!(QueryValuesInstance, setup_leaf);
-    assert!(
-        setup_leaf_start == round_up_to_64(query_index_end),
-        "setup_leaf should be 64-byte aligned after query_index"
-    );
-    offsets[0] = (setup_leaf_start - offset_of!(QueryValuesInstance, query_index))
-        / core::mem::size_of::<u32>();
+    assert!(setup_leaf_start == round_up_to_64(query_index_end));
+    offsets[0] = setup_leaf_start / core::mem::size_of::<u32>();
 
-    // offset from last setup_leaf element to witness_leaf
-    let setup_leaf_end =
-        offset_of!(QueryValuesInstance, setup_leaf) + LEAF_SIZE_SETUP * core::mem::size_of::<u32>();
+    let mut i = 1;
+    while i < LEAF_SIZE_SETUP {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
+
+    let setup_leaf_end = setup_leaf_start + LEAF_SIZE_SETUP * core::mem::size_of::<u32>();
     let witness_leaf_start = offset_of!(QueryValuesInstance, witness_leaf);
-    assert!(
-        witness_leaf_start == round_up_to_64(setup_leaf_end),
-        "witness_leaf should be 64-byte aligned after setup_leaf"
-    );
-    let setup_to_witness_gap = (witness_leaf_start - offset_of!(QueryValuesInstance, setup_leaf))
-        / core::mem::size_of::<u32>()
-        - LEAF_SIZE_SETUP;
-    offsets[LEAF_SIZE_SETUP] = 1 + setup_to_witness_gap;
+    assert!(witness_leaf_start == round_up_to_64(setup_leaf_end));
+    offsets[i] = witness_leaf_start / core::mem::size_of::<u32>();
+    i += 1;
 
-    // offset from last witness_leaf element to memory_leaf
-    let witness_leaf_end = offset_of!(QueryValuesInstance, witness_leaf)
-        + LEAF_SIZE_WITNESS_TREE * core::mem::size_of::<u32>();
+    while i < LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
+
+    let witness_leaf_end =
+        witness_leaf_start + LEAF_SIZE_WITNESS_TREE * core::mem::size_of::<u32>();
     let memory_leaf_start = offset_of!(QueryValuesInstance, memory_leaf);
-    assert!(
-        memory_leaf_start == round_up_to_64(witness_leaf_end),
-        "memory_leaf should be 64-byte aligned after witness_leaf"
-    );
-    let witness_to_memory_gap = (memory_leaf_start - offset_of!(QueryValuesInstance, witness_leaf))
-        / core::mem::size_of::<u32>()
-        - LEAF_SIZE_WITNESS_TREE;
-    offsets[LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE] = 1 + witness_to_memory_gap;
+    assert!(memory_leaf_start == round_up_to_64(witness_leaf_end));
+    offsets[i] = memory_leaf_start / core::mem::size_of::<u32>();
+    i += 1;
 
-    // offset from last memory_leaf element to stage_2_leaf
-    let memory_leaf_end = offset_of!(QueryValuesInstance, memory_leaf)
-        + LEAF_SIZE_MEMORY_TREE * core::mem::size_of::<u32>();
+    while i < LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE + LEAF_SIZE_MEMORY_TREE {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
+
+    let memory_leaf_end = memory_leaf_start + LEAF_SIZE_MEMORY_TREE * core::mem::size_of::<u32>();
     let stage_2_leaf_start = offset_of!(QueryValuesInstance, stage_2_leaf);
-    assert!(
-        stage_2_leaf_start == round_up_to_64(memory_leaf_end),
-        "stage_2_leaf should be 64-byte aligned after memory_leaf"
-    );
-    let memory_to_stage2_gap = (stage_2_leaf_start - offset_of!(QueryValuesInstance, memory_leaf))
-        / core::mem::size_of::<u32>()
-        - LEAF_SIZE_MEMORY_TREE;
-    offsets[LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE + LEAF_SIZE_MEMORY_TREE] =
-        1 + memory_to_stage2_gap;
+    assert!(stage_2_leaf_start == round_up_to_64(memory_leaf_end));
+    offsets[i] = stage_2_leaf_start / core::mem::size_of::<u32>();
+    i += 1;
 
-    // offset from last stage_2_leaf element to quotient_leaf
-    let stage_2_leaf_end = offset_of!(QueryValuesInstance, stage_2_leaf)
-        + LEAF_SIZE_STAGE_2 * core::mem::size_of::<u32>();
+    while i < LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE + LEAF_SIZE_MEMORY_TREE + LEAF_SIZE_STAGE_2 {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
+
+    let stage_2_leaf_end = stage_2_leaf_start + LEAF_SIZE_STAGE_2 * core::mem::size_of::<u32>();
     let quotient_leaf_start = offset_of!(QueryValuesInstance, quotient_leaf);
-    assert!(
-        quotient_leaf_start == round_up_to_64(stage_2_leaf_end),
-        "quotient_leaf should be 64-byte aligned after stage_2_leaf"
-    );
-    let stage2_to_quotient_gap = (quotient_leaf_start
-        - offset_of!(QueryValuesInstance, stage_2_leaf))
-        / core::mem::size_of::<u32>()
-        - LEAF_SIZE_STAGE_2;
-    offsets[LEAF_SIZE_SETUP + LEAF_SIZE_WITNESS_TREE + LEAF_SIZE_MEMORY_TREE + LEAF_SIZE_STAGE_2] =
-        1 + stage2_to_quotient_gap;
+    assert!(quotient_leaf_start == round_up_to_64(stage_2_leaf_end));
+    offsets[i] = quotient_leaf_start / core::mem::size_of::<u32>();
+    i += 1;
 
-    // offset from last quotient_leaf element to fri_oracles_leafs
-    let quotient_leaf_end = offset_of!(QueryValuesInstance, quotient_leaf)
-        + LEAF_SIZE_QUOTIENT * core::mem::size_of::<u32>();
-    let fri_oracles_leafs_start = offset_of!(QueryValuesInstance, fri_oracles_leafs);
-    assert!(
-        fri_oracles_leafs_start == round_up_to_64(quotient_leaf_end),
-        "fri_oracles_leafs should be 64-byte aligned after quotient_leaf"
-    );
-    let quotient_to_fri_gap = (fri_oracles_leafs_start
-        - offset_of!(QueryValuesInstance, quotient_leaf))
-        / core::mem::size_of::<u32>()
-        - LEAF_SIZE_QUOTIENT;
-    offsets[LEAF_SIZE_SETUP
+    while i < LEAF_SIZE_SETUP
         + LEAF_SIZE_WITNESS_TREE
         + LEAF_SIZE_MEMORY_TREE
         + LEAF_SIZE_STAGE_2
-        + LEAF_SIZE_QUOTIENT] = 1 + quotient_to_fri_gap;
+        + LEAF_SIZE_QUOTIENT
+    {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
+
+    let quotient_leaf_end = quotient_leaf_start + LEAF_SIZE_QUOTIENT * core::mem::size_of::<u32>();
+    let fri_oracle_leafs_start = offset_of!(QueryValuesInstance, fri_oracles_leafs);
+    assert!(fri_oracle_leafs_start == round_up_to_64(quotient_leaf_end));
+    offsets[i] = fri_oracle_leafs_start / core::mem::size_of::<u32>();
+    i += 1;
+
+    while i < LEAF_SIZE_SETUP
+        + LEAF_SIZE_WITNESS_TREE
+        + LEAF_SIZE_MEMORY_TREE
+        + LEAF_SIZE_STAGE_2
+        + LEAF_SIZE_QUOTIENT
+        + TOTAL_FRI_LEAFS_SIZES
+    {
+        offsets[i] = offsets[i - 1] + 1;
+        i += 1;
+    }
 
     offsets
 };
@@ -433,7 +427,7 @@ impl QueryValuesInstance {
         proof_skeleton: &ProofSkeletonInstance,
         hasher: &mut V,
     ) {
-        let mut dst = this.cast::<u32>();
+        let dst = this.cast::<u32>();
         let modulus = Mersenne31Field::CHARACTERISTICS as u32;
         // query index
         let query_index = I::read_word();
@@ -445,10 +439,12 @@ impl QueryValuesInstance {
         );
         dst.write(query_index);
 
+        let mut i = 0;
         // leaf values are field elements
-        for i in BASE_CIRCUIT_QUERY_VALUES_OFFSETS {
-            dst = dst.add(i);
-            dst.write(I::read_reduced_field_element(modulus));
+        while i < NUM_QUERIES {
+            dst.add(BASE_CIRCUIT_QUERY_VALUES_OFFSETS[i])
+                .write(I::read_reduced_field_element(modulus));
+            i += 1;
         }
 
         // for all except FRI the following is valid

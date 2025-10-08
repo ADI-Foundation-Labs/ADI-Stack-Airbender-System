@@ -1,6 +1,6 @@
 use core::fmt;
-use core::ops::{Deref, DerefMut};
 use core::hash::Hash;
+use core::ops::{Deref, DerefMut};
 
 #[repr(C)]
 pub struct AlignedArray<T, A, const N: usize> {
@@ -20,7 +20,6 @@ pub struct A64;
 
 pub type AlignedArray64<T, const N: usize> = AlignedArray<T, A64, N>;
 pub type AlignedSlice64<'a, T> = AlignedSlice<'a, T, A64>;
-
 
 impl<T, A, const N: usize> AlignedArray<T, A, N> {
     #[inline(always)]
@@ -44,10 +43,7 @@ impl<'a, T, A> AlignedSlice<'a, T, A> {
     #[inline(always)]
     pub const unsafe fn from_raw_parts(data: *const T, len: usize) -> Self {
         let data = core::slice::from_raw_parts(data, len);
-        Self {
-            _aligner: [],
-            data
-        }
+        Self { _aligner: [], data }
     }
 }
 

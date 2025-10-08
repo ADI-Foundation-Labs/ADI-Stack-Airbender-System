@@ -314,18 +314,13 @@ fn test_verifier_in_simulator() {
 }
 
 #[test]
-fn test_query_values_offsets_pointer_arithmetic() {
+fn test_query_values_offsets() {
     // Create a dummy QueryValuesInstance to test pointer arithmetic
     let dummy = MaybeUninit::<QueryValuesInstance>::uninit();
     let base_ptr = dummy.as_ptr().cast::<u32>();
 
-    // Start at query_index
-    let mut current_ptr = unsafe {
-        base_ptr.add(offset_of!(QueryValuesInstance, query_index) / core::mem::size_of::<u32>())
-    };
-
     for (i, &offset_increment) in BASE_CIRCUIT_QUERY_VALUES_OFFSETS.iter().enumerate() {
-        current_ptr = unsafe { current_ptr.add(offset_increment) };
+        let current_ptr = unsafe { base_ptr.add(offset_increment) };
 
         match i {
             0 => {
