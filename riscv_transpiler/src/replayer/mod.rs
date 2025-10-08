@@ -231,14 +231,15 @@ mod test {
     use crate::ir::decode;
     use crate::ir::FullUnsignedMachineDecoderConfig;
     use crate::vm::test::read_binary;
+    use crate::vm::Counters;
     use crate::vm::*;
     use crate::witness::NonMemDestinationHolder;
 
     use super::*;
     use std::path::Path;
 
-    // type Counters = DelegationsCounters;
-    type Counters = DelegationsAndFamiliesCounters;
+    // type CountersT = DelegationsCounters;
+    type CountersT = DelegationsAndFamiliesCounters;
 
     #[test]
     fn test_replay_simple_fibonacci() {
@@ -254,12 +255,16 @@ mod test {
         let num_snapshots = 1000;
         let cycles_bound = period * num_snapshots;
 
-        let mut state = State::initial_with_counters(Counters::default());
+        let mut state = State::initial_with_counters(CountersT::default());
 
         let mut snapshotter = SimpleSnapshotter::new_with_cycle_limit(cycles_bound, period, state);
 
         let now = std::time::Instant::now();
-        VM::<Counters>::run_basic_unrolled::<SimpleSnapshotter<Counters, 5>, RamWithRomRegion<5>, _>(
+        VM::<CountersT>::run_basic_unrolled::<
+            SimpleSnapshotter<CountersT, 5>,
+            RamWithRomRegion<5>,
+            _,
+        >(
             &mut state,
             num_snapshots,
             &mut ram,
@@ -287,7 +292,7 @@ mod test {
         let counters = state.counters;
 
         // now replay - first from the start
-        let mut state = State::initial_with_counters(Counters::default());
+        let mut state = State::initial_with_counters(CountersT::default());
 
         let mut ram = ReplayerRam::<5> {
             ram_log: &snapshotter.reads_buffer,
@@ -303,7 +308,7 @@ mod test {
             buffers: &mut buffers[..],
         };
         let now = std::time::Instant::now();
-        ReplayerVM::<Counters>::replay_basic_unrolled::<_, _>(
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
             &mut state,
             num_snapshots,
             &mut ram,
@@ -323,7 +328,8 @@ mod test {
 
         // now let's give an example of parallel processing
 
-        let total_num_add_sub = counters.add_sub_family;
+        let total_num_add_sub =
+            counters.get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>();
 
         println!("In total {} of ADD/SUB family opcodes", total_num_add_sub);
 
@@ -356,9 +362,15 @@ mod test {
             let mut snapshots_iter = snapshotter.snapshots.iter();
             for _i in 0..geometry.len() {
                 let mut num_snapshots = 0;
-                'inner: while current_snapshot.state.counters.add_sub_family
-                    - starting_snapshot.state.counters.add_sub_family
-                    < chunk_size
+                'inner: while current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) - starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) < chunk_size
                 {
                     if let Some(next_snapshot) = snapshots_iter.next() {
                         num_snapshots += 1;
@@ -368,15 +380,27 @@ mod test {
                     }
                 }
 
-                let start_chunk_idx =
-                    starting_snapshot.state.counters.add_sub_family / circuit_capacity;
-                let start_chunk_offset =
-                    starting_snapshot.state.counters.add_sub_family % circuit_capacity;
+                let start_chunk_idx = starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) / circuit_capacity;
+                let start_chunk_offset = starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) % circuit_capacity;
 
-                let end_chunk_idx =
-                    current_snapshot.state.counters.add_sub_family / circuit_capacity;
-                let end_chunk_offset =
-                    current_snapshot.state.counters.add_sub_family % circuit_capacity;
+                let end_chunk_idx = current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) / circuit_capacity;
+                let end_chunk_offset = current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) % circuit_capacity;
 
                 let mut chunks = vec![];
                 let mut offset = start_chunk_offset;
@@ -427,7 +451,7 @@ mod test {
                             buffers: &mut chunks,
                         };
                     let mut state = starting_snapshot.state;
-                    ReplayerVM::<Counters>::replay_basic_unrolled::<_, _>(
+                    ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
                         &mut state,
                         num_snapshots,
                         &mut ram,

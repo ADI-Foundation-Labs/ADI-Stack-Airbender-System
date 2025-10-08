@@ -22,6 +22,7 @@ pub trait Counters: 'static + Clone + Copy + Debug {
     fn bump_keccak_special_5(&mut self);
     fn bump_non_determinism(&mut self);
     fn log_circuit_family<const FAMILY: u8>(&mut self);
+    fn get_calls_to_circuit_family<const FAMILY: u8>(&self) -> usize;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

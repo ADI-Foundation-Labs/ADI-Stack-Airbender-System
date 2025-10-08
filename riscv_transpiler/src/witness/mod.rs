@@ -1,5 +1,6 @@
 pub mod delegation;
-use crate::witness::delegation::DelegationWitness;
+
+pub use self::delegation::{DelegationAbiDescription, DelegationWitness};
 use risc_v_simulator::machine_mode_only_unrolled::{
     MemoryOpcodeTracingDataWithTimestamp, NonMemoryOpcodeTracingDataWithTimestamp,
 };

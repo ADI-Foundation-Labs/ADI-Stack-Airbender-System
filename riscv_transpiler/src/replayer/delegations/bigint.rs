@@ -78,6 +78,9 @@ pub(crate) fn bigint_call<C: Counters, R: RAM>(
     tracer: &mut impl WitnessTracer,
 ) {
     let mut witness = BigintDelegationWitness::empty();
+    let write_ts = state.timestamp | 3;
+    witness.write_timestamp = write_ts;
+
     let (x10, x10_ts) = read_register_with_ts::<C, 3>(state, 10);
     let (x11, x11_ts) = read_register_with_ts::<C, 3>(state, 11);
     let x12 = state.registers[12].value;
@@ -92,8 +95,6 @@ pub(crate) fn bigint_call<C: Counters, R: RAM>(
         write_value: x11,
         timestamp: TimestampData::from_scalar(x11_ts),
     };
-
-    let write_ts = state.timestamp | 3;
 
     let b = read_u256(x11, ram, write_ts, &mut witness.indirect_reads);
     let a = read_u256_for_update(x10, ram, write_ts, &mut witness.indirect_writes);

@@ -61,11 +61,13 @@ pub(crate) fn blake2_round_function_call<C: Counters, R: RAM>(
     tracer: &mut impl WitnessTracer,
 ) {
     let mut witness = Blake2sRoundFunctionDelegationWitness::empty();
+    let write_ts = state.timestamp | 3;
+    witness.write_timestamp = write_ts;
 
     let (x10, x10_ts) = read_register_with_ts::<C, 3>(state, 10);
     let (x11, x11_ts) = read_register_with_ts::<C, 3>(state, 11);
-    let (x12, x12_ts) = read_register_with_ts::<C, 3>(state, 11);
-    let (x13, x13_ts) = read_register_with_ts::<C, 3>(state, 11);
+    let (x12, x12_ts) = read_register_with_ts::<C, 3>(state, 12);
+    let (x13, x13_ts) = read_register_with_ts::<C, 3>(state, 13);
 
     witness.reg_accesses[0] = RegisterOrIndirectReadWriteData {
         read_value: x10,
@@ -87,8 +89,6 @@ pub(crate) fn blake2_round_function_call<C: Counters, R: RAM>(
         write_value: x13,
         timestamp: TimestampData::from_scalar(x13_ts),
     };
-
-    let write_ts = state.timestamp | 3;
 
     let input: [u32; BLAKE2S_BLOCK_SIZE_U32_WORDS] =
         read_words(x11, ram, write_ts, &mut witness.indirect_reads);

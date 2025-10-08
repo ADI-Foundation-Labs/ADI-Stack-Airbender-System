@@ -78,40 +78,42 @@ impl DelegationAbiDescription for Blake2sRoundFunctionAbiDescription {
         0..0,
     ];
 
-    const VARIABLE_OFFSETS_DESCRIPTION: &'static [Range<usize>; 32] = &[
-        0..0, // x0
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0, // x10
-        0..0, // x11
-        0..0, // x12
-        0..0,
-        0..0,
-        0..0,
-        0..0, // x16
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-        0..0,
-    ];
+    const VARIABLE_OFFSETS_DESCRIPTION: &'static [u16] = &[];
+
+    // const VARIABLE_OFFSETS_DESCRIPTION: &'static [Range<usize>; 32] = &[
+    //     0..0, // x0
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0, // x10
+    //     0..0, // x11
+    //     0..0, // x12
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0, // x16
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    //     0..0,
+    // ];
 }
 
 pub type Blake2sRoundFunctionDelegationWitness = DelegationWitness<4, 16, 24, 0>;

@@ -27,6 +27,10 @@ impl Counters for DelegationsCounters {
     }
     #[inline(always)]
     fn log_circuit_family<const FAMILY: u8>(&mut self) {}
+    #[inline(always)]
+    fn get_calls_to_circuit_family<const FAMILY: u8>(&self) -> usize {
+        0
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -74,6 +78,24 @@ impl Counters for DelegationsAndFamiliesCounters {
             self.word_size_mem_family += 1;
         } else if const { FAMILY == LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX } {
             self.subword_size_mem_family += 1;
+        } else {
+            unsafe { core::hint::unreachable_unchecked() }
+        }
+    }
+    #[inline(always)]
+    fn get_calls_to_circuit_family<const FAMILY: u8>(&self) -> usize {
+        if const { FAMILY == ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX } {
+            self.add_sub_family
+        } else if const { FAMILY == JUMP_BRANCH_SLT_CIRCUIT_FAMILY_IDX } {
+            self.slt_branch_family
+        } else if const { FAMILY == SHIFT_BINARY_CSR_CIRCUIT_FAMILY_IDX } {
+            self.binary_shift_csr_family
+        } else if const { FAMILY == MUL_DIV_CIRCUIT_FAMILY_IDX } {
+            self.mul_div_family
+        } else if const { FAMILY == LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX } {
+            self.word_size_mem_family
+        } else if const { FAMILY == LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX } {
+            self.subword_size_mem_family
         } else {
             unsafe { core::hint::unreachable_unchecked() }
         }

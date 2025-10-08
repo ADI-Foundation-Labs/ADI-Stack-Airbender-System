@@ -42,7 +42,9 @@ pub struct TracingDecoderData {
     // pub timestamp: TimestampData,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[repr(C)]
 pub struct NonMemoryOpcodeTracingData {
     pub initial_pc: u32,
@@ -55,7 +57,9 @@ pub struct NonMemoryOpcodeTracingData {
     pub delegation_type: u16,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[repr(C)]
 pub struct LoadOpcodeTracingData {
     pub initial_pc: u32,
@@ -67,7 +71,9 @@ pub struct LoadOpcodeTracingData {
     pub rd_value: u32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[repr(C)]
 pub struct StoreOpcodeTracingData {
     pub initial_pc: u32,
@@ -95,7 +101,9 @@ const _: () = const {
 pub const MEM_LOAD_TRACE_DATA_MARKER: u16 = 0;
 pub const MEM_STORE_TRACE_DATA_MARKER: u16 = MEM_LOAD_TRACE_DATA_MARKER + 1;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[repr(C)]
 pub struct NonMemoryOpcodeTracingDataWithTimestamp {
     pub opcode_data: NonMemoryOpcodeTracingData,
@@ -105,7 +113,9 @@ pub struct NonMemoryOpcodeTracingDataWithTimestamp {
     pub cycle_timestamp: TimestampData,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[repr(C)]
 pub struct MemoryOpcodeTracingDataWithTimestamp {
     pub opcode_data: LoadOpcodeTracingData,
