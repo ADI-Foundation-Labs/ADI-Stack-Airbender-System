@@ -743,8 +743,6 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
             default_pc_value_in_padding: 4,
         };
 
-        dbg!(oracle.inner[2]);
-
         let is_empty = oracle.inner.is_empty();
 
         // println!(
@@ -1022,620 +1020,682 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
-    todo!();
-
-    // if true {
-    //     println!("Will try to prove word LOAD/STORE circuit");
-
-    //     let extra_tables =
-    //         create_word_only_load_store_special_tables::<_, SECOND_WORD_BITS>(&binary);
-    //     let word_load_store_circuit = {
-    //         compile_unrolled_circuit_state_transition::<Mersenne31Field>(
-    //             &|cs| {
-    //                 word_only_load_store_table_addition_fn(cs);
-    //                 for (table_type, table) in extra_tables.clone() {
-    //                     cs.add_table_with_content(table_type, table);
-    //                 }
-    //             },
-    //             &|cs| {
-    //                 word_only_load_store_circuit_with_preprocessed_bytecode::<_, _, SECOND_WORD_BITS>(
-    //                     cs,
-    //                 )
-    //             },
-    //             1 << 20,
-    //             TRACE_LEN_LOG2,
-    //         )
-    //     };
-
-    //     let mut table_driver = TableDriver::<Mersenne31Field>::new();
-    //     word_only_load_store_table_driver_fn(&mut table_driver);
-    //     for (table_type, table) in extra_tables.clone() {
-    //         table_driver.add_table_with_content(table_type, table);
-    //     }
-
-    //     let family_data = &word_mem_circuits;
-    //     assert_eq!(family_data.len(), 1);
-    //     let (decoder_table_data, witness_gen_data) =
-    //         &preprocessing_data[&LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX];
-    //     let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
-
-    //     let oracle = MemoryCircuitOracle {
-    //         inner: &family_data[0].data,
-    //         decoder_table: witness_gen_data,
-    //     };
-
-    //     let is_empty = oracle.inner.is_empty();
-
-    //     // println!(
-    //     //     "Opcode = 0x{:08x}",
-    //     //     family_data[0].data[203].opcode_data.opcode
-    //     // );
-    //     // dbg!(family_data[0].data[203].as_load_data());
-
-    //     let memory_trace = evaluate_memory_witness_for_executor_family::<_, Global>(
-    //         &word_load_store_circuit,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &oracle,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     let full_trace = evaluate_witness_for_executor_family::<_, Global>(
-    //         &word_load_store_circuit,
-    //         word_load_store::witness_eval_fn,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &oracle,
-    //         &table_driver,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     parse_state_permutation_elements_from_full_trace(
-    //         &word_load_store_circuit,
-    //         &full_trace,
-    //         &mut write_set,
-    //         &mut read_set,
-    //     );
-    //     parse_shuffle_ram_accesses_from_full_trace(
-    //         &word_load_store_circuit,
-    //         &full_trace,
-    //         &mut memory_write_set,
-    //         &mut memory_read_set,
-    //     );
-
-    //     let is_satisfied = check_satisfied(
-    //         &word_load_store_circuit,
-    //         &full_trace.exec_trace,
-    //         full_trace.num_witness_columns,
-    //     );
-    //     assert!(is_satisfied);
-
-    //     let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
-    //     let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
-    //     let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
-    //         &table_driver,
-    //         &decoder_table_data,
-    //         trace_len,
-    //         &word_load_store_circuit.setup_layout,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         &worker,
-    //     );
-
-    //     // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
-    //     //     Some(witness.lookup_mapping.clone())
-    //     // } else {
-    //     //     None
-    //     // };
-
-    //     println!("Trying to prove");
-
-    //     let now = std::time::Instant::now();
-    //     let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
-    //         DEFAULT_TRACE_PADDING_MULTIPLE,
-    //         _,
-    //         DefaultTreeConstructor,
-    //     >(
-    //         &word_load_store_circuit,
-    //         &vec![],
-    //         &external_challenges,
-    //         full_trace,
-    //         &[],
-    //         &setup,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         None,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         53,
-    //         28,
-    //         &worker,
-    //     );
-    //     println!("Proving time is {:?}", now.elapsed());
-
-    //     if is_empty {
-    //         assert_eq!(
-    //             proof.permutation_grand_product_accumulator,
-    //             Mersenne31Quartic::ONE
-    //         );
-    //     }
-    //     assert!(proof.delegation_argument_accumulator.is_none());
-
-    //     serialize_to_file(&proof, "word_only_load_store_unrolled_proof.json");
-
-    //     permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
-    // }
-
-    // if true {
-    //     println!("Will try to prove subword LOAD/STORE circuit");
-
-    //     use cs::machine::ops::unrolled::load_store::*;
-    //     const SECOND_WORD_BITS: usize = 4;
-
-    //     let extra_tables = create_load_store_special_tables::<_, SECOND_WORD_BITS>(&binary);
-    //     let subword_load_store_circuit = {
-    //         compile_unrolled_circuit_state_transition::<Mersenne31Field>(
-    //             &|cs| {
-    //                 subword_only_load_store_table_addition_fn(cs);
-    //                 for (table_type, table) in extra_tables.clone() {
-    //                     cs.add_table_with_content(table_type, table);
-    //                 }
-    //             },
-    //             &|cs| {
-    //                 subword_only_load_store_circuit_with_preprocessed_bytecode::<
-    //                     _,
-    //                     _,
-    //                     SECOND_WORD_BITS,
-    //                 >(cs)
-    //             },
-    //             1 << 20,
-    //             TRACE_LEN_LOG2,
-    //         )
-    //     };
-
-    //     let mut table_driver = TableDriver::<Mersenne31Field>::new();
-    //     subword_only_load_store_table_driver_fn(&mut table_driver);
-    //     for (table_type, table) in extra_tables.clone() {
-    //         table_driver.add_table_with_content(table_type, table);
-    //     }
-
-    //     let family_data = &subword_mem_circuits;
-    //     assert_eq!(family_data.len(), 1);
-    //     let (decoder_table_data, witness_gen_data) =
-    //         &preprocessing_data[&LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX];
-    //     let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
-
-    //     let oracle = MemoryCircuitOracle {
-    //         inner: &family_data[0].data,
-    //         decoder_table: witness_gen_data,
-    //     };
-
-    //     let is_empty = oracle.inner.is_empty();
-
-    //     // println!(
-    //     //     "Opcode = 0x{:08x}",
-    //     //     family_data[0].data[29].opcode_data.opcode
-    //     // );
-
-    //     let memory_trace = evaluate_memory_witness_for_executor_family::<_, Global>(
-    //         &subword_load_store_circuit,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &oracle,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     let full_trace = evaluate_witness_for_executor_family::<_, Global>(
-    //         &subword_load_store_circuit,
-    //         subword_load_store::witness_eval_fn,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &oracle,
-    //         &table_driver,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     parse_state_permutation_elements_from_full_trace(
-    //         &subword_load_store_circuit,
-    //         &full_trace,
-    //         &mut write_set,
-    //         &mut read_set,
-    //     );
-    //     parse_shuffle_ram_accesses_from_full_trace(
-    //         &subword_load_store_circuit,
-    //         &full_trace,
-    //         &mut memory_write_set,
-    //         &mut memory_read_set,
-    //     );
-
-    //     let is_satisfied = check_satisfied(
-    //         &subword_load_store_circuit,
-    //         &full_trace.exec_trace,
-    //         full_trace.num_witness_columns,
-    //     );
-    //     assert!(is_satisfied);
-
-    //     let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
-    //     let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
-    //     let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
-    //         &table_driver,
-    //         &decoder_table_data,
-    //         trace_len,
-    //         &subword_load_store_circuit.setup_layout,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         &worker,
-    //     );
-
-    //     // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
-    //     //     Some(witness.lookup_mapping.clone())
-    //     // } else {
-    //     //     None
-    //     // };
-
-    //     println!("Trying to prove");
-
-    //     let now = std::time::Instant::now();
-    //     let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
-    //         DEFAULT_TRACE_PADDING_MULTIPLE,
-    //         _,
-    //         DefaultTreeConstructor,
-    //     >(
-    //         &subword_load_store_circuit,
-    //         &vec![],
-    //         &external_challenges,
-    //         full_trace,
-    //         &[],
-    //         &setup,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         None,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         53,
-    //         28,
-    //         &worker,
-    //     );
-    //     println!("Proving time is {:?}", now.elapsed());
-
-    //     if is_empty {
-    //         assert_eq!(
-    //             proof.permutation_grand_product_accumulator,
-    //             Mersenne31Quartic::ONE
-    //         );
-    //     }
-    //     assert!(proof.delegation_argument_accumulator.is_none());
-
-    //     serialize_to_file(&proof, "subword_only_load_store_unrolled_proof.json");
-
-    //     permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
-    // }
-
-    // // Machine state permutation ended
-    // {
-    //     for (pc, ts) in write_set.iter().copied() {
-    //         if read_set.contains(&(pc, ts)) == false {
-    //             panic!("read set doesn't contain a pair {:?}", (pc, ts));
-    //         }
-    //     }
-
-    //     for (pc, ts) in read_set.iter().copied() {
-    //         if write_set.contains(&(pc, ts)) == false {
-    //             panic!("write set doesn't contain a pair {:?}", (pc, ts));
-    //         }
-    //     }
-    // }
-
-    // if true {
-    //     println!("Will try to prove memory inits and teardowns circuit");
-
-    //     let compiler = OneRowCompiler::<Mersenne31Field>::default();
-    //     let inits_and_teardowns_circuit =
-    //         compiler.compile_init_and_teardown_circuit(NUM_INIT_AND_TEARDOWN_SETS, TRACE_LEN_LOG2);
-
-    //     let table_driver = TableDriver::<Mersenne31Field>::new();
-
-    //     let inits_data = &inits_and_teardowns[0];
-
-    //     let memory_trace = evaluate_init_and_teardown_memory_witness::<Global>(
-    //         &inits_and_teardowns_circuit,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &inits_data.lazy_init_data,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     let full_trace = evaluate_init_and_teardown_witness::<Global>(
-    //         &inits_and_teardowns_circuit,
-    //         NUM_CYCLES_PER_CHUNK,
-    //         &inits_data.lazy_init_data,
-    //         &worker,
-    //         Global,
-    //     );
-
-    //     let WitnessEvaluationData {
-    //         aux_data,
-    //         exec_trace,
-    //         num_witness_columns,
-    //         lookup_mapping,
-    //     } = full_trace;
-    //     let full_trace = WitnessEvaluationDataForExecutionFamily {
-    //         aux_data: ExecutorFamilyWitnessEvaluationAuxData {},
-    //         exec_trace,
-    //         num_witness_columns,
-    //         lookup_mapping,
-    //     };
-
-    //     let is_satisfied = check_satisfied(
-    //         &inits_and_teardowns_circuit,
-    //         &full_trace.exec_trace,
-    //         full_trace.num_witness_columns,
-    //     );
-    //     assert!(is_satisfied);
-
-    //     let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
-    //     let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
-    //     let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
-    //         &table_driver,
-    //         &[],
-    //         trace_len,
-    //         &inits_and_teardowns_circuit.setup_layout,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         &worker,
-    //     );
-
-    //     // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
-    //     //     Some(witness.lookup_mapping.clone())
-    //     // } else {
-    //     //     None
-    //     // };
-
-    //     println!("Trying to prove");
-
-    //     let now = std::time::Instant::now();
-    //     let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
-    //         DEFAULT_TRACE_PADDING_MULTIPLE,
-    //         _,
-    //         DefaultTreeConstructor,
-    //     >(
-    //         &inits_and_teardowns_circuit,
-    //         &vec![],
-    //         &external_challenges,
-    //         full_trace,
-    //         &aux_data.aux_boundary_data,
-    //         &setup,
-    //         &twiddles,
-    //         &lde_precomputations,
-    //         None,
-    //         lde_factor,
-    //         tree_cap_size,
-    //         53,
-    //         28,
-    //         &worker,
-    //     );
-    //     println!("Proving time is {:?}", now.elapsed());
-
-    //     serialize_to_file(&proof, "inits_and_teardowns_unrolled_proof.json");
-
-    //     permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
-    // }
-
-    // if true {
-    //     // now prove delegation circuits
-    //     let mut external_values = ExternalValues {
-    //         challenges: external_challenges,
-    //         aux_boundary_values: Default::default(),
-    //     };
-    //     external_values.aux_boundary_values = Default::default();
-
-    //     let (circuit, table_driver) = {
-    //         use crate::cs::cs::cs_reference::BasicAssembly;
-    //         use cs::delegation::blake2_round_with_extended_control::define_blake2_with_extended_control_delegation_circuit;
-    //         let mut cs = BasicAssembly::<Mersenne31Field>::new();
-    //         define_blake2_with_extended_control_delegation_circuit(&mut cs);
-    //         let (circuit_output, _) = cs.finalize();
-    //         let table_driver = circuit_output.table_driver.clone();
-    //         let compiler = OneRowCompiler::default();
-    //         let circuit = compiler.compile_to_evaluate_delegations(
-    //             circuit_output,
-    //             (NUM_DELEGATION_CYCLES + 1).trailing_zeros() as usize,
-    //         );
-
-    //         (circuit, table_driver)
-    //     };
-
-    //     let delegation_circuits = delegation_circuits
-    //         .remove(&(BLAKE2S_DELEGATION_CSR_REGISTER as u16))
-    //         .unwrap();
-    //     for delegation_witness in delegation_circuits.into_iter() {
-    //         println!("Will try to prove Blake delegation");
-
-    //         assert_eq!(
-    //             delegation_witness.delegation_type as u32,
-    //             BLAKE2S_DELEGATION_CSR_REGISTER
-    //         );
-
-    //         // evaluate a witness and memory-only witness for each
-
-    //         let delegation_type = delegation_witness.delegation_type;
-
-    //         let oracle = DelegationCircuitOracle {
-    //             cycle_data: &delegation_witness,
-    //         };
-    //         #[cfg(feature = "debug_logs")]
-    //         println!(
-    //             "Evaluating memory-only witness for delegation circuit {}",
-    //             delegation_type
-    //         );
-    //         let mem_only_witness = evaluate_delegation_memory_witness(
-    //             &circuit,
-    //             NUM_DELEGATION_CYCLES,
-    //             &oracle,
-    //             &worker,
-    //             Global,
-    //         );
-
-    //         let eval_fn = super::blake2s_delegation_with_gpu_tracer::witness_eval_fn;
-
-    //         #[cfg(feature = "debug_logs")]
-    //         println!(
-    //             "Evaluating witness for delegation circuit {}",
-    //             delegation_type
-    //         );
-    //         let full_witness = evaluate_witness(
-    //             &circuit,
-    //             eval_fn,
-    //             NUM_DELEGATION_CYCLES,
-    //             &oracle,
-    //             &[],
-    //             &table_driver,
-    //             0,
-    //             &worker,
-    //             Global,
-    //         );
-
-    //         parse_delegation_ram_accesses_from_full_trace(
-    //             &circuit,
-    //             &full_witness,
-    //             &mut memory_write_set,
-    //             &mut memory_read_set,
-    //         );
-
-    //         let is_satisfied = check_satisfied(
-    //             &circuit,
-    //             &full_witness.exec_trace,
-    //             full_witness.num_witness_columns,
-    //         );
-    //         assert!(is_satisfied);
-
-    //         let trace_len = NUM_DELEGATION_CYCLES + 1;
-
-    //         // create setup
-    //         let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
-    //         let lde_precomputations =
-    //             LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
-
-    //         let setup = SetupPrecomputations::from_tables_and_trace_len(
-    //             &table_driver,
-    //             NUM_DELEGATION_CYCLES + 1,
-    //             &circuit.setup_layout,
-    //             &twiddles,
-    //             &lde_precomputations,
-    //             lde_factor,
-    //             tree_cap_size,
-    //             &worker,
-    //         );
-
-    //         // let lookup_mapping_for_gpu = if maybe_delegated_gpu_comparison_hook.is_some() {
-    //         //     Some(witness.witness.lookup_mapping.clone())
-    //         // } else {
-    //         //     None
-    //         // };
-
-    //         let now = std::time::Instant::now();
-    //         let (prover_data, proof) = prove::<DEFAULT_TRACE_PADDING_MULTIPLE, _>(
-    //             &circuit,
-    //             &[],
-    //             &external_values,
-    //             full_witness,
-    //             &setup,
-    //             &twiddles,
-    //             &lde_precomputations,
-    //             0,
-    //             Some(delegation_type),
-    //             lde_factor,
-    //             tree_cap_size,
-    //             53,
-    //             28,
-    //             &worker,
-    //         );
-    //         println!(
-    //             "Delegation circuit type {} proving time is {:?}",
-    //             delegation_type,
-    //             now.elapsed()
-    //         );
-
-    //         // if let Some(ref gpu_comparison_hook) = maybe_delegated_gpu_comparison_hook {
-    //         //     let log_n = work_type.trace_len.trailing_zeros();
-    //         //     assert_eq!(work_type.trace_len, 1 << log_n);
-    //         //     let dummy_public_inputs = Vec::<Mersenne31Field>::new();
-    //         //     let gpu_comparison_args = GpuComparisonArgs {
-    //         //         circuit: &work_type.compiled_circuit,
-    //         //         setup: &setup,
-    //         //         external_values: &external_values,
-    //         //         public_inputs: &dummy_public_inputs,
-    //         //         twiddles: &twiddles,
-    //         //         lde_precomputations: &lde_precomputations,
-    //         //         table_driver: &work_type.table_driver,
-    //         //         lookup_mapping: lookup_mapping_for_gpu.unwrap(),
-    //         //         log_n: log_n as usize,
-    //         //         circuit_sequence: 0,
-    //         //         delegation_processing_type: Some(delegation_type),
-    //         //         prover_data: &prover_data,
-    //         //     };
-    //         //     gpu_comparison_hook(&gpu_comparison_args);
-    //         // }
-
-    //         // if !for_gpu_comparison {
-    //         //     serialize_to_file(&proof, "blake2s_delegator_proof");
-    //         // }
-
-    //         dbg!(prover_data.stage_2_result.grand_product_accumulator);
-    //         dbg!(prover_data.stage_2_result.sum_over_delegation_poly);
-
-    //         permutation_argument_accumulator.mul_assign(&proof.memory_grand_product_accumulator);
-    //         delegation_argument_accumulator
-    //             .sub_assign(&proof.delegation_argument_accumulator.unwrap());
-    //     }
-    // }
-
-    // dbg!(permutation_argument_accumulator);
-    // dbg!(delegation_argument_accumulator);
-
-    // // inits and teardowns
-    // {
-    //     let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
-    //     let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
-    //     assert_eq!(expected_init_set.len(), expected_teardown_set.len());
-
-    //     for (is_register, addr, ts, init_value) in expected_init_set.iter() {
-    //         assert!(*is_register == false);
-    //         assert_eq!(
-    //             *ts, 0,
-    //             "init timestamp is invalid for memory address {}",
-    //             addr
-    //         );
-    //         assert_eq!(
-    //             *init_value, 0,
-    //             "init value is invalid for memory address {}",
-    //             addr
-    //         );
-    //     }
-    //     for (is_register, addr, ts, _) in expected_teardown_set.iter() {
-    //         assert!(*is_register == false);
-    //         assert!(
-    //             *ts > INITIAL_TIMESTAMP,
-    //             "teardown timestamp is invalid for memory address {}",
-    //             addr
-    //         );
-    //     }
-
-    //     for ((_, addr0, _, _), (_, addr1, _, _)) in
-    //         expected_init_set.iter().zip(expected_teardown_set.iter())
-    //     {
-    //         assert_eq!(*addr0, *addr1);
-    //     }
-
-    //     assert_eq!(total_unique_teardowns, expected_teardown_set.len());
-    // }
-
-    // assert_eq!(permutation_argument_accumulator, Mersenne31Quartic::ONE);
-    // assert_eq!(delegation_argument_accumulator, Mersenne31Quartic::ZERO);
+    if true {
+        println!("Will try to prove word LOAD/STORE circuit");
+
+        let extra_tables =
+            create_word_only_load_store_special_tables::<_, SECOND_WORD_BITS>(&binary);
+        let word_load_store_circuit = {
+            compile_unrolled_circuit_state_transition::<Mersenne31Field>(
+                &|cs| {
+                    word_only_load_store_table_addition_fn(cs);
+                    for (table_type, table) in extra_tables.clone() {
+                        cs.add_table_with_content(table_type, table);
+                    }
+                },
+                &|cs| {
+                    word_only_load_store_circuit_with_preprocessed_bytecode::<_, _, SECOND_WORD_BITS>(
+                        cs,
+                    )
+                },
+                1 << 20,
+                TRACE_LEN_LOG2,
+            )
+        };
+
+        let mut table_driver = TableDriver::<Mersenne31Field>::new();
+        word_only_load_store_table_driver_fn(&mut table_driver);
+        for (table_type, table) in extra_tables.clone() {
+            table_driver.add_table_with_content(table_type, table);
+        }
+
+        let num_calls =
+            counters.get_calls_to_circuit_family::<LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX>();
+        dbg!(num_calls);
+
+        let mut state = snapshotter.initial_snapshot.state;
+        let mut ram = ReplayerRam::<SECOND_WORD_BITS> {
+            ram_log: &snapshotter.reads_buffer,
+        };
+        let mut nd = ReplayerNonDeterminism {
+            non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer,
+        };
+        let mut buffer = vec![MemoryOpcodeTracingDataWithTimestamp::default(); num_calls];
+        let mut buffers = vec![&mut buffer[..]];
+        let mut tracer = MemDestinationHolder::<LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX> {
+            buffers: &mut buffers[..],
+        };
+
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &tape,
+            period,
+            &mut nd,
+            &mut tracer,
+        );
+
+        let (decoder_table_data, witness_gen_data) =
+            &preprocessing_data[&LOAD_STORE_WORD_ONLY_CIRCUIT_FAMILY_IDX];
+        let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
+
+        let oracle = MemoryCircuitOracle {
+            inner: &buffer[..],
+            decoder_table: witness_gen_data,
+        };
+
+        let is_empty = oracle.inner.is_empty();
+
+        // println!(
+        //     "Opcode = 0x{:08x}",
+        //     family_data[0].data[203].opcode_data.opcode
+        // );
+        // dbg!(family_data[0].data[203].as_load_data());
+
+        let memory_trace = evaluate_memory_witness_for_executor_family::<_, Global>(
+            &word_load_store_circuit,
+            NUM_CYCLES_PER_CHUNK,
+            &oracle,
+            &worker,
+            Global,
+        );
+
+        let full_trace = evaluate_witness_for_executor_family::<_, Global>(
+            &word_load_store_circuit,
+            word_load_store::witness_eval_fn,
+            NUM_CYCLES_PER_CHUNK,
+            &oracle,
+            &table_driver,
+            &worker,
+            Global,
+        );
+
+        parse_state_permutation_elements_from_full_trace(
+            &word_load_store_circuit,
+            &full_trace,
+            &mut write_set,
+            &mut read_set,
+        );
+        parse_shuffle_ram_accesses_from_full_trace(
+            &word_load_store_circuit,
+            &full_trace,
+            &mut memory_write_set,
+            &mut memory_read_set,
+        );
+
+        let is_satisfied = check_satisfied(
+            &word_load_store_circuit,
+            &full_trace.exec_trace,
+            full_trace.num_witness_columns,
+        );
+        assert!(is_satisfied);
+
+        let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
+        let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
+        let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
+            &table_driver,
+            &decoder_table_data,
+            trace_len,
+            &word_load_store_circuit.setup_layout,
+            &twiddles,
+            &lde_precomputations,
+            lde_factor,
+            tree_cap_size,
+            &worker,
+        );
+
+        // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
+        //     Some(witness.lookup_mapping.clone())
+        // } else {
+        //     None
+        // };
+
+        println!("Trying to prove");
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
+            DEFAULT_TRACE_PADDING_MULTIPLE,
+            _,
+            DefaultTreeConstructor,
+        >(
+            &word_load_store_circuit,
+            &vec![],
+            &external_challenges,
+            full_trace,
+            &[],
+            &setup,
+            &twiddles,
+            &lde_precomputations,
+            None,
+            lde_factor,
+            tree_cap_size,
+            53,
+            28,
+            &worker,
+        );
+        println!("Proving time is {:?}", now.elapsed());
+
+        if is_empty {
+            assert_eq!(
+                proof.permutation_grand_product_accumulator,
+                Mersenne31Quartic::ONE
+            );
+        }
+        assert!(proof.delegation_argument_accumulator.is_none());
+
+        serialize_to_file(&proof, "word_only_load_store_unrolled_proof.json");
+
+        permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
+    }
+
+    if true {
+        println!("Will try to prove subword LOAD/STORE circuit");
+
+        use cs::machine::ops::unrolled::load_store::*;
+        const SECOND_WORD_BITS: usize = 4;
+
+        let extra_tables = create_load_store_special_tables::<_, SECOND_WORD_BITS>(&binary);
+        let subword_load_store_circuit = {
+            compile_unrolled_circuit_state_transition::<Mersenne31Field>(
+                &|cs| {
+                    subword_only_load_store_table_addition_fn(cs);
+                    for (table_type, table) in extra_tables.clone() {
+                        cs.add_table_with_content(table_type, table);
+                    }
+                },
+                &|cs| {
+                    subword_only_load_store_circuit_with_preprocessed_bytecode::<
+                        _,
+                        _,
+                        SECOND_WORD_BITS,
+                    >(cs)
+                },
+                1 << 20,
+                TRACE_LEN_LOG2,
+            )
+        };
+
+        let mut table_driver = TableDriver::<Mersenne31Field>::new();
+        subword_only_load_store_table_driver_fn(&mut table_driver);
+        for (table_type, table) in extra_tables.clone() {
+            table_driver.add_table_with_content(table_type, table);
+        }
+
+        let num_calls =
+            counters.get_calls_to_circuit_family::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX>();
+        dbg!(num_calls);
+
+        let mut state = snapshotter.initial_snapshot.state;
+        let mut ram = ReplayerRam::<SECOND_WORD_BITS> {
+            ram_log: &snapshotter.reads_buffer,
+        };
+        let mut nd = ReplayerNonDeterminism {
+            non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer,
+        };
+        let mut buffer = vec![MemoryOpcodeTracingDataWithTimestamp::default(); num_calls];
+        let mut buffers = vec![&mut buffer[..]];
+        let mut tracer = MemDestinationHolder::<LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX> {
+            buffers: &mut buffers[..],
+        };
+
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &tape,
+            period,
+            &mut nd,
+            &mut tracer,
+        );
+
+        let (decoder_table_data, witness_gen_data) =
+            &preprocessing_data[&LOAD_STORE_SUBWORD_ONLY_CIRCUIT_FAMILY_IDX];
+        let decoder_table_data = materialize_flattened_decoder_table(decoder_table_data);
+
+        let oracle = MemoryCircuitOracle {
+            inner: &buffer[..],
+            decoder_table: witness_gen_data,
+        };
+
+        let is_empty = oracle.inner.is_empty();
+
+        // println!(
+        //     "Opcode = 0x{:08x}",
+        //     family_data[0].data[29].opcode_data.opcode
+        // );
+
+        let memory_trace = evaluate_memory_witness_for_executor_family::<_, Global>(
+            &subword_load_store_circuit,
+            NUM_CYCLES_PER_CHUNK,
+            &oracle,
+            &worker,
+            Global,
+        );
+
+        let full_trace = evaluate_witness_for_executor_family::<_, Global>(
+            &subword_load_store_circuit,
+            subword_load_store::witness_eval_fn,
+            NUM_CYCLES_PER_CHUNK,
+            &oracle,
+            &table_driver,
+            &worker,
+            Global,
+        );
+
+        parse_state_permutation_elements_from_full_trace(
+            &subword_load_store_circuit,
+            &full_trace,
+            &mut write_set,
+            &mut read_set,
+        );
+        parse_shuffle_ram_accesses_from_full_trace(
+            &subword_load_store_circuit,
+            &full_trace,
+            &mut memory_write_set,
+            &mut memory_read_set,
+        );
+
+        let is_satisfied = check_satisfied(
+            &subword_load_store_circuit,
+            &full_trace.exec_trace,
+            full_trace.num_witness_columns,
+        );
+        assert!(is_satisfied);
+
+        let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
+        let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
+        let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
+            &table_driver,
+            &decoder_table_data,
+            trace_len,
+            &subword_load_store_circuit.setup_layout,
+            &twiddles,
+            &lde_precomputations,
+            lde_factor,
+            tree_cap_size,
+            &worker,
+        );
+
+        // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
+        //     Some(witness.lookup_mapping.clone())
+        // } else {
+        //     None
+        // };
+
+        println!("Trying to prove");
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
+            DEFAULT_TRACE_PADDING_MULTIPLE,
+            _,
+            DefaultTreeConstructor,
+        >(
+            &subword_load_store_circuit,
+            &vec![],
+            &external_challenges,
+            full_trace,
+            &[],
+            &setup,
+            &twiddles,
+            &lde_precomputations,
+            None,
+            lde_factor,
+            tree_cap_size,
+            53,
+            28,
+            &worker,
+        );
+        println!("Proving time is {:?}", now.elapsed());
+
+        if is_empty {
+            assert_eq!(
+                proof.permutation_grand_product_accumulator,
+                Mersenne31Quartic::ONE
+            );
+        }
+        assert!(proof.delegation_argument_accumulator.is_none());
+
+        serialize_to_file(&proof, "subword_only_load_store_unrolled_proof.json");
+
+        permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
+    }
+
+    // Machine state permutation ended
+    {
+        for (pc, ts) in write_set.iter().copied() {
+            if read_set.contains(&(pc, ts)) == false {
+                panic!("read set doesn't contain a pair {:?}", (pc, ts));
+            }
+        }
+
+        for (pc, ts) in read_set.iter().copied() {
+            if write_set.contains(&(pc, ts)) == false {
+                panic!("write set doesn't contain a pair {:?}", (pc, ts));
+            }
+        }
+    }
+
+    if true {
+        println!("Will try to prove memory inits and teardowns circuit");
+
+        let compiler = OneRowCompiler::<Mersenne31Field>::default();
+        let inits_and_teardowns_circuit =
+            compiler.compile_init_and_teardown_circuit(NUM_INIT_AND_TEARDOWN_SETS, TRACE_LEN_LOG2);
+
+        let table_driver = TableDriver::<Mersenne31Field>::new();
+
+        let inits_data = &inits_and_teardowns[0];
+
+        let memory_trace = evaluate_init_and_teardown_memory_witness::<Global>(
+            &inits_and_teardowns_circuit,
+            NUM_CYCLES_PER_CHUNK,
+            &inits_data.lazy_init_data,
+            &worker,
+            Global,
+        );
+
+        let full_trace = evaluate_init_and_teardown_witness::<Global>(
+            &inits_and_teardowns_circuit,
+            NUM_CYCLES_PER_CHUNK,
+            &inits_data.lazy_init_data,
+            &worker,
+            Global,
+        );
+
+        let WitnessEvaluationData {
+            aux_data,
+            exec_trace,
+            num_witness_columns,
+            lookup_mapping,
+        } = full_trace;
+        let full_trace = WitnessEvaluationDataForExecutionFamily {
+            aux_data: ExecutorFamilyWitnessEvaluationAuxData {},
+            exec_trace,
+            num_witness_columns,
+            lookup_mapping,
+        };
+
+        let is_satisfied = check_satisfied(
+            &inits_and_teardowns_circuit,
+            &full_trace.exec_trace,
+            full_trace.num_witness_columns,
+        );
+        assert!(is_satisfied);
+
+        let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
+        let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
+        let setup = SetupPrecomputations::from_tables_and_trace_len_with_decoder_table(
+            &table_driver,
+            &[],
+            trace_len,
+            &inits_and_teardowns_circuit.setup_layout,
+            &twiddles,
+            &lde_precomputations,
+            lde_factor,
+            tree_cap_size,
+            &worker,
+        );
+
+        // let lookup_mapping_for_gpu = if maybe_delegator_gpu_comparison_hook.is_some() {
+        //     Some(witness.lookup_mapping.clone())
+        // } else {
+        //     None
+        // };
+
+        println!("Trying to prove");
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) = prove_configured_for_unrolled_circuits::<
+            DEFAULT_TRACE_PADDING_MULTIPLE,
+            _,
+            DefaultTreeConstructor,
+        >(
+            &inits_and_teardowns_circuit,
+            &vec![],
+            &external_challenges,
+            full_trace,
+            &aux_data.aux_boundary_data,
+            &setup,
+            &twiddles,
+            &lde_precomputations,
+            None,
+            lde_factor,
+            tree_cap_size,
+            53,
+            28,
+            &worker,
+        );
+        println!("Proving time is {:?}", now.elapsed());
+
+        serialize_to_file(&proof, "inits_and_teardowns_unrolled_proof.json");
+
+        permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
+    }
+
+    if true {
+        // now prove delegation circuits
+        let mut external_values = ExternalValues {
+            challenges: external_challenges,
+            aux_boundary_values: Default::default(),
+        };
+        external_values.aux_boundary_values = Default::default();
+
+        let (circuit, table_driver) = {
+            use crate::cs::cs::cs_reference::BasicAssembly;
+            use cs::delegation::blake2_round_with_extended_control::define_blake2_with_extended_control_delegation_circuit;
+            let mut cs = BasicAssembly::<Mersenne31Field>::new();
+            define_blake2_with_extended_control_delegation_circuit(&mut cs);
+            let (circuit_output, _) = cs.finalize();
+            let table_driver = circuit_output.table_driver.clone();
+            let compiler = OneRowCompiler::default();
+            let circuit = compiler.compile_to_evaluate_delegations(
+                circuit_output,
+                (NUM_DELEGATION_CYCLES + 1).trailing_zeros() as usize,
+            );
+
+            (circuit, table_driver)
+        };
+
+        println!("Will try to prove Blake delegation");
+
+        let num_calls = counters.blake_calls;
+        dbg!(num_calls);
+
+        let mut state = snapshotter.initial_snapshot.state;
+        let mut ram = ReplayerRam::<SECOND_WORD_BITS> {
+            ram_log: &snapshotter.reads_buffer,
+        };
+        let mut nd = ReplayerNonDeterminism {
+            non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer,
+        };
+        let mut buffer = vec![DelegationWitness::empty(); num_calls];
+        let mut buffers = vec![&mut buffer[..]];
+        let mut tracer = BlakeDelegationDestinationHolder {
+            buffers: &mut buffers[..],
+        };
+
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &tape,
+            period,
+            &mut nd,
+            &mut tracer,
+        );
+
+        // evaluate a witness and memory-only witness for each
+
+        let delegation_type = BLAKE2S_DELEGATION_CSR_REGISTER as u16;
+        let oracle = Blake2sDelegationOracle {
+            cycle_data: &buffer,
+            marker: core::marker::PhantomData,
+        };
+        #[cfg(feature = "debug_logs")]
+        println!(
+            "Evaluating memory-only witness for delegation circuit {}",
+            delegation_type
+        );
+        let mem_only_witness = evaluate_delegation_memory_witness(
+            &circuit,
+            NUM_DELEGATION_CYCLES,
+            &oracle,
+            &worker,
+            Global,
+        );
+
+        let eval_fn = super::blake2s_delegation_with_transpiler::witness_eval_fn;
+
+        #[cfg(feature = "debug_logs")]
+        println!(
+            "Evaluating witness for delegation circuit {}",
+            delegation_type
+        );
+        let full_witness = evaluate_witness(
+            &circuit,
+            eval_fn,
+            NUM_DELEGATION_CYCLES,
+            &oracle,
+            &[],
+            &table_driver,
+            0,
+            &worker,
+            Global,
+        );
+
+        parse_delegation_ram_accesses_from_full_trace(
+            &circuit,
+            &full_witness,
+            &mut memory_write_set,
+            &mut memory_read_set,
+        );
+
+        let is_satisfied = check_satisfied(
+            &circuit,
+            &full_witness.exec_trace,
+            full_witness.num_witness_columns,
+        );
+        assert!(is_satisfied);
+
+        let trace_len = NUM_DELEGATION_CYCLES + 1;
+
+        // create setup
+        let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
+        let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
+
+        let setup = SetupPrecomputations::from_tables_and_trace_len(
+            &table_driver,
+            NUM_DELEGATION_CYCLES + 1,
+            &circuit.setup_layout,
+            &twiddles,
+            &lde_precomputations,
+            lde_factor,
+            tree_cap_size,
+            &worker,
+        );
+
+        // let lookup_mapping_for_gpu = if maybe_delegated_gpu_comparison_hook.is_some() {
+        //     Some(witness.witness.lookup_mapping.clone())
+        // } else {
+        //     None
+        // };
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) = prove::<DEFAULT_TRACE_PADDING_MULTIPLE, _>(
+            &circuit,
+            &[],
+            &external_values,
+            full_witness,
+            &setup,
+            &twiddles,
+            &lde_precomputations,
+            0,
+            Some(delegation_type),
+            lde_factor,
+            tree_cap_size,
+            53,
+            28,
+            &worker,
+        );
+        println!(
+            "Delegation circuit type {} proving time is {:?}",
+            delegation_type,
+            now.elapsed()
+        );
+
+        // if let Some(ref gpu_comparison_hook) = maybe_delegated_gpu_comparison_hook {
+        //     let log_n = work_type.trace_len.trailing_zeros();
+        //     assert_eq!(work_type.trace_len, 1 << log_n);
+        //     let dummy_public_inputs = Vec::<Mersenne31Field>::new();
+        //     let gpu_comparison_args = GpuComparisonArgs {
+        //         circuit: &work_type.compiled_circuit,
+        //         setup: &setup,
+        //         external_values: &external_values,
+        //         public_inputs: &dummy_public_inputs,
+        //         twiddles: &twiddles,
+        //         lde_precomputations: &lde_precomputations,
+        //         table_driver: &work_type.table_driver,
+        //         lookup_mapping: lookup_mapping_for_gpu.unwrap(),
+        //         log_n: log_n as usize,
+        //         circuit_sequence: 0,
+        //         delegation_processing_type: Some(delegation_type),
+        //         prover_data: &prover_data,
+        //     };
+        //     gpu_comparison_hook(&gpu_comparison_args);
+        // }
+
+        // if !for_gpu_comparison {
+        //     serialize_to_file(&proof, "blake2s_delegator_proof");
+        // }
+
+        dbg!(prover_data.stage_2_result.grand_product_accumulator);
+        dbg!(prover_data.stage_2_result.sum_over_delegation_poly);
+
+        permutation_argument_accumulator.mul_assign(&proof.memory_grand_product_accumulator);
+        delegation_argument_accumulator.sub_assign(&proof.delegation_argument_accumulator.unwrap());
+    }
+
+    dbg!(permutation_argument_accumulator);
+    dbg!(delegation_argument_accumulator);
+
+    // inits and teardowns
+    {
+        let expected_init_set: Vec<_> = memory_read_set.difference(&memory_write_set).collect();
+        let expected_teardown_set: Vec<_> = memory_write_set.difference(&memory_read_set).collect();
+        assert_eq!(expected_init_set.len(), expected_teardown_set.len());
+
+        for (is_register, addr, ts, init_value) in expected_init_set.iter() {
+            assert!(*is_register == false);
+            assert_eq!(
+                *ts, 0,
+                "init timestamp is invalid for memory address {}",
+                addr
+            );
+            assert_eq!(
+                *init_value, 0,
+                "init value is invalid for memory address {}",
+                addr
+            );
+        }
+        for (is_register, addr, ts, _) in expected_teardown_set.iter() {
+            assert!(*is_register == false);
+            assert!(
+                *ts > INITIAL_TIMESTAMP,
+                "teardown timestamp is invalid for memory address {}",
+                addr
+            );
+        }
+
+        for ((_, addr0, _, _), (_, addr1, _, _)) in
+            expected_init_set.iter().zip(expected_teardown_set.iter())
+        {
+            assert_eq!(*addr0, *addr1);
+        }
+
+        assert_eq!(total_unique_teardowns, expected_teardown_set.len());
+    }
+
+    assert_eq!(permutation_argument_accumulator, Mersenne31Quartic::ONE);
+    assert_eq!(delegation_argument_accumulator, Mersenne31Quartic::ZERO);
 }

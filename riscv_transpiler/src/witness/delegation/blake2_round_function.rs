@@ -5,9 +5,9 @@ pub struct Blake2sRoundFunctionAbiDescription;
 
 impl DelegationAbiDescription for Blake2sRoundFunctionAbiDescription {
     const DELEGATION_TYPE: u16 =
-        common_constants::blake2s_with_control::BLAKE2S_BASE_ABI_REGISTER as u16;
+        common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as u16;
     const BASE_REGISTER: usize =
-        common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as usize;
+        common_constants::blake2s_with_control::BLAKE2S_BASE_ABI_REGISTER as usize;
     const INDIRECT_READS_DESCRIPTION: &'static [Range<usize>; 32] = &[
         0..0, // x0
         0..0,

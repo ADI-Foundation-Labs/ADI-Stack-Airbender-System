@@ -55,11 +55,11 @@ impl<'a, const ROM_BOUND_SECOND_WORD_BITS: usize> RAM
     }
 
     #[inline(always)]
-    fn mask_read_value_for_witness(&self, address: u32, value: &mut u32) {
+    fn mask_read_for_witness(&self, address: &mut u32, value: &mut u32) {
         // we do not do anything here
-        debug_assert_eq!(address % 4, 0);
-        let word_idx = (address / 4) as usize;
-        if word_idx < 1 << (16 + ROM_BOUND_SECOND_WORD_BITS) / core::mem::size_of::<u32>() {
+        debug_assert_eq!(*address % 4, 0);
+        if *address < 1 << (16 + ROM_BOUND_SECOND_WORD_BITS) {
+            *address = 0u32;
             *value = 0u32;
         }
     }

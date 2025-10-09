@@ -52,7 +52,8 @@ pub(crate) fn lw<C: Counters, R: RAM>(
     let (rs1_value, rs1_ts) = read_register_with_ts::<C, 0>(state, instr.rs1);
     let address = rs1_value.wrapping_add(instr.imm);
     debug_assert!(address % 4 == 0);
-    // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking
+    // NOTE: value here is either ROM or RAM, but timestamp is already consistent with masking of ROM access
+    // into read 0 from address 0
     let (ram_timestamp, ram_old_value) = ram.read_word(address, state.timestamp | 1);
     let mut rd = ram_old_value;
     let (rd_old_value, rd_ts) = write_register_with_ts::<C, 2>(state, instr.rd, &mut rd);
@@ -60,13 +61,14 @@ pub(crate) fn lw<C: Counters, R: RAM>(
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value
     let mut ram_value_after_masking = ram_old_value;
-    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
+    let mut address_for_witness = address;
+    ram.mask_read_for_witness(&mut address_for_witness, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
-            aligned_ram_address: address,
+            aligned_ram_address: address_for_witness,
             aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,
@@ -195,13 +197,14 @@ pub(crate) fn lh<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value
     let mut ram_value_after_masking = ram_old_value;
-    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
+    let mut address_for_witness = aligned_address;
+    ram.mask_read_for_witness(&mut address_for_witness, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
-            aligned_ram_address: aligned_address,
+            aligned_ram_address: address_for_witness,
             aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,
@@ -238,13 +241,14 @@ pub(crate) fn lb<C: Counters, R: RAM, const SIGN_EXTEND: bool>(
     // NOTE: we may access ROM, that is modeled as accessing address 0,
     // that is never written, so we ask for masking into some default value
     let mut ram_value_after_masking = ram_old_value;
-    ram.mask_read_value_for_witness(address, &mut ram_value_after_masking);
+    let mut address_for_witness = aligned_address;
+    ram.mask_read_for_witness(&mut address_for_witness, &mut ram_value_after_masking);
     let traced_data = MemoryOpcodeTracingDataWithTimestamp {
         opcode_data: LoadOpcodeTracingData {
             initial_pc: state.pc,
             opcode: 0u32,
             rs1_value,
-            aligned_ram_address: aligned_address,
+            aligned_ram_address: address_for_witness,
             aligned_ram_read_value: ram_value_after_masking,
             rd_old_value,
             rd_value: rd,

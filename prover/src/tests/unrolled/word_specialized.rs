@@ -1023,8 +1023,6 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
             default_pc_value_in_padding: 4,
         };
 
-        dbg!(oracle.inner[2]);
-
         let is_empty = oracle.inner.is_empty();
 
         // println!(
@@ -1133,8 +1131,6 @@ pub fn run_basic_unrolled_test_with_word_specialization_impl(
         delegation_argument_accumulator.add_assign(&proof.delegation_argument_accumulator.unwrap());
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
-
-    panic!();
 
     if true {
         println!("Will try to prove MUL/DIV circuit");

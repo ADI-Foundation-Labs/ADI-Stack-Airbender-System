@@ -51,7 +51,7 @@ impl<const ROM_BOUND_SECOND_WORD_BITS: usize> RAM for RamWithRomRegion<ROM_BOUND
     }
 
     #[inline(always)]
-    fn mask_read_value_for_witness(&self, _address: u32, _value: &mut u32) {
+    fn mask_read_for_witness(&self, _address: &mut u32, _value: &mut u32) {
         // we do not do anything here
     }
 

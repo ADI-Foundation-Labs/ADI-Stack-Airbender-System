@@ -70,7 +70,7 @@ pub trait Snapshotter<C: Counters>: 'static {
 pub trait RAM {
     fn peek_word(&self, address: u32) -> u32;
     fn read_word(&mut self, address: u32, timestamp: TimestampScalar) -> (TimestampScalar, u32);
-    fn mask_read_value_for_witness(&self, address: u32, value: &mut u32);
+    fn mask_read_for_witness(&self, address: &mut u32, value: &mut u32);
     fn write_word(
         &mut self,
         address: u32,
@@ -125,7 +125,7 @@ impl<C: Counters> VM<C> {
         instruction_tape: &impl InstructionTape,
         snapshot_period: usize,
         nd: &mut ND,
-    ) {
+    ) -> bool {
         use crate::vm::instructions::*;
 
         for _ in 0..num_snapshots {
@@ -265,7 +265,7 @@ impl<C: Counters> VM<C> {
                     state.timestamp += TIMESTAMP_STEP;
                     if state.pc == pc {
                         snapshotter.take_snapshot(&*state);
-                        return;
+                        return true;
                     }
                 }
             }
@@ -273,7 +273,7 @@ impl<C: Counters> VM<C> {
             snapshotter.take_snapshot(&*state);
         }
 
-        panic!("out of cycles");
+        false
     }
 }
 
@@ -283,7 +283,7 @@ pub fn run_default(
     snapshotter: &mut SimpleSnapshotter<DelegationsCounters, 5>,
     instruction_tape: &mut SimpleTape,
     snapshot_period: usize,
-) {
+) -> bool {
     let mut state = State::initial_with_counters(DelegationsCounters::default());
     VM::<DelegationsCounters>::run_basic_unrolled::<
         SimpleSnapshotter<DelegationsCounters, 5>,

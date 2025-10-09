@@ -121,6 +121,23 @@ impl<
     }
 }
 
+pub type BigintDelegationDestinationHolder<'a> = DelegationDestinationHolder<
+    'a,
+    { common_constants::bigint_with_control::BIGINT_OPS_WITH_CONTROL_CSR_REGISTER as u16 },
+    3,
+    8,
+    8,
+    0,
+>;
+pub type BlakeDelegationDestinationHolder<'a> = DelegationDestinationHolder<
+    'a,
+    { common_constants::blake2s_with_control::BLAKE2S_DELEGATION_CSR_REGISTER as u16 },
+    4,
+    16,
+    24,
+    0,
+>;
+
 // Holder for destination buffer for one particular delegation type. It may represent only part
 // of the destination circuit's capacity
 pub struct NonMemDestinationHolder<'a, const FAMILY: u8> {
