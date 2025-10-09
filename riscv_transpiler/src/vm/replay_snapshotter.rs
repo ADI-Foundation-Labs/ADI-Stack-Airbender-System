@@ -18,7 +18,7 @@ impl Counters for DelegationsCounters {
         self.blake_calls += 1;
     }
     #[inline(always)]
-    fn bump_keccak_special_5(&mut self) {
+    fn bump_keccak_special5(&mut self) {
         self.keccak_calls += 1;
     }
     #[inline(always)]
@@ -57,7 +57,7 @@ impl Counters for DelegationsAndFamiliesCounters {
         self.blake_calls += 1;
     }
     #[inline(always)]
-    fn bump_keccak_special_5(&mut self) {
+    fn bump_keccak_special5(&mut self) {
         self.keccak_calls += 1;
     }
     #[inline(always)]

@@ -490,4 +490,250 @@ mod test {
             }
         }
     }
+
+    #[test]
+    fn test_replay_keccak_f1600() {
+        let (_, binary) = read_binary(&Path::new("examples/keccak_f1600/app.bin"));
+        let (_, text) = read_binary(&Path::new("examples/keccak_f1600/app.text"));
+        let instructions: Vec<Instruction> = text
+            .into_iter()
+            .map(|el| decode::<FullUnsignedMachineDecoderConfig>(el))
+            .collect();
+        let tape = SimpleTape::new(&instructions);
+        let mut ram = RamWithRomRegion::<5>::from_rom_content(&binary, 1 << 30);
+        let period = 1 << 20;
+        let num_snapshots = 1000;
+        let cycles_bound = period * num_snapshots;
+
+        let mut state = State::initial_with_counters(CountersT::default());
+
+        let mut snapshotter: SimpleSnapshotter<CountersT, 5> =
+            SimpleSnapshotter::new_with_cycle_limit(cycles_bound, period, state);
+
+        let now = std::time::Instant::now();
+        VM::<CountersT>::run_basic_unrolled::<
+            SimpleSnapshotter<CountersT, 5>,
+            RamWithRomRegion<5>,
+            _,
+        >(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &mut snapshotter,
+            &tape,
+            period,
+            &mut (),
+        );
+        let elapsed = now.elapsed();
+
+        let total_snapshots = snapshotter.snapshots.len();
+        let cycles_upper_bound = total_snapshots * period;
+
+        println!(
+            "Performance is {} MHz ({} total snapshots with period of {} cycles)",
+            (cycles_upper_bound as f64) / (elapsed.as_micros() as f64),
+            total_snapshots,
+            period
+        );
+
+        let exact_cycles_passed = (state.timestamp - INITIAL_TIMESTAMP) / TIMESTAMP_STEP;
+
+        println!("Passed exactly {} cycles", exact_cycles_passed);
+
+        let counters = state.counters;
+
+        // now replay - first from the start
+        let mut state = State::initial_with_counters(CountersT::default());
+
+        let mut ram = ReplayerRam::<5> {
+            ram_log: &snapshotter.reads_buffer,
+        };
+
+        let mut nd = ReplayerNonDeterminism {
+            non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer,
+        };
+
+        let mut buffer = vec![NonMemoryOpcodeTracingDataWithTimestamp::default(); (1 << 22) - 1];
+        let mut buffers = vec![&mut buffer[..]];
+        let mut tracer = NonMemDestinationHolder::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX> {
+            buffers: &mut buffers[..],
+        };
+        let now = std::time::Instant::now();
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &tape,
+            period,
+            &mut nd,
+            &mut tracer,
+        );
+        let elapsed = now.elapsed();
+
+        println!(
+            "Replay performance is {} MHz ({} total snapshots with period of {} cycles)",
+            (cycles_upper_bound as f64) / (elapsed.as_micros() as f64),
+            total_snapshots,
+            period
+        );
+
+        // now let's give an example of parallel processing
+
+        let total_num_add_sub =
+            counters.get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>();
+
+        println!("In total {} of ADD/SUB family opcodes", total_num_add_sub);
+
+        let circuit_capacity = (1 << 24) - 1;
+
+        let num_circuits = total_num_add_sub.div_ceil(circuit_capacity);
+
+        println!("In total {} of ADD/SUB circuits", num_circuits);
+
+        // allocate ALL of them
+        let mut total_witness =
+            vec![
+                vec![NonMemoryOpcodeTracingDataWithTimestamp::default(); circuit_capacity];
+                num_circuits
+            ];
+
+        // now there is no concrete solution what is the most optimal strategy here, but let's assume that frequency of particular opcodes
+        // is well spread over the cycles
+
+        let worker = worker::Worker::new_with_num_threads(2);
+        let chunk_size = total_num_add_sub.div_ceil(worker.num_cores);
+
+        let mut witness_buffers: Vec<_> = total_witness.iter_mut().map(|el| &mut el[..]).collect();
+
+        let now = std::time::Instant::now();
+        worker.scope(total_snapshots, |scope, geometry| {
+            let tape_ref = &tape;
+            let mut starting_snapshot = snapshotter.initial_snapshot;
+            let mut current_snapshot = starting_snapshot;
+            let mut snapshots_iter = snapshotter.snapshots.iter();
+            for _i in 0..geometry.len() {
+                let mut num_snapshots = 0;
+                'inner: while current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) - starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) < chunk_size
+                {
+                    if let Some(next_snapshot) = snapshots_iter.next() {
+                        num_snapshots += 1;
+                        current_snapshot = *next_snapshot;
+                    } else {
+                        break 'inner;
+                    }
+                }
+
+                let start_chunk_idx = starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) / circuit_capacity;
+                let start_chunk_offset = starting_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) % circuit_capacity;
+
+                let end_chunk_idx = current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) / circuit_capacity;
+                let end_chunk_offset = current_snapshot
+                    .state
+                    .counters
+                    .get_calls_to_circuit_family::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX>(
+                ) % circuit_capacity;
+
+                let mut chunks = vec![];
+                let mut offset = start_chunk_offset;
+                unsafe {
+                    // Lazy to go via splits
+                    for src_chunk in start_chunk_idx..=end_chunk_idx {
+                        if src_chunk == end_chunk_idx {
+                            if end_chunk_offset > 0 {
+                                let range = 0..end_chunk_offset;
+                                let chunk = (&mut witness_buffers[src_chunk][range]
+                                    as *mut [NonMemoryOpcodeTracingDataWithTimestamp])
+                                    .as_mut_unchecked();
+                                chunks.push(chunk);
+                            }
+                        } else {
+                            let range = offset..;
+                            offset = 0;
+                            let chunk = (&mut witness_buffers[src_chunk][range]
+                                as *mut [NonMemoryOpcodeTracingDataWithTimestamp])
+                                .as_mut_unchecked();
+                            chunks.push(chunk);
+                        }
+                    }
+                }
+
+                let ram_range =
+                    starting_snapshot.memory_reads_start..current_snapshot.memory_reads_end;
+                let nd_range = starting_snapshot.non_determinism_reads_start
+                    ..current_snapshot.non_determinism_reads_end;
+
+                let mut ram = ReplayerRam::<5> {
+                    ram_log: &snapshotter.reads_buffer[ram_range],
+                };
+                let mut nd = ReplayerNonDeterminism {
+                    non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer[nd_range],
+                };
+
+                // println!("Thread {}", _i);
+                // for el in chunks.iter() {
+                //     println!("Chunk of size {}", el.len());
+                // }
+
+                // spawn replayer
+                scope.spawn(move |_| {
+                    let mut chunks = chunks;
+                    let mut tracer =
+                        NonMemDestinationHolder::<ADD_SUB_LUI_AUIPC_MOP_CIRCUIT_FAMILY_IDX> {
+                            buffers: &mut chunks,
+                        };
+                    let mut state = starting_snapshot.state;
+                    ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+                        &mut state,
+                        num_snapshots,
+                        &mut ram,
+                        tape_ref,
+                        period,
+                        &mut nd,
+                        &mut tracer,
+                    );
+                });
+
+                starting_snapshot = current_snapshot;
+            }
+        });
+        let elapsed = now.elapsed();
+
+        println!(
+            "Parallel replay performance is {} MHz ({} total snapshots with period of {} cycles) at {} cores",
+            (cycles_upper_bound as f64) / (elapsed.as_micros() as f64),
+            total_snapshots,
+            period,
+            worker.get_num_cores(),
+        );
+
+        let mut ts = 0;
+        for (i, el) in total_witness.iter().flatten().enumerate() {
+            if i < total_num_add_sub {
+                let cycle_ts = el.cycle_timestamp.as_scalar();
+                assert_ne!(cycle_ts, 0, "timestamp is 0 at position {}", i);
+                assert!(cycle_ts > ts, "timestamp is not ordered at position {}", i);
+                ts = cycle_ts;
+            }
+        }
+    }
 }
