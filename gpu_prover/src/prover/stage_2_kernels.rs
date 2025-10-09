@@ -10,6 +10,8 @@ use super::unrolled_prover::stage_2_shared::{
     stage2_process_range_check_16_entry_invs_and_multiplicity,
     stage2_process_timestamp_range_check_entry_invs_and_multiplicity,
     stage2_process_generic_lookup_entry_invs_and_multiplicity,
+    stage2_handle_delegation_requests,
+    stage2_process_delegations,
     stage2_compute_grand_product,
 };
 use crate::device_structures::{
@@ -23,7 +25,6 @@ use crate::ops_cub::device_reduce::{
 };
 use crate::ops_cub::device_scan::{get_scan_temp_storage_bytes, ScanOperation};
 use crate::ops_simple::{set_to_zero, sub_into_x};
-use crate::utils::WARP_SIZE;
 
 use cs::definitions::{NUM_TIMESTAMP_COLUMNS_FOR_RAM, REGISTER_SIZE, TIMESTAMP_COLUMNS_NUM_BITS};
 use cs::one_row_compiler::CompiledCircuitArtifact;
@@ -38,22 +39,6 @@ use std::cmp::max;
 
 type BF = BaseField;
 type E4 = Ext4Field;
-
-cuda_kernel!(
-    DelegationAuxPoly,
-    delegation_aux_poly,
-    delegation_challenge: DelegationChallenges,
-    request_metadata: DelegationRequestMetadata,
-    processing_metadata: DelegationProcessingMetadata,
-    memory_cols: PtrAndStride<BF>,
-    setup_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    delegation_aux_poly_col: u32,
-    handle_delegation_requests: bool,
-    log_n: u32,
-);
-
-delegation_aux_poly!(ab_delegation_aux_poly_kernel);
 
 cuda_kernel!(
     ShuffleRamMemoryArgs,
@@ -269,15 +254,14 @@ pub fn compute_stage_2_args_on_main_domain(
     let ProverCachedData {
         trace_len,
         memory_timestamp_high_from_circuit_idx,
-        delegation_type: _,
+        delegation_type,
         memory_argument_challenges,
-        execute_delegation_argument,
         delegation_challenges,
         process_shuffle_ram_init,
         shuffle_ram_inits_and_teardowns,
         lazy_init_address_range_check_16,
         handle_delegation_requests,
-        delegation_request_layout: _,
+        delegation_request_layout,
         process_batch_ram_access,
         process_registers_and_indirect_access,
         delegation_processor_layout,
@@ -442,8 +426,7 @@ pub fn compute_stage_2_args_on_main_domain(
         stream,
     )?;
 
-    // Compute delegation aux poly
-    // first, a check on zksync_airbender's own layout, copied from zksync_airbenders's stage2.rs
+    // layout sanity check
     if circuit.memory_layout.delegation_processor_layout.is_none()
         && circuit.memory_layout.delegation_request_layout.is_none()
     {
@@ -461,26 +444,35 @@ pub fn compute_stage_2_args_on_main_domain(
     } else {
         assert!(delegation_challenges.delegation_argument_gamma.is_zero() == false);
     }
-    if handle_delegation_requests || process_delegations {
-        assert!(execute_delegation_argument);
-        let delegation_challenges = DelegationChallenges::new(&delegation_challenges);
-        let (request_metadata, processing_metadata) = get_delegation_metadata(cached_data, circuit);
-        let delegation_aux_poly_col = translate_e4_offset(delegation_processing_aux_poly.start());
-        let block_dim = 128;
-        let grid_dim = (n as u32 + 127) / 128;
-        let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-        let args = DelegationAuxPolyArguments::new(
-            delegation_challenges,
-            request_metadata,
-            processing_metadata,
+
+    if handle_delegation_requests {
+        assert!(!process_delegations);
+        stage2_handle_delegation_requests(
+            circuit,
+            &delegation_challenges,
+            Some(memory_timestamp_high_from_circuit_idx),
+            &delegation_request_layout,
             memory_cols,
             setup_cols,
             d_stage_2_e4_cols,
-            delegation_aux_poly_col as u32,
-            handle_delegation_requests,
-            log_n as u32,
-        );
-        DelegationAuxPolyFunction(ab_delegation_aux_poly_kernel).launch(&config, &args)?;
+            translate_e4_offset(delegation_processing_aux_poly.start()),
+            log_n,
+            stream,
+        )?;
+    }
+
+    if process_delegations {
+        assert!(!handle_delegation_requests);
+        stage2_process_delegations(
+            &delegation_challenges,
+            delegation_type,
+            &delegation_processor_layout,
+            memory_cols,
+            d_stage_2_e4_cols,
+            translate_e4_offset(delegation_processing_aux_poly.start()),
+            log_n,
+            stream,
+        )?;
     }
 
     stage2_process_range_check_16_trivial_checks(

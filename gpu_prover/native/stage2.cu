@@ -108,15 +108,14 @@ EXTERN __launch_bounds__(128, 8) __global__ void ab_generic_aggregated_entry_inv
       multiplicities_dst_cols_start, num_multiplicities_cols, num_table_rows_tail, log_n);
 }
 
-// This kernel is just for one arg col and should be negligible.
-// I'm making it standalone because it doesn't quite fit with the others and
-// for easier comparison to zksync_airbender's stage2.rs control flow.
 EXTERN __launch_bounds__(128, 8) __global__
-    void ab_delegation_aux_poly_kernel(__grid_constant__ const DelegationChallenges challenges,
-                                       __grid_constant__ const DelegationRequestMetadata request_metadata,
-                                       __grid_constant__ const DelegationProcessingMetadata processing_metadata, matrix_getter<bf, ld_modifier::cs> memory_cols,
-                                       matrix_getter<bf, ld_modifier::cs> setup_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                       const unsigned delegation_aux_poly_col, const bool handle_delegation_requests, const unsigned log_n) {
+    void ab_handle_delegation_requests_kernel(__grid_constant__ const DelegationChallenges challenges,
+                                              __grid_constant__ const DelegationRequestMetadata request_metadata,
+                                              matrix_getter<bf, ld_modifier::cs> memory_cols,
+                                              matrix_getter<bf, ld_modifier::cs> setup_cols,
+                                              vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                              const unsigned delegation_aux_poly_col,
+                                              const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.
@@ -127,35 +126,50 @@ EXTERN __launch_bounds__(128, 8) __global__
   memory_cols.add_row(gid);
   setup_cols.add_row(gid);
 
-  if (handle_delegation_requests) {
-    const bf num = memory_cols.get_at_col(request_metadata.multiplicity_col);
+  const bf num = memory_cols.get_at_col(request_metadata.multiplicity_col);
 
-    bf timestamp_low = setup_cols.get_at_col(request_metadata.timestamp_setup_col);
-    timestamp_low = bf::add(timestamp_low, request_metadata.in_cycle_write_idx);
+  bf timestamp_low = setup_cols.get_at_col(request_metadata.timestamp_setup_col);
+  timestamp_low = bf::add(timestamp_low, request_metadata.in_cycle_write_idx);
 
-    bf timestamp_high = setup_cols.get_at_col(request_metadata.timestamp_setup_col + 1);
-    timestamp_high = bf::add(timestamp_high, request_metadata.memory_timestamp_high_from_circuit_idx);
+  bf timestamp_high = setup_cols.get_at_col(request_metadata.timestamp_setup_col + 1);
+  timestamp_high = bf::add(timestamp_high, request_metadata.memory_timestamp_high_from_circuit_idx);
 
-    e4 denom = challenges.gamma;
-    denom = e4::add(denom, memory_cols.get_at_col(request_metadata.delegation_type_col));
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(request_metadata.abi_mem_offset_high_col)));
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[1], timestamp_low));
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[2], timestamp_high));
+  e4 denom = challenges.gamma;
+  denom = e4::add(denom, memory_cols.get_at_col(request_metadata.delegation_type_col));
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(request_metadata.abi_mem_offset_high_col)));
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[1], timestamp_low));
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[2], timestamp_high));
 
-    const e4 denom_inv{e4::inv(denom)};
-    stage_2_e4_cols.set_at_col(delegation_aux_poly_col, e4::mul(num, denom_inv));
-  } else /* process_delegations */ {
-    const bf num = memory_cols.get_at_col(processing_metadata.multiplicity_col);
+  const e4 denom_inv{e4::inv(denom)};
+  stage_2_e4_cols.set_at_col(delegation_aux_poly_col, e4::mul(num, denom_inv));
+}
 
-    e4 denom = challenges.gamma;
-    denom = e4::add(denom, processing_metadata.delegation_type);
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(processing_metadata.abi_mem_offset_high_col)));
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[1], memory_cols.get_at_col(processing_metadata.write_timestamp_col)));
-    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[2], memory_cols.get_at_col(processing_metadata.write_timestamp_col + 1)));
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_process_delegations_kernel(__grid_constant__ const DelegationChallenges challenges,
+                                       __grid_constant__ const DelegationProcessingMetadata processing_metadata,
+                                       matrix_getter<bf, ld_modifier::cs> memory_cols,
+                                       vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                       const unsigned delegation_aux_poly_col,
+                                       const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.
+  if (gid >= n - 1)
+    return;
 
-    const e4 denom_inv{e4::inv(denom)};
-    stage_2_e4_cols.set_at_col(delegation_aux_poly_col, e4::mul(num, denom_inv));
-  }
+  stage_2_e4_cols.add_row(gid);
+  memory_cols.add_row(gid);
+
+  const bf num = memory_cols.get_at_col(processing_metadata.multiplicity_col);
+
+  e4 denom = challenges.gamma;
+  denom = e4::add(denom, processing_metadata.delegation_type);
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(processing_metadata.abi_mem_offset_high_col)));
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[1], memory_cols.get_at_col(processing_metadata.write_timestamp_col)));
+  denom = e4::add(denom, e4::mul(challenges.linearization_challenges[2], memory_cols.get_at_col(processing_metadata.write_timestamp_col + 1)));
+
+  const e4 denom_inv{e4::inv(denom)};
+  stage_2_e4_cols.set_at_col(delegation_aux_poly_col, e4::mul(num, denom_inv));
 }
 
 EXTERN __launch_bounds__(128, 8) __global__

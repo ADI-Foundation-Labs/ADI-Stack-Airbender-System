@@ -8,7 +8,9 @@ use crate::ops_complex::transpose;
 use crate::ops_cub::device_scan::{scan, ScanOperation};
 use crate::utils::WARP_SIZE;
 
-use cs::definitions::{TIMESTAMP_COLUMNS_NUM_BITS};
+use cs::definitions::{
+    DelegationProcessingLayout, DelegationRequestLayout, TIMESTAMP_COLUMNS_NUM_BITS
+};
 use cs::one_row_compiler::{
     CompiledCircuitArtifact, LookupWidth1SourceDestInformation,
     LookupWidth1SourceDestInformationForExpressions,
@@ -18,6 +20,8 @@ use era_cudart::execution::{CudaLaunchConfig, KernelFunction};
 use era_cudart::result::CudaResult;
 use era_cudart::slice::DeviceSlice;
 use era_cudart::stream::CudaStream;
+use field::{Field, PrimeField};
+use prover::definitions::ExternalDelegationArgumentChallenges;
 
 type BF = BaseField;
 type E4 = Ext4Field;
@@ -133,6 +137,33 @@ cuda_kernel!(
 );
 
 process_generic_lookup_intermediate_polys!(ab_generic_lookup_intermediate_polys_kernel);
+
+cuda_kernel!(
+    HandleDelegationRequests,
+    handle_delegation_requests,
+    delegation_challenges: DelegationChallenges,
+    request_metadata: DelegationRequestMetadata,
+    memory_cols: PtrAndStride<BF>,
+    setup_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    delegation_aux_poly_col: u32,
+    log_n: u32,
+);
+
+handle_delegation_requests!(ab_handle_delegation_requests_kernel);
+
+cuda_kernel!(
+    ProcessDelegations,
+    process_delegations,
+    delegation_challenges: DelegationChallenges,
+    processing_metadata: DelegationProcessingMetadata,
+    memory_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    delegation_aux_poly_col: u32,
+    log_n: u32,
+);
+
+process_delegations!(ab_process_delegations_kernel);
 
 pub(crate) fn stage2_process_range_check_16_trivial_checks<F: Fn(usize) -> usize>(
     circuit: &CompiledCircuitArtifact<BF>,
@@ -519,6 +550,82 @@ pub(crate) fn stage2_process_generic_lookup_entry_invs_and_multiplicity<F: Fn(us
         ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel,
     )
     .launch(&config, &args)
+}
+
+pub(crate) fn stage2_handle_delegation_requests(
+    circuit: &CompiledCircuitArtifact<BF>,
+    delegation_challenges: &ExternalDelegationArgumentChallenges,
+    memory_timestamp_high_from_circuit_idx: Option<BF>,
+    layout: &DelegationRequestLayout,
+    memory_cols: PtrAndStride<BF>,
+    setup_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    delegation_aux_poly_col: usize,
+    log_n: u32,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+
+    let delegation_challenges = DelegationChallenges::new(delegation_challenges);
+
+    let memory_timestamp_high_from_circuit_idx =
+        memory_timestamp_high_from_circuit_idx.unwrap_or(BF::ZERO); 
+
+    let request_metadata = DelegationRequestMetadata {
+        multiplicity_col: layout.multiplicity.start() as u32,
+        timestamp_setup_col: circuit.setup_layout.timestamp_setup_columns.start() as u32,
+        memory_timestamp_high_from_circuit_idx,
+        delegation_type_col: layout.delegation_type.start() as u32,
+        abi_mem_offset_high_col: layout.abi_mem_offset_high.start() as u32,
+        in_cycle_write_idx: BF::from_u64_unchecked(layout.in_cycle_write_index as u64),
+    };
+
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = HandleDelegationRequestsArguments::new(
+        delegation_challenges,
+        request_metadata,
+        memory_cols,
+        setup_cols,
+        stage_2_e4_cols,
+        delegation_aux_poly_col as u32,
+        log_n,
+    );
+    HandleDelegationRequestsFunction(ab_handle_delegation_requests_kernel).launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_delegations(
+    delegation_challenges: &ExternalDelegationArgumentChallenges,
+    delegation_type: BF,
+    layout: &DelegationProcessingLayout,
+    memory_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    delegation_aux_poly_col: usize,
+    log_n: u32,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    let delegation_challenges = DelegationChallenges::new(delegation_challenges);
+    // reminder to refactor when we finally get rid of abi_mem_offset_high
+    assert!(layout.abi_mem_offset_high.num_elements() > 0);
+    let processing_metadata = DelegationProcessingMetadata {
+        multiplicity_col: layout.multiplicity.start() as u32,
+        delegation_type,
+        abi_mem_offset_high_col: layout.abi_mem_offset_high.start() as u32,
+        write_timestamp_col: layout.write_timestamp.start() as u32,
+    };
+
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = ProcessDelegationsArguments::new(
+        delegation_challenges,
+        processing_metadata,
+        memory_cols,
+        stage_2_e4_cols,
+        delegation_aux_poly_col as u32,
+        log_n,
+    );
+    ProcessDelegationsFunction(ab_process_delegations_kernel).launch(&config, &args)
 }
 
 pub(crate) fn stage2_compute_grand_product(
