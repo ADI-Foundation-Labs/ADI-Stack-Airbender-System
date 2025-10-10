@@ -16,8 +16,8 @@ use setups::{
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum CircuitType {
-    Main(MainCircuitType),
     Delegation(DelegationCircuitType),
+    Unified,
     Unrolled(UnrolledCircuitType),
 }
 
@@ -25,14 +25,6 @@ impl CircuitType {
     #[inline(always)]
     pub fn from_delegation_type(delegation_type: u16) -> Self {
         Self::Delegation(delegation_type.into())
-    }
-
-    #[inline(always)]
-    pub const fn as_main(&self) -> Option<MainCircuitType> {
-        match self {
-            Self::Main(circuit_type) => Some(*circuit_type),
-            _ => None,
-        }
     }
 
     #[inline(always)]
@@ -53,121 +45,34 @@ impl CircuitType {
 
     pub const fn get_domain_size(&self) -> usize {
         match self {
-            Self::Main(main_type) => main_type.get_domain_size(),
             Self::Delegation(delegation_type) => delegation_type.get_domain_size(),
+            Self::Unified => todo!(),
             Self::Unrolled(unrolled_type) => unrolled_type.get_domain_size(),
         }
     }
 
     pub const fn get_lde_factor(&self) -> usize {
         match self {
-            Self::Main(main_type) => main_type.get_lde_factor(),
             Self::Delegation(delegation_type) => delegation_type.get_lde_factor(),
+            Self::Unified => todo!(),
             Self::Unrolled(unrolled_type) => unrolled_type.get_lde_factor(),
         }
     }
 
     pub const fn get_lde_source_cosets(&self) -> &'static [usize] {
         match self {
-            Self::Main(main_type) => main_type.get_lde_source_cosets(),
             Self::Delegation(delegation_type) => delegation_type.get_lde_source_cosets(),
+            Self::Unified => todo!(),
             Self::Unrolled(unrolled_type) => unrolled_type.get_lde_source_cosets(),
         }
     }
 
     pub const fn get_tree_cap_size(&self) -> usize {
         match self {
-            Self::Main(main_type) => main_type.get_tree_cap_size(),
             Self::Delegation(delegation_type) => delegation_type.get_tree_cap_size(),
+            Self::Unified => todo!(),
             Self::Unrolled(unrolled_type) => unrolled_type.get_tree_cap_size(),
         }
-    }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum MainCircuitType {
-    FinalReducedRiscVMachine,
-    MachineWithoutSignedMulDiv,
-    ReducedRiscVLog23Machine,
-    ReducedRiscVMachine,
-    RiscVCycles,
-}
-
-impl MainCircuitType {
-    pub const fn get_domain_size(&self) -> usize {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::DOMAIN_SIZE,
-            Self::MachineWithoutSignedMulDiv => machine_without_signed_mul_div::DOMAIN_SIZE,
-            Self::ReducedRiscVLog23Machine => reduced_risc_v_log_23_machine::DOMAIN_SIZE,
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::DOMAIN_SIZE,
-            Self::RiscVCycles => risc_v_cycles::DOMAIN_SIZE,
-        }
-    }
-
-    pub const fn get_lde_factor(&self) -> usize {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::LDE_FACTOR,
-            Self::MachineWithoutSignedMulDiv => machine_without_signed_mul_div::LDE_FACTOR,
-            Self::ReducedRiscVLog23Machine => reduced_risc_v_log_23_machine::LDE_FACTOR,
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::LDE_FACTOR,
-            Self::RiscVCycles => risc_v_cycles::LDE_FACTOR,
-        }
-    }
-
-    pub const fn get_lde_source_cosets(&self) -> &'static [usize] {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::LDE_SOURCE_COSETS,
-            Self::MachineWithoutSignedMulDiv => machine_without_signed_mul_div::LDE_SOURCE_COSETS,
-            Self::ReducedRiscVLog23Machine => reduced_risc_v_log_23_machine::LDE_SOURCE_COSETS,
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::LDE_SOURCE_COSETS,
-            Self::RiscVCycles => risc_v_cycles::LDE_SOURCE_COSETS,
-        }
-    }
-
-    pub const fn get_tree_cap_size(&self) -> usize {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::TREE_CAP_SIZE,
-            Self::MachineWithoutSignedMulDiv => machine_without_signed_mul_div::TREE_CAP_SIZE,
-            Self::ReducedRiscVLog23Machine => reduced_risc_v_log_23_machine::TREE_CAP_SIZE,
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::TREE_CAP_SIZE,
-            Self::RiscVCycles => risc_v_cycles::TREE_CAP_SIZE,
-        }
-    }
-
-    pub const fn get_num_cycles(&self) -> usize {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::NUM_CYCLES,
-            Self::MachineWithoutSignedMulDiv => machine_without_signed_mul_div::NUM_CYCLES,
-            Self::ReducedRiscVLog23Machine => reduced_risc_v_log_23_machine::NUM_CYCLES,
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::NUM_CYCLES,
-            Self::RiscVCycles => risc_v_cycles::NUM_CYCLES,
-        }
-    }
-
-    pub const fn get_allowed_delegation_csrs(&self) -> &'static [u32] {
-        match self {
-            Self::FinalReducedRiscVMachine => final_reduced_risc_v_machine::ALLOWED_DELEGATION_CSRS,
-            Self::MachineWithoutSignedMulDiv => {
-                machine_without_signed_mul_div::ALLOWED_DELEGATION_CSRS
-            }
-            Self::ReducedRiscVLog23Machine => {
-                reduced_risc_v_log_23_machine::ALLOWED_DELEGATION_CSRS
-            }
-            Self::ReducedRiscVMachine => reduced_risc_v_machine::ALLOWED_DELEGATION_CSRS,
-            Self::RiscVCycles => risc_v_cycles::ALLOWED_DELEGATION_CSRS,
-        }
-    }
-
-    pub fn get_allowed_delegation_circuit_types(
-        &self,
-    ) -> impl Iterator<Item = DelegationCircuitType> {
-        self.get_allowed_delegation_csrs()
-            .iter()
-            .map(|id| DelegationCircuitType::from(*id as u16))
-    }
-
-    pub const fn needs_delegation_challenge(&self) -> bool {
-        !self.get_allowed_delegation_csrs().is_empty()
     }
 }
 
