@@ -9,9 +9,9 @@ pub struct AlignedArray<T, A, const N: usize> {
 }
 
 #[repr(C)]
-pub struct AlignedSlice<'a, T, A> {
+pub struct AlignedSlice<T, A> {
     _aligner: [A; 0],
-    data: &'a [T],
+    data: [T],
 }
 
 #[derive(Clone, Copy)]
@@ -19,7 +19,7 @@ pub struct AlignedSlice<'a, T, A> {
 pub struct A64;
 
 pub type AlignedArray64<T, const N: usize> = AlignedArray<T, A64, N>;
-pub type AlignedSlice64<'a, T> = AlignedSlice<'a, T, A64>;
+pub type AlignedSlice64<T> = AlignedSlice<T, A64>;
 
 impl<T, A, const N: usize> AlignedArray<T, A, N> {
     #[inline(always)]
@@ -28,7 +28,7 @@ impl<T, A, const N: usize> AlignedArray<T, A, N> {
     }
 }
 
-impl<'a, T, A> AlignedSlice<'a, T, A> {
+impl<T, A> AlignedSlice<T, A> {
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -41,9 +41,8 @@ impl<'a, T, A> AlignedSlice<'a, T, A> {
     /// Same as `core::slice::from_raw_parts`,
     /// but caller should also ensure data is aligned for type `A` (not just `T`!)
     #[inline(always)]
-    pub const unsafe fn from_raw_parts(data: *const T, len: usize) -> Self {
-        let data = core::slice::from_raw_parts(data, len);
-        Self { _aligner: [], data }
+    pub const unsafe fn from_raw_parts<'a>(data: *const T, len: usize) -> &'a Self {
+        &*(core::ptr::slice_from_raw_parts(data, len) as *const Self)
     }
 }
 
