@@ -96,7 +96,7 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
     let mut snapshotter = SimpleSnapshotter::new_with_cycle_limit(cycles_bound, period, state);
     let mut non_determinism = QuasiUARTSource::new_with_reads(vec![15, 1]);
 
-    VM::<CountersT>::run_basic_unrolled::<
+    let is_program_finished = VM::<CountersT>::run_basic_unrolled::<
         SimpleSnapshotter<CountersT, SECOND_WORD_BITS>,
         RamWithRomRegion<SECOND_WORD_BITS>,
         _,
@@ -109,6 +109,7 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
         period,
         &mut non_determinism,
     );
+    assert!(is_program_finished); // check that we reached looping state (ie. end state for our vm)
 
     let total_snapshots = snapshotter.snapshots.len();
     let cycles_upper_bound = total_snapshots * period;
@@ -269,6 +270,7 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
                 NON_DETERMINISM_CSR,
                 BLAKE2S_DELEGATION_CSR_REGISTER as u16,
                 BIGINT_OPS_WITH_CONTROL_CSR_REGISTER as u16,
+                KECCAK_SPECIAL5_CSR_REGISTER as u16
             ],
         )
     } else {
@@ -280,6 +282,7 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
                 NON_DETERMINISM_CSR,
                 BLAKE2S_DELEGATION_CSR_REGISTER as u16,
                 BIGINT_OPS_WITH_CONTROL_CSR_REGISTER as u16,
+                KECCAK_SPECIAL5_CSR_REGISTER as u16
             ],
         )
     };
@@ -675,7 +678,7 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
 
     let csr_table = create_csr_table_for_delegation::<Mersenne31Field>(
         true,
-        &[BLAKE2S_DELEGATION_CSR_REGISTER],
+        &[BLAKE2S_DELEGATION_CSR_REGISTER, KECCAK_SPECIAL5_CSR_REGISTER],
         TableType::SpecialCSRProperties.to_table_id(),
     );
 
@@ -1473,8 +1476,8 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
         permutation_argument_accumulator.mul_assign(&proof.permutation_grand_product_accumulator);
     }
 
+    // now prove delegation circuits
     if true {
-        // now prove delegation circuits
         let mut external_values = ExternalValues {
             challenges: external_challenges,
             aux_boundary_values: Default::default(),
@@ -1647,6 +1650,188 @@ pub fn run_basic_unrolled_test_in_transpiler_with_word_specialization_impl(
 
         // if !for_gpu_comparison {
         //     serialize_to_file(&proof, "blake2s_delegator_proof");
+        // }
+
+        dbg!(prover_data.stage_2_result.grand_product_accumulator);
+        dbg!(prover_data.stage_2_result.sum_over_delegation_poly);
+
+        permutation_argument_accumulator.mul_assign(&proof.memory_grand_product_accumulator);
+        delegation_argument_accumulator.sub_assign(&proof.delegation_argument_accumulator.unwrap());
+    }
+
+    if true {
+        let mut external_values = ExternalValues {
+            challenges: external_challenges,
+            aux_boundary_values: Default::default(),
+        };
+        external_values.aux_boundary_values = Default::default();
+
+        let (circuit, table_driver) = {
+            use crate::cs::cs::cs_reference::BasicAssembly;
+            use cs::delegation::keccak_special5::define_keccak_special5_delegation_circuit;
+            let mut cs = BasicAssembly::<Mersenne31Field>::new();
+            define_keccak_special5_delegation_circuit(&mut cs);
+            let (circuit_output, _) = cs.finalize();
+            let table_driver = circuit_output.table_driver.clone();
+            let compiler = OneRowCompiler::default();
+            let circuit = compiler.compile_to_evaluate_delegations(
+                circuit_output,
+                (NUM_DELEGATION_CYCLES + 1).trailing_zeros() as usize,
+            );
+
+            (circuit, table_driver)
+        };
+
+        println!("Will try to prove Keccak delegation");
+
+        let num_calls = counters.keccak_calls;
+        dbg!(num_calls);
+
+        let mut state = snapshotter.initial_snapshot.state;
+        let mut ram = ReplayerRam::<SECOND_WORD_BITS> {
+            ram_log: &snapshotter.reads_buffer,
+        };
+        let mut nd = ReplayerNonDeterminism {
+            non_determinism_reads_log: &snapshotter.non_determinism_reads_buffer,
+        };
+        let mut buffer = vec![DelegationWitness::empty(); num_calls];
+        let mut buffers = vec![&mut buffer[..]];
+        let mut tracer = KeccakDelegationDestinationHolder {
+            buffers: &mut buffers[..],
+        };
+
+        ReplayerVM::<CountersT>::replay_basic_unrolled::<_, _>(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &tape,
+            period,
+            &mut nd,
+            &mut tracer,
+        );
+
+        // evaluate a witness and memory-only witness for each
+
+        let delegation_type = KECCAK_SPECIAL5_CSR_REGISTER as u16;
+        let oracle = KeccakDelegationOracle {
+            cycle_data: &buffer,
+            marker: core::marker::PhantomData,
+        };
+        #[cfg(feature = "debug_logs")]
+        println!(
+            "Evaluating memory-only witness for delegation circuit {}",
+            delegation_type
+        );
+        let mem_only_witness = evaluate_delegation_memory_witness(
+            &circuit,
+            NUM_DELEGATION_CYCLES,
+            &oracle,
+            &worker,
+            Global,
+        );
+
+        let eval_fn = super::keccak_special5_delegation_with_transpiler::witness_eval_fn;
+
+        #[cfg(feature = "debug_logs")]
+        println!(
+            "Evaluating witness for delegation circuit {}",
+            delegation_type
+        );
+        let full_witness = evaluate_witness(
+            &circuit,
+            eval_fn,
+            NUM_DELEGATION_CYCLES,
+            &oracle,
+            &[],
+            &table_driver,
+            0,
+            &worker,
+            Global,
+        );
+
+        parse_delegation_ram_accesses_from_full_trace(
+            &circuit,
+            &full_witness,
+            &mut memory_write_set,
+            &mut memory_read_set,
+        );
+
+        let is_satisfied = check_satisfied(
+            &circuit,
+            &full_witness.exec_trace,
+            full_witness.num_witness_columns,
+        );
+        assert!(is_satisfied);
+
+        let trace_len = NUM_DELEGATION_CYCLES + 1;
+
+        // create setup
+        let twiddles: Twiddles<_, Global> = Twiddles::new(trace_len, &worker);
+        let lde_precomputations = LdePrecomputations::new(trace_len, lde_factor, &[0, 1], &worker);
+
+        let setup = SetupPrecomputations::from_tables_and_trace_len(
+            &table_driver,
+            NUM_DELEGATION_CYCLES + 1,
+            &circuit.setup_layout,
+            &twiddles,
+            &lde_precomputations,
+            lde_factor,
+            tree_cap_size,
+            &worker,
+        );
+
+        // let lookup_mapping_for_gpu = if maybe_delegated_gpu_comparison_hook.is_some() {
+        //     Some(witness.witness.lookup_mapping.clone())
+        // } else {
+        //     None
+        // };
+
+        let now = std::time::Instant::now();
+        let (prover_data, proof) = prove::<DEFAULT_TRACE_PADDING_MULTIPLE, _>(
+            &circuit,
+            &[],
+            &external_values,
+            full_witness,
+            &setup,
+            &twiddles,
+            &lde_precomputations,
+            0,
+            Some(delegation_type),
+            lde_factor,
+            tree_cap_size,
+            53,
+            28,
+            &worker,
+        );
+        println!(
+            "Delegation circuit type {} proving time is {:?}",
+            delegation_type,
+            now.elapsed()
+        );
+
+        // if let Some(ref gpu_comparison_hook) = maybe_delegated_gpu_comparison_hook {
+        //     let log_n = work_type.trace_len.trailing_zeros();
+        //     assert_eq!(work_type.trace_len, 1 << log_n);
+        //     let dummy_public_inputs = Vec::<Mersenne31Field>::new();
+        //     let gpu_comparison_args = GpuComparisonArgs {
+        //         circuit: &work_type.compiled_circuit,
+        //         setup: &setup,
+        //         external_values: &external_values,
+        //         public_inputs: &dummy_public_inputs,
+        //         twiddles: &twiddles,
+        //         lde_precomputations: &lde_precomputations,
+        //         table_driver: &work_type.table_driver,
+        //         lookup_mapping: lookup_mapping_for_gpu.unwrap(),
+        //         log_n: log_n as usize,
+        //         circuit_sequence: 0,
+        //         delegation_processing_type: Some(delegation_type),
+        //         prover_data: &prover_data,
+        //     };
+        //     gpu_comparison_hook(&gpu_comparison_args);
+        // }
+
+        // if !for_gpu_comparison {
+        //     serialize_to_file(&proof, "keccak_delegator_proof");
         // }
 
         dbg!(prover_data.stage_2_result.grand_product_accumulator);

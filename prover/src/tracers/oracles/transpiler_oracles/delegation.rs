@@ -4,7 +4,9 @@ use cs::definitions::TimestampScalar;
 use field::PrimeField;
 use riscv_transpiler::witness::delegation::bigint::BigintAbiDescription;
 use riscv_transpiler::witness::delegation::blake2_round_function::Blake2sRoundFunctionAbiDescription;
+use riscv_transpiler::witness::delegation::keccak_special5::KeccakSpecial5AbiDescription;
 use riscv_transpiler::witness::*;
+use common_constants::KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS;
 
 #[derive(Clone, Copy, Debug)]
 pub struct DelegationOracle<
@@ -23,6 +25,8 @@ pub struct DelegationOracle<
 pub type BigintDelegationOracle<'a> = DelegationOracle<'a, BigintAbiDescription, 3, 8, 8, 0>;
 pub type Blake2sDelegationOracle<'a> =
     DelegationOracle<'a, Blake2sRoundFunctionAbiDescription, 4, 16, 24, 0>;
+pub type KeccakDelegationOracle<'a> = DelegationOracle<'a, KeccakSpecial5AbiDescription, 2, 0, {KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS*2}, KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS>;
+
 
 impl<
         'a,
