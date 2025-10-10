@@ -554,10 +554,6 @@ pub fn compute_stage_2_args_on_main_domain(
         circuit.memory_layout.shuffle_ram_access_sets.len() > 0,
     ); 
     assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-    assert_eq!(
-        num_memory_args,
-        circuit.memory_layout.shuffle_ram_access_sets.len(),
-    );
     let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);
     let raw_memory_args_start = circuit
         .stage_2_layout
@@ -567,6 +563,11 @@ pub fn compute_stage_2_args_on_main_domain(
 
     if process_shuffle_ram_init{
         assert!(!process_registers_and_indirect_access);
+        // reminder of what needs to change for unrolled circuits
+        assert_eq!(
+            num_memory_args,
+            circuit.memory_layout.shuffle_ram_access_sets.len(),
+        );
         stage2_process_lazy_init_and_ram_access(
             circuit,
             memory_challenges.clone(),
