@@ -1,5 +1,9 @@
 use super::arg_utils::*;
 use super::context::DeviceProperties;
+use super::unrolled_prover::stage_2_ram_shared::{
+    stage2_process_lazy_init_and_ram_access,
+    stage2_process_registers_and_indirect_access_in_delegation,
+};
 use super::unrolled_prover::stage_2_shared::{
     stage2_process_range_check_16_trivial_checks,
     stage2_process_range_check_16_expressions,
@@ -16,7 +20,7 @@ use super::unrolled_prover::stage_2_shared::{
 };
 use crate::device_structures::{
     DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
-    DeviceMatrixChunkMutImpl, MutPtrAndStride, PtrAndStride,
+    DeviceMatrixChunkMutImpl,
 };
 use crate::field::{BaseField, Ext4Field};
 use crate::ops_cub::device_reduce::{
@@ -28,8 +32,6 @@ use crate::ops_simple::{set_to_zero, sub_into_x};
 
 use cs::definitions::{NUM_TIMESTAMP_COLUMNS_FOR_RAM, REGISTER_SIZE, TIMESTAMP_COLUMNS_NUM_BITS};
 use cs::one_row_compiler::CompiledCircuitArtifact;
-use era_cudart::cuda_kernel;
-use era_cudart::execution::{CudaLaunchConfig, KernelFunction};
 use era_cudart::result::CudaResult;
 use era_cudart::slice::{DeviceSlice, DeviceVariable};
 use era_cudart::stream::CudaStream;
@@ -39,36 +41,6 @@ use std::cmp::max;
 
 type BF = BaseField;
 type E4 = Ext4Field;
-
-cuda_kernel!(
-    ShuffleRamMemoryArgs,
-    shuffle_ram_memory_args,
-    memory_challenges: MemoryChallenges,
-    shuffle_ram_accesses: ShuffleRamAccesses,
-    setup_cols: PtrAndStride<BF>,
-    memory_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    lazy_init_teardown_layouts: LazyInitTeardownLayouts,
-    memory_timestamp_high_from_circuit_idx: BF,
-    lazy_init_teardown_args_start: u32,
-    memory_args_start: u32,
-    log_n: u32,
-);
-
-shuffle_ram_memory_args!(ab_shuffle_ram_memory_args_kernel);
-
-cuda_kernel!(
-    RegisterAndIndirectMemoryArgs,
-    register_and_indirect_memory_args,
-    memory_challenges: MemoryChallenges,
-    register_and_indirect_accesses: RegisterAndIndirectAccesses,
-    memory_cols: PtrAndStride<BF>,
-    stage_2_e4_cols: MutPtrAndStride<BF>,
-    memory_args_start: u32,
-    log_n: u32,
-);
-
-register_and_indirect_memory_args!(ab_register_and_indirect_memory_args_kernel);
 
 pub fn get_stage_2_e4_scratch(domain_size: usize, circuit: &CompiledCircuitArtifact<BF>) -> usize {
     max(
@@ -519,9 +491,9 @@ pub fn compute_stage_2_args_on_main_domain(
             log_n,
             stream,
         )?;
-        lazy_init_teardown_layouts
+        Some(lazy_init_teardown_layouts)
     } else {
-        LazyInitTeardownLayouts::default()
+        None
     };
 
     stage2_process_timestamp_range_check_expressions(
@@ -569,46 +541,50 @@ pub fn compute_stage_2_args_on_main_domain(
         stream,
     )?;
 
-    // Pack metadata for memory args
+    // Shuffle ram init/teardown and shuffle ram accesses are distinct things.
+    // We expect:
+    // inits > 0, access == 0: can happen in unrolled, never in non-unrolled
+    // inits == 0, access > 0: can happen in unrolled, never in non-unrolled
+    // both > 0              : can happen in non-unrolled (main), never in unrolled
+    // both == 0             : can happen in non-unrolled (delegated), and also in unrolled
+    // The following asserts might be fail for unrolled circuits.
+    // They're a reminder of what I need to change.
+    assert_eq!(
+        process_shuffle_ram_init,
+        circuit.memory_layout.shuffle_ram_access_sets.len() > 0,
+    ); 
+    assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
+    assert_eq!(
+        num_memory_args,
+        circuit.memory_layout.shuffle_ram_access_sets.len(),
+    );
     let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);
     let raw_memory_args_start = circuit
         .stage_2_layout
         .intermediate_polys_for_memory_argument
         .start();
     let memory_args_start = translate_e4_offset(raw_memory_args_start);
-    let raw_lazy_init_teardown_args_start = circuit
-        .stage_2_layout
-        .intermediate_polys_for_memory_init_teardown
-        .start();
-    let lazy_init_teardown_args_start = translate_e4_offset(raw_lazy_init_teardown_args_start);
-    if process_shuffle_ram_init {
+
+    if process_shuffle_ram_init{
         assert!(!process_registers_and_indirect_access);
-        assert_eq!(lazy_init_teardown_layouts.process_shuffle_ram_init, true);
-        let write_timestamp_in_setup_start = circuit.setup_layout.timestamp_setup_columns.start();
-        let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
-        assert_eq!(num_memory_args, shuffle_ram_access_sets.len());
-        assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-        let shuffle_ram_accesses =
-            ShuffleRamAccesses::new(shuffle_ram_access_sets, write_timestamp_in_setup_start);
-        let block_dim = 128;
-        let grid_dim = (n as u32 + 127) / 128;
-        let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-        let args = ShuffleRamMemoryArgsArguments::new(
+        stage2_process_lazy_init_and_ram_access(
+            circuit,
             memory_challenges.clone(),
-            shuffle_ram_accesses,
+            memory_timestamp_high_from_circuit_idx,
+            lazy_init_teardown_layouts.unwrap(),
             setup_cols,
             memory_cols,
             d_stage_2_e4_cols,
-            lazy_init_teardown_layouts,
-            memory_timestamp_high_from_circuit_idx,
-            lazy_init_teardown_args_start as u32,
-            memory_args_start as u32,
-            log_n as u32,
-        );
-        ShuffleRamMemoryArgsFunction(ab_shuffle_ram_memory_args_kernel).launch(&config, &args)?;
-    } else {
-        assert!(process_registers_and_indirect_access);
-        assert_eq!(circuit.memory_layout.shuffle_ram_access_sets.len(), 0);
+            memory_args_start,
+            log_n,
+            &translate_e4_offset,
+            stream,
+        )?;
+    }
+
+    if process_registers_and_indirect_access {
+        assert!(!process_shuffle_ram_init);
+        // Layout checks that likely need to be modified for unrolled circuits
         let mut num_intermediate_polys_for_register_accesses = 0;
         for el in circuit.memory_layout.register_and_indirect_accesses.iter() {
             num_intermediate_polys_for_register_accesses += 1;
@@ -619,30 +595,18 @@ pub fn compute_stage_2_args_on_main_domain(
             num_intermediate_polys_for_register_accesses,
         );
         assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-    }
-    if process_registers_and_indirect_access {
-        let register_and_indirect_accesses = &circuit.memory_layout.register_and_indirect_accesses;
-        assert!(register_and_indirect_accesses.len() > 0);
-        let write_timestamp_col = delegation_processor_layout.write_timestamp.start();
-        let register_and_indirect_accesses = RegisterAndIndirectAccesses::new(
-            &memory_challenges,
-            register_and_indirect_accesses,
-            write_timestamp_col,
-        );
-        let block_dim = 128;
-        let grid_dim = (n as u32 + 127) / 128;
-        let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
-        let args = RegisterAndIndirectMemoryArgsArguments::new(
+        stage2_process_registers_and_indirect_access_in_delegation(
+            circuit,
             memory_challenges,
-            register_and_indirect_accesses,
+            &delegation_processor_layout,
             memory_cols,
             d_stage_2_e4_cols,
-            memory_args_start as u32,
-            log_n as u32,
-        );
-        RegisterAndIndirectMemoryArgsFunction(ab_register_and_indirect_memory_args_kernel)
-            .launch(&config, &args)?;
+            memory_args_start,
+            log_n,
+            stream,
+        )?;
     }
+
     // quick and dirty c0 = 0 adjustment for bf cols
     assert_eq!(
         scratch_for_col_sums.len(),
