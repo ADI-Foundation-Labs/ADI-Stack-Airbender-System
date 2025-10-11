@@ -115,6 +115,7 @@ EXTERN __launch_bounds__(128, 8) __global__
                                               matrix_getter<bf, ld_modifier::cs> setup_cols,
                                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                               const unsigned delegation_aux_poly_col,
+                                              const bool is_unrolled,
                                               const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -124,15 +125,25 @@ EXTERN __launch_bounds__(128, 8) __global__
 
   stage_2_e4_cols.add_row(gid);
   memory_cols.add_row(gid);
-  setup_cols.add_row(gid);
 
   const bf num = memory_cols.get_at_col(request_metadata.multiplicity_col);
 
-  bf timestamp_low = setup_cols.get_at_col(request_metadata.timestamp_setup_col);
-  timestamp_low = bf::add(timestamp_low, request_metadata.in_cycle_write_idx);
+  bf timestamp_low{};
+  bf timestamp_high{};
+  if (is_unrolled) {
+    timestamp_low = memory_cols.get_at_col(request_metadata.timestamp_col);
+    timestamp_low = bf::add(timestamp_low, request_metadata.in_cycle_write_idx);
 
-  bf timestamp_high = setup_cols.get_at_col(request_metadata.timestamp_setup_col + 1);
-  timestamp_high = bf::add(timestamp_high, request_metadata.memory_timestamp_high_from_circuit_idx);
+    timestamp_high = memory_cols.get_at_col(request_metadata.timestamp_col + 1);
+  } else {
+    setup_cols.add_row(gid);
+
+    timestamp_low = setup_cols.get_at_col(request_metadata.timestamp_col);
+    timestamp_low = bf::add(timestamp_low, request_metadata.in_cycle_write_idx);
+
+    timestamp_high = setup_cols.get_at_col(request_metadata.timestamp_col + 1);
+    timestamp_high = bf::add(timestamp_high, request_metadata.memory_timestamp_high_from_circuit_idx);
+  }
 
   e4 denom = challenges.gamma;
   denom = e4::add(denom, memory_cols.get_at_col(request_metadata.delegation_type_col));

@@ -147,6 +147,7 @@ cuda_kernel!(
     setup_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     delegation_aux_poly_col: u32,
+    is_unrolled: bool,
     log_n: u32,
 );
 
@@ -561,18 +562,26 @@ pub(crate) fn stage2_handle_delegation_requests(
     setup_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     delegation_aux_poly_col: usize,
+    is_unrolled: bool,
     log_n: u32,
     stream: &CudaStream,
 ) -> CudaResult<()> {
 
     let delegation_challenges = DelegationChallenges::new(delegation_challenges);
 
-    let memory_timestamp_high_from_circuit_idx =
-        memory_timestamp_high_from_circuit_idx.unwrap_or(BF::ZERO); 
+    let (timestamp_columns, memory_timestamp_high_from_circuit_idx) = if is_unrolled {
+        assert!(memory_timestamp_high_from_circuit_idx.is_none());
+        (&circuit.memory_layout.intermediate_state_layout.unwrap().timestamp, BF::ZERO)
+    } else {
+        (
+            &circuit.setup_layout.timestamp_setup_columns,
+            memory_timestamp_high_from_circuit_idx.unwrap(),
+        )
+    };
 
     let request_metadata = DelegationRequestMetadata {
         multiplicity_col: layout.multiplicity.start() as u32,
-        timestamp_setup_col: circuit.setup_layout.timestamp_setup_columns.start() as u32,
+        timestamp_col: timestamp_columns.start() as u32,
         memory_timestamp_high_from_circuit_idx,
         delegation_type_col: layout.delegation_type.start() as u32,
         abi_mem_offset_high_col: layout.abi_mem_offset_high.start() as u32,
@@ -589,6 +598,7 @@ pub(crate) fn stage2_handle_delegation_requests(
         setup_cols,
         stage_2_e4_cols,
         delegation_aux_poly_col as u32,
+        is_unrolled,
         log_n,
     );
     HandleDelegationRequestsFunction(ab_handle_delegation_requests_kernel).launch(&config, &args)

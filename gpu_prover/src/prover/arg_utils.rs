@@ -1,8 +1,9 @@
 use cs::definitions::{
     IndirectAccessColumns, LookupExpression, OptimizedOraclesForLookupWidth1,
     RegisterAccessColumns, RegisterAndIndirectAccessDescription, ShuffleRamAuxComparisonSet,
-    ShuffleRamInitAndTeardownLayout, MEM_ARGUMENT_CHALLENGE_POWERS_ADDRESS_HIGH_IDX,
-    MEM_ARGUMENT_CHALLENGE_POWERS_ADDRESS_LOW_IDX,
+    ShuffleRamInitAndTeardownLayout,
+    EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES,
+    MEM_ARGUMENT_CHALLENGE_POWERS_ADDRESS_HIGH_IDX, MEM_ARGUMENT_CHALLENGE_POWERS_ADDRESS_LOW_IDX,
     MEM_ARGUMENT_CHALLENGE_POWERS_TIMESTAMP_HIGH_IDX,
     MEM_ARGUMENT_CHALLENGE_POWERS_TIMESTAMP_LOW_IDX, MEM_ARGUMENT_CHALLENGE_POWERS_VALUE_HIGH_IDX,
     MEM_ARGUMENT_CHALLENGE_POWERS_VALUE_LOW_IDX, NUM_DELEGATION_ARGUMENT_KEY_PARTS,
@@ -59,7 +60,7 @@ impl DelegationChallenges {
 #[repr(C)]
 pub struct DelegationRequestMetadata {
     pub multiplicity_col: u32,
-    pub timestamp_setup_col: u32,
+    pub timestamp_col: u32,
     pub memory_timestamp_high_from_circuit_idx: BF,
     pub delegation_type_col: u32,
     pub abi_mem_offset_high_col: u32,
@@ -96,7 +97,7 @@ pub fn get_delegation_metadata(
         let layout = delegation_request_layout;
         let request_metadata = DelegationRequestMetadata {
             multiplicity_col: layout.multiplicity.start() as u32,
-            timestamp_setup_col: circuit.setup_layout.timestamp_setup_columns.start() as u32,
+            timestamp_col: circuit.setup_layout.timestamp_setup_columns.start() as u32,
             memory_timestamp_high_from_circuit_idx,
             delegation_type_col: layout.delegation_type.start() as u32,
             abi_mem_offset_high_col: layout.abi_mem_offset_high.start() as u32,
@@ -135,6 +136,36 @@ impl LookupChallenges {
         assert_eq!(NUM_LOOKUP_ARGUMENT_KEY_PARTS, 4);
         assert_eq!(challenges.len(), NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1);
         let linearization_challenges: [E4; NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1] =
+            std::array::from_fn(|i| challenges[i]);
+        Self {
+            linearization_challenges,
+            gamma,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+#[repr(C)]
+pub struct DecoderTableChallenges {
+    pub linearization_challenges:
+        [E4; EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES],
+    pub gamma: E4,
+}
+
+impl DecoderTableChallenges {
+    #[allow(dead_code)]
+    pub fn new(challenges: &[E4], gamma: E4) -> Self {
+        // ensures size matches corresponding cuda struct
+        assert_eq!(
+            EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES,
+            9
+        );
+        assert_eq!(
+            challenges.len(),
+            EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES,
+        );
+        let linearization_challenges: [E4;
+            EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES] =
             std::array::from_fn(|i| challenges[i]);
         Self {
             linearization_challenges,

@@ -141,6 +141,7 @@ pub fn compute_stage_2_args_on_main_domain(
     maybe_batch_reduce_intermediates: &mut Option<&mut DeviceSlice<BF>>,
     scratch_for_col_sums: &mut DeviceSlice<BF>,
     lookup_challenges: &DeviceVariable<LookupChallenges>,
+    // decoder_table_challenges: &DeviceVariable<DecoderTableChallenges>,
     cached_data: &ProverCachedData,
     circuit: &CompiledCircuitArtifact<BF>,
     num_generic_table_rows: usize,
@@ -428,6 +429,7 @@ pub fn compute_stage_2_args_on_main_domain(
             setup_cols,
             d_stage_2_e4_cols,
             translate_e4_offset(delegation_processing_aux_poly.start()),
+            false,
             log_n,
             stream,
         )?;

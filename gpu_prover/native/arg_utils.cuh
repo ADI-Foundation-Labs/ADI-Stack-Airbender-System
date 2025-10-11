@@ -14,6 +14,10 @@ typedef base_field bf;
 typedef ext2_field e2;
 typedef ext4_field e4;
 
+constexpr unsigned REGISTER_SIZE = 2;
+constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH = 2 + 1 + 1 + 1 + 1 + REGISTER_SIZE + 1 + 1;
+constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES = EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH - 1;
+
 constexpr unsigned NUM_DELEGATION_ARGUMENT_KEY_PARTS = 4;
 
 struct DelegationChallenges {
@@ -23,7 +27,7 @@ struct DelegationChallenges {
 
 struct DelegationRequestMetadata {
   const unsigned multiplicity_col;
-  const unsigned timestamp_setup_col;
+  const unsigned timestamp_col;
   const bf memory_timestamp_high_from_circuit_idx;
   const unsigned delegation_type_col;
   const unsigned abi_mem_offset_high_col;
