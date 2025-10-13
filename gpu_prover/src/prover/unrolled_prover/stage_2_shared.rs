@@ -1,4 +1,3 @@
-use crate::prover::arg_utils::*;
 use crate::device_structures::{
     DeviceMatrix, DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
     DeviceMatrixChunkMutImpl, DeviceMatrixMut, MutPtrAndStride, PtrAndStride,
@@ -6,10 +5,11 @@ use crate::device_structures::{
 use crate::field::{BaseField, Ext4Field};
 use crate::ops_complex::transpose;
 use crate::ops_cub::device_scan::{scan, ScanOperation};
+use crate::prover::arg_utils::*;
 use crate::utils::WARP_SIZE;
 
 use cs::definitions::{
-    DelegationProcessingLayout, DelegationRequestLayout, TIMESTAMP_COLUMNS_NUM_BITS
+    DelegationProcessingLayout, DelegationRequestLayout, TIMESTAMP_COLUMNS_NUM_BITS,
 };
 use cs::one_row_compiler::{
     CompiledCircuitArtifact, LookupWidth1SourceDestInformation,
@@ -29,7 +29,7 @@ type E4 = Ext4Field;
 cuda_kernel!(
     RangeCheckAggregatedEntryInvsAndMultiplicitiesArg,
     range_check_aggregated_entry_invs_and_multiplicities_arg,
-    lookup_challenges: *const LookupChallenges,
+    challenges: *const LookupChallenges,
     witness_cols: PtrAndStride<BF>,
     setup_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
@@ -47,9 +47,29 @@ range_check_aggregated_entry_invs_and_multiplicities_arg!(
 );
 
 cuda_kernel!(
+    DecoderAggregatedEntryInvsAndMultiplicitiesArg,
+    decoder_aggregated_entry_invs_and_multiplicities_arg,
+    challenges: *const DecoderTableChallenges,
+    witness_cols: PtrAndStride<BF>,
+    setup_cols: PtrAndStride<BF>,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    aggregated_entry_invs: *mut E4,
+    start_col_in_setup: u32,
+    multiplicities_src_cols_start: u32,
+    multiplicities_dst_cols_start: u32,
+    num_multiplicities_cols: u32,
+    num_table_rows_tail: u32,
+    log_n: u32,
+);
+
+decoder_aggregated_entry_invs_and_multiplicities_arg!(
+    ab_decoder_aggregated_entry_invs_and_multiplicities_arg_kernel
+);
+
+cuda_kernel!(
     GenericAggregatedEntryInvsAndMultiplicitiesArg,
     generic_aggregated_entry_invs_and_multiplicities_arg,
-    lookup_challenges: *const LookupChallenges,
+    challenges: *const LookupChallenges,
     witness_cols: PtrAndStride<BF>,
     setup_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
@@ -123,6 +143,20 @@ cuda_kernel!(
 process_range_check_expressions_for_shuffle_ram!(ab_range_check_expressions_for_shuffle_ram_kernel);
 
 cuda_kernel!(
+    ProcessDecoderLookupIntermediatePoly,
+    process_decoder_lookup_intermediate_poly,
+    memory_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_decoder_lookups: *const E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    decoder_lookup_arg_col: u32,
+    predicate_col: u32,
+    pc_start_col: u32,
+    log_n: u32,
+);
+
+process_decoder_lookup_intermediate_poly!(ab_decoder_lookup_intermediate_poly_kernel);
+
+cuda_kernel!(
     ProcessGenericLookupIntermediatePolys,
     process_generic_lookup_intermediate_polys,
     generic_lookups_args_to_table_entries_map: PtrAndStride<u32>,
@@ -169,8 +203,9 @@ process_delegations!(ab_process_delegations_kernel);
 pub(crate) fn stage2_process_range_check_16_trivial_checks<F: Fn(usize) -> usize>(
     circuit: &CompiledCircuitArtifact<BF>,
     range_check_16_width_1_lookups_access: &Vec<LookupWidth1SourceDestInformation>,
-    range_check_16_width_1_lookups_access_via_expressions:
-        &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+    range_check_16_width_1_lookups_access_via_expressions: &Vec<
+        LookupWidth1SourceDestInformationForExpressions<BF>,
+    >,
     witness_cols: PtrAndStride<BF>,
     aggregated_entry_invs_for_range_check_16: *const E4,
     stage_2_bf_cols: MutPtrAndStride<BF>,
@@ -201,8 +236,9 @@ pub(crate) fn stage2_process_range_check_16_trivial_checks<F: Fn(usize) -> usize
 }
 
 fn process_range_check_expressions_impl<F: Fn(usize) -> usize>(
-    range_check_width_1_lookups_access_via_expressions:
-        &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+    range_check_width_1_lookups_access_via_expressions: &Vec<
+        LookupWidth1SourceDestInformationForExpressions<BF>,
+    >,
     witness_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     aggregated_entry_invs: *const E4,
@@ -237,13 +273,13 @@ fn process_range_check_expressions_impl<F: Fn(usize) -> usize>(
         stage_2_e4_cols,
         log_n,
     );
-    ProcessRangeCheckExpressionsFunction(ab_range_check_expressions_kernel)
-        .launch(&config, &args)
+    ProcessRangeCheckExpressionsFunction(ab_range_check_expressions_kernel).launch(&config, &args)
 }
 
 pub(crate) fn stage2_process_range_check_16_expressions<F: Fn(usize) -> usize>(
-    range_check_16_width_1_lookups_access_via_expressions:
-        &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+    range_check_16_width_1_lookups_access_via_expressions: &Vec<
+        LookupWidth1SourceDestInformationForExpressions<BF>,
+    >,
     witness_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     aggregated_entry_invs_for_range_check_16: *const E4,
@@ -275,8 +311,9 @@ pub(crate) fn stage2_process_range_check_16_expressions<F: Fn(usize) -> usize>(
 // This function's logic is identical to stage2_process_range_check_16_expressions.
 // I'm making it distinct to match Alex's API.
 pub(crate) fn stage2_process_timestamp_range_check_expressions<F: Fn(usize) -> usize>(
-    timestamp_range_check_width_1_lookups_access_via_expressions:
-        &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+    timestamp_range_check_width_1_lookups_access_via_expressions: &Vec<
+        LookupWidth1SourceDestInformationForExpressions<BF>,
+    >,
     witness_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     aggregated_entry_invs_for_timestamp_range_checks: *const E4,
@@ -325,13 +362,15 @@ pub(crate) fn stage2_process_lazy_init_range_checks(
         stage_2_e4_cols,
         log_n,
     );
-    ProcessLazyInitRangeChecksFunction(ab_lazy_init_range_checks_kernel)
-        .launch(&config, &args)
+    ProcessLazyInitRangeChecksFunction(ab_lazy_init_range_checks_kernel).launch(&config, &args)
 }
 
-pub(crate) fn stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution<F: Fn(usize) -> usize>(
-    timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram:
-        &Vec<LookupWidth1SourceDestInformationForExpressions<BF>>,
+pub(crate) fn stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution<
+    F: Fn(usize) -> usize,
+>(
+    timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram: &Vec<
+        LookupWidth1SourceDestInformationForExpressions<BF>,
+    >,
     setup_cols: PtrAndStride<BF>,
     witness_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
@@ -368,7 +407,46 @@ pub(crate) fn stage2_process_timestamp_range_check_expressions_with_extra_timest
         memory_timestamp_high_from_circuit_idx,
         log_n,
     );
-    ProcessRangeCheckExpressionsForShuffleRamFunction(ab_range_check_expressions_for_shuffle_ram_kernel)
+    ProcessRangeCheckExpressionsForShuffleRamFunction(
+        ab_range_check_expressions_for_shuffle_ram_kernel,
+    )
+    .launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_executor_family_decoder_intermediate_poly<F: Fn(usize) -> usize>(
+    circuit: &CompiledCircuitArtifact<BF>,
+    memory_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_decoder_lookups: *const E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    log_n: u32,
+    translate_e4_offset: &F,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    let decoder_lookup_poly = &circuit
+        .stage_2_layout
+        .intermediate_poly_for_decoder_accesses;
+    assert_eq!(decoder_lookup_poly.num_elements(), 1);
+    let decoder_lookup_arg_col = translate_e4_offset(decoder_lookup_poly.start());
+
+    let intermediate_state_layout = circuit.memory_layout.intermediate_state_layout.unwrap();
+
+    let predicate_col = intermediate_state_layout.execute.start();
+
+    let pc_start_col = intermediate_state_layout.pc.start();
+
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = ProcessDecoderLookupIntermediatePolyArguments::new(
+        memory_cols,
+        aggregated_entry_invs_for_decoder_lookups,
+        stage_2_e4_cols,
+        decoder_lookup_arg_col as u32,
+        predicate_col as u32,
+        pc_start_col as u32,
+        log_n,
+    );
+    ProcessDecoderLookupIntermediatePolyFunction(ab_decoder_lookup_intermediate_poly_kernel)
         .launch(&config, &args)
 }
 
@@ -385,7 +463,10 @@ pub(crate) fn stage2_process_generic_lookup_intermediate_polys<F: Fn(usize) -> u
     translate_e4_offset: &F,
     stream: &CudaStream,
 ) -> CudaResult<()> {
-    assert_eq!(generic_lookups_args_to_table_entries_map.rows(), (1 << log_n) as usize);
+    assert_eq!(
+        generic_lookups_args_to_table_entries_map.rows(),
+        (1 << log_n) as usize
+    );
     assert_eq!(
         generic_lookups_args_to_table_entries_map.cols(),
         num_generic_args,
@@ -397,11 +478,11 @@ pub(crate) fn stage2_process_generic_lookup_intermediate_polys<F: Fn(usize) -> u
     //     return Ok(());
     // }
     let generic_args_start = translate_e4_offset(
-            circuit
-                .stage_2_layout
-                .intermediate_polys_for_generic_lookup
-                .start(),
-        );
+        circuit
+            .stage_2_layout
+            .intermediate_polys_for_generic_lookup
+            .start(),
+    );
     let generic_lookups_args_to_table_entries_map =
         generic_lookups_args_to_table_entries_map.as_ptr_and_stride();
     let block_dim = WARP_SIZE * 4;
@@ -464,7 +545,9 @@ pub(crate) fn stage2_process_range_check_16_entry_invs_and_multiplicity<F: Fn(us
     .launch(&config, &args)
 }
 
-pub(crate) fn stage2_process_timestamp_range_check_entry_invs_and_multiplicity<F: Fn(usize) -> usize>(
+pub(crate) fn stage2_process_timestamp_range_check_entry_invs_and_multiplicity<
+    F: Fn(usize) -> usize,
+>(
     lookup_challenges: *const LookupChallenges,
     setup_cols: PtrAndStride<BF>,
     witness_cols: PtrAndStride<BF>,
@@ -485,7 +568,7 @@ pub(crate) fn stage2_process_timestamp_range_check_entry_invs_and_multiplicity<F
     let timestamp_range_check_multiplicities_dst_col =
         translate_e4_offset(timestamp_range_check_multiplicities_dst);
     let block_dim = WARP_SIZE * 4;
-    let grid_dim = ((1<< log_n) + block_dim - 1) / block_dim;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
     let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
     let args = RangeCheckAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
         lookup_challenges,
@@ -502,6 +585,70 @@ pub(crate) fn stage2_process_timestamp_range_check_entry_invs_and_multiplicity<F
     );
     RangeCheckAggregatedEntryInvsAndMultiplicitiesArgFunction(
         ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel,
+    )
+    .launch(&config, &args)
+}
+
+pub(crate) fn stage2_process_executor_family_decoder_entry_invs_and_multiplicity<
+    F: Fn(usize) -> usize,
+>(
+    circuit: &CompiledCircuitArtifact<BF>,
+    decoder_table_challenges: *const DecoderTableChallenges,
+    setup_cols: PtrAndStride<BF>,
+    witness_cols: PtrAndStride<BF>,
+    aggregated_entry_invs_for_decoder_lookups: *mut E4,
+    stage_2_e4_cols: MutPtrAndStride<BF>,
+    log_n: u32,
+    translate_e4_offset: &F,
+    stream: &CudaStream,
+) -> CudaResult<()> {
+    let num_decoder_table_rows = circuit.executor_family_decoder_table_size;
+    assert!(num_decoder_table_rows > 0);
+    let setup_src = &circuit.setup_layout.preprocessed_decoder_setup_columns;
+    let multiplicities_src = &circuit
+        .witness_layout
+        .multiplicities_columns_for_decoder_in_executor_families;
+    let multiplicities_dst = &circuit
+        .stage_2_layout
+        .intermediate_polys_for_decoder_multiplicities;
+    let num_decoder_multiplicities_cols = setup_src.num_elements();
+    // Just a sanity check. We can handle > 1 if needed.
+    assert_eq!(num_decoder_multiplicities_cols, 1);
+    assert_eq!(
+        num_decoder_multiplicities_cols,
+        multiplicities_src.num_elements()
+    );
+    assert_eq!(
+        num_decoder_multiplicities_cols,
+        multiplicities_dst.num_elements()
+    );
+    let start_col_in_setup = setup_src.start();
+    let multiplicities_src_cols_start = multiplicities_src.start();
+    let multiplicities_dst_cols_start = translate_e4_offset(multiplicities_dst.start());
+    let lookup_encoding_capacity = (1 << log_n as usize) - 1;
+    let num_decoder_table_rows_tail = num_decoder_table_rows % lookup_encoding_capacity;
+    assert_eq!(
+        num_decoder_multiplicities_cols,
+        (num_decoder_table_rows + lookup_encoding_capacity - 1) / lookup_encoding_capacity
+    );
+    let block_dim = WARP_SIZE * 4;
+    let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+    let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+    let args = DecoderAggregatedEntryInvsAndMultiplicitiesArgArguments::new(
+        decoder_table_challenges,
+        witness_cols,
+        setup_cols,
+        stage_2_e4_cols,
+        aggregated_entry_invs_for_decoder_lookups,
+        start_col_in_setup as u32,
+        multiplicities_src_cols_start as u32,
+        multiplicities_dst_cols_start as u32,
+        num_decoder_multiplicities_cols as u32,
+        num_decoder_table_rows_tail as u32,
+        log_n as u32,
+    );
+    DecoderAggregatedEntryInvsAndMultiplicitiesArgFunction(
+        ab_decoder_aggregated_entry_invs_and_multiplicities_arg_kernel,
     )
     .launch(&config, &args)
 }
@@ -566,12 +713,18 @@ pub(crate) fn stage2_handle_delegation_requests(
     log_n: u32,
     stream: &CudaStream,
 ) -> CudaResult<()> {
-
     let delegation_challenges = DelegationChallenges::new(delegation_challenges);
 
     let (timestamp_columns, memory_timestamp_high_from_circuit_idx) = if is_unrolled {
         assert!(memory_timestamp_high_from_circuit_idx.is_none());
-        (&circuit.memory_layout.intermediate_state_layout.unwrap().timestamp, BF::ZERO)
+        (
+            &circuit
+                .memory_layout
+                .intermediate_state_layout
+                .unwrap()
+                .timestamp,
+            BF::ZERO,
+        )
     } else {
         (
             &circuit.setup_layout.timestamp_setup_columns,

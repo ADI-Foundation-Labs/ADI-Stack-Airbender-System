@@ -14,10 +14,6 @@ typedef base_field bf;
 typedef ext2_field e2;
 typedef ext4_field e4;
 
-constexpr unsigned REGISTER_SIZE = 2;
-constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH = 2 + 1 + 1 + 1 + 1 + REGISTER_SIZE + 1 + 1;
-constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES = EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH - 1;
-
 constexpr unsigned NUM_DELEGATION_ARGUMENT_KEY_PARTS = 4;
 
 struct DelegationChallenges {
@@ -45,6 +41,15 @@ constexpr unsigned NUM_LOOKUP_ARGUMENT_KEY_PARTS = 4;
 
 struct LookupChallenges {
   const e4 linearization_challenges[NUM_LOOKUP_ARGUMENT_KEY_PARTS - 1];
+  const e4 gamma;
+};
+
+constexpr unsigned REGISTER_SIZE = 2;
+constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH = 2 + 1 + 1 + 1 + 1 + REGISTER_SIZE + 1 + 1;
+constexpr unsigned EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES = EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH - 1;
+
+struct DecoderTableChallenges {
+  const e4 linearization_challenges[EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_LINEARIZATION_CHALLENGES];
   const e4 gamma;
 };
 

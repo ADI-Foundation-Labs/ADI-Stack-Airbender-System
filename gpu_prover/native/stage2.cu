@@ -14,20 +14,18 @@ using bf = base_field;
 using e2 = ext2_field;
 using e4 = ext4_field;
 
-// Populates entry-invs and b-cols.
-// ENTRY_WIDTH = 1 instantiation computes aggregated entries and multiplicity args for range check 16 lookups.
-// ENTRY_WIDTH = 4 instantiation computes aggregated entries and multiplicity args for generic lookups.
-template <unsigned ENTRY_WIDTH>
+// ENTRY_WIDTH = 1 logic is special-cased for range check lookups.
+template <typename T, unsigned ENTRY_WIDTH>
 DEVICE_FORCEINLINE void
-aggregated_entry_invs_and_multiplicities_arg_kernel(const LookupChallenges *challenges_ptr, matrix_getter<bf, ld_modifier::cs> witness_cols,
-                                                    matrix_getter<bf, ld_modifier::cs> setup_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                                    // st_modifier::cg to cache stores for upcoming lookup_a_args_kernel
-                                                    vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup,
-                                                    const unsigned multiplicities_src_cols_start, const unsigned multiplicities_dst_cols_start,
-                                                    const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
+aggregated_entry_invs_and_multiplicities_arg_impl(const T *challenges_ptr, matrix_getter<bf, ld_modifier::cs> witness_cols,
+                                                  matrix_getter<bf, ld_modifier::cs> setup_cols, vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                                  // st_modifier::cg to cache stores for upcoming lookup_a_args_kernel
+                                                  vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup,
+                                                  const unsigned multiplicities_src_cols_start, const unsigned multiplicities_dst_cols_start,
+                                                  const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
   const unsigned n = 1u << log_n;
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
-  // Zeroing the last row for stage 2 bf and e4 args is handled by lookup_args_kernel.
+  // Zeroing the last row for stage 2 bf and e4 args is handled by generic lookup args kernel.
   if (gid >= n - 1)
     return;
 
@@ -80,30 +78,35 @@ aggregated_entry_invs_and_multiplicities_arg_kernel(const LookupChallenges *chal
   }
 }
 
-// TODO (optional): I could unify
-// range_check_aggregated_entry_invs_and_multiplicities_arg_kernel
-// and
-// generic_aggregated_entry_invs_and_multiplicities_arg_kernel
-// into a one-size-fits-all kernel by making ENTRY_WIDTH a runtime argument instead of a template parameter.
-// I think they're alright as-is.
 EXTERN __launch_bounds__(128, 8) __global__ void ab_range_check_aggregated_entry_invs_and_multiplicities_arg_kernel(
     const LookupChallenges *challenges, matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> setup_cols,
     vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-    // st_modifier::cg to cache stores for upcoming lookup_a_args_kernel
+    // st_modifier::cg because these will be reused by later kernels
     vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup, const unsigned multiplicities_src_cols_start,
     const unsigned multiplicities_dst_cols_start, const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
-  aggregated_entry_invs_and_multiplicities_arg_kernel<1>(challenges, witness_cols, setup_cols, stage_2_e4_cols, aggregated_entry_invs, start_col_in_setup,
-                                                         multiplicities_src_cols_start, multiplicities_dst_cols_start, num_multiplicities_cols,
-                                                         num_table_rows_tail, log_n);
+  aggregated_entry_invs_and_multiplicities_arg_impl<LookupChallenges, 1>(
+      challenges, witness_cols, setup_cols, stage_2_e4_cols, aggregated_entry_invs, start_col_in_setup, multiplicities_src_cols_start,
+      multiplicities_dst_cols_start, num_multiplicities_cols, num_table_rows_tail, log_n);
+}
+
+EXTERN __launch_bounds__(128, 8) __global__ void ab_decoder_aggregated_entry_invs_and_multiplicities_arg_kernel(
+    const DecoderTableChallenges *challenges, matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> setup_cols,
+    vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+    // st_modifier::cg because these will be reused by later kernels
+    vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup, const unsigned multiplicities_src_cols_start,
+    const unsigned multiplicities_dst_cols_start, const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
+  aggregated_entry_invs_and_multiplicities_arg_impl<DecoderTableChallenges, EXECUTOR_FAMILY_CIRCUIT_DECODER_TABLE_WIDTH>(
+      challenges, witness_cols, setup_cols, stage_2_e4_cols, aggregated_entry_invs, start_col_in_setup, multiplicities_src_cols_start,
+      multiplicities_dst_cols_start, num_multiplicities_cols, num_table_rows_tail, log_n);
 }
 
 EXTERN __launch_bounds__(128, 8) __global__ void ab_generic_aggregated_entry_invs_and_multiplicities_arg_kernel(
     const LookupChallenges *challenges, matrix_getter<bf, ld_modifier::cs> witness_cols, matrix_getter<bf, ld_modifier::cs> setup_cols,
     vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-    // st_modifier::cg to cache stores for upcoming lookup_a_args_kernel
+    // st_modifier::cg because these will be reused by later kernels
     vector_setter<e4, st_modifier::cg> aggregated_entry_invs, const unsigned start_col_in_setup, const unsigned multiplicities_src_cols_start,
     const unsigned multiplicities_dst_cols_start, const unsigned num_multiplicities_cols, const unsigned num_table_rows_tail, const unsigned log_n) {
-  aggregated_entry_invs_and_multiplicities_arg_kernel<NUM_LOOKUP_ARGUMENT_KEY_PARTS>(
+  aggregated_entry_invs_and_multiplicities_arg_impl<LookupChallenges, NUM_LOOKUP_ARGUMENT_KEY_PARTS>(
       challenges, witness_cols, setup_cols, stage_2_e4_cols, aggregated_entry_invs, start_col_in_setup, multiplicities_src_cols_start,
       multiplicities_dst_cols_start, num_multiplicities_cols, num_table_rows_tail, log_n);
 }
@@ -315,7 +318,40 @@ EXTERN __launch_bounds__(128, 8) __global__
 }
 
 EXTERN __launch_bounds__(128, 8) __global__
-    void ab_generic_lookup_intermediate_polys_kernel(
+    void ab_decoder_lookup_intermediate_poly_kernel(
+                               matrix_getter<bf, ld_modifier::cs> memory_cols,
+                               vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_decoder_lookups,
+                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                               const unsigned decoder_lookup_arg_col,
+                               const unsigned predicate_col,
+                               const unsigned pc_start_col,
+                               const unsigned log_n) {
+  const unsigned n = 1u << log_n;
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= n - 1)
+    return;
+
+  stage_2_e4_cols.add_row(gid);
+  memory_cols.add_row(gid);
+
+  // witness gen probably ensures execute predicate is canonical, but being careful doesn't hurt
+  const unsigned predicate = bf::into_canonical(memory_cols.get_at_col(predicate_col)).limb;
+  if (predicate) {
+    const unsigned pc_high = bf::into_canonical(memory_cols.get_at_col(pc_start_col)).limb;
+    const unsigned pc_low = bf::into_canonical(memory_cols.get_at_col(pc_start_col + 1)).limb;
+    const unsigned pc = (pc_high << 16) | pc_low;
+    const unsigned decoder_table_row = pc >> 2;
+
+    const e4 aggregated_entry_inv = aggregated_entry_invs_for_decoder_lookups.get(decoder_table_row);
+
+    stage_2_e4_cols.set_at_col(decoder_lookup_arg_col, aggregated_entry_inv);
+  } else {
+    stage_2_e4_cols.set_at_col(decoder_lookup_arg_col, e4::zero());
+  }
+}
+
+EXTERN __launch_bounds__(128, 8) __global__
+    void ab_generic_lookup_intermediate_poly_kernel(
                                matrix_getter<unsigned, ld_modifier::cs> generic_lookups_args_to_table_entries_map,
                                vector_getter<e4, ld_modifier::ca> aggregated_entry_invs_for_generic_lookups,
                                matrix_setter<bf, st_modifier::cs> stage_2_bf_cols,
