@@ -7,6 +7,7 @@ use std::ops::Range;
 
 pub mod bigint;
 pub mod blake2_round_function;
+pub mod keccak_special5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DelegationWitness<

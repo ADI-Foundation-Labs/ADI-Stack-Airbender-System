@@ -1,9 +1,11 @@
+use common_constants::KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS;
 use cs::cs::oracle::Oracle;
 use cs::cs::placeholder::Placeholder;
 use cs::definitions::TimestampScalar;
 use field::PrimeField;
 use riscv_transpiler::witness::delegation::bigint::BigintAbiDescription;
 use riscv_transpiler::witness::delegation::blake2_round_function::Blake2sRoundFunctionAbiDescription;
+use riscv_transpiler::witness::delegation::keccak_special5::KeccakSpecial5AbiDescription;
 use riscv_transpiler::witness::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -23,6 +25,14 @@ pub struct DelegationOracle<
 pub type BigintDelegationOracle<'a> = DelegationOracle<'a, BigintAbiDescription, 3, 8, 8, 0>;
 pub type Blake2sDelegationOracle<'a> =
     DelegationOracle<'a, Blake2sRoundFunctionAbiDescription, 4, 16, 24, 0>;
+pub type KeccakDelegationOracle<'a> = DelegationOracle<
+    'a,
+    KeccakSpecial5AbiDescription,
+    2,
+    0,
+    { KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS * 2 },
+    KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS,
+>;
 
 impl<
         'a,
@@ -127,7 +137,7 @@ impl<
             Placeholder::DelegationABIOffset => 0,
             Placeholder::DelegationType => D::DELEGATION_TYPE,
             Placeholder::DelegationIndirectAccessVariableOffset { variable_index } => {
-                D::VARIABLE_OFFSETS_DESCRIPTION[variable_index]
+                self.cycle_data[trace_row].variables_offsets[variable_index]
             }
             a @ _ => {
                 panic!("Placeholder query {:?} is not supported as u16", a);

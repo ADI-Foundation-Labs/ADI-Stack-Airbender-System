@@ -19,7 +19,7 @@ pub use self::simple_tape::SimpleTape;
 pub trait Counters: 'static + Clone + Copy + Debug {
     fn bump_bigint(&mut self);
     fn bump_blake2_round_function(&mut self);
-    fn bump_keccak_special_5(&mut self);
+    fn bump_keccak_special5(&mut self);
     fn bump_non_determinism(&mut self);
     fn log_circuit_family<const FAMILY: u8>(&mut self);
     fn get_calls_to_circuit_family<const FAMILY: u8>(&self) -> usize;
@@ -326,6 +326,53 @@ pub(crate) mod test {
     fn test_simple_fibonacci() {
         let (_, binary) = read_binary(&Path::new("examples/fibonacci/app.bin"));
         let (_, text) = read_binary(&Path::new("examples/fibonacci/app.text"));
+        let instructions: Vec<Instruction> = text
+            .into_iter()
+            .map(|el| decode::<FullUnsignedMachineDecoderConfig>(el))
+            .collect();
+        let tape = SimpleTape::new(&instructions);
+        let mut ram = RamWithRomRegion::<5>::from_rom_content(&binary, 1 << 30);
+        let period = 1 << 20;
+        let num_snapshots = 1000;
+        let cycles_bound = period * num_snapshots;
+
+        let mut state = State::initial_with_counters(DelegationsCounters::default());
+
+        let mut snapshotter = SimpleSnapshotter::new_with_cycle_limit(cycles_bound, period, state);
+
+        let now = std::time::Instant::now();
+        VM::<DelegationsCounters>::run_basic_unrolled::<
+            SimpleSnapshotter<DelegationsCounters, 5>,
+            RamWithRomRegion<5>,
+            _,
+        >(
+            &mut state,
+            num_snapshots,
+            &mut ram,
+            &mut snapshotter,
+            &tape,
+            period,
+            &mut (),
+        );
+        let elapsed = now.elapsed();
+
+        let total_snapshots = snapshotter.snapshots.len();
+        let cycles_upper_bound = total_snapshots * period;
+
+        println!(
+            "Performance is {} MHz ({} total snapshots with period of {} cycles)",
+            (cycles_upper_bound as f64) / (elapsed.as_micros() as f64),
+            total_snapshots,
+            period
+        );
+
+        dbg!(&state.registers[10..18]);
+    }
+
+    #[test]
+    fn test_keccak_f1600() {
+        let (_, binary) = read_binary(&Path::new("examples/keccak_f1600/app.bin"));
+        let (_, text) = read_binary(&Path::new("examples/keccak_f1600/app.text"));
         let instructions: Vec<Instruction> = text
             .into_iter()
             .map(|el| decode::<FullUnsignedMachineDecoderConfig>(el))

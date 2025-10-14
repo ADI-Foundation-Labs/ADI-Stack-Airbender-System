@@ -54,7 +54,7 @@ pub(crate) fn call_delegation<C: Counters, S: Snapshotter<C>, R: RAM>(
             delegations::blake2_round_function::blake2_round_function_call(state, ram, snapshotter)
         }
         a if a == DelegationType::Keccak as u32 => {
-            todo!()
+            delegations::keccak_special5::keccak_special5_call(state, ram, snapshotter)
         }
         _ => unsafe { core::hint::unreachable_unchecked() },
     }

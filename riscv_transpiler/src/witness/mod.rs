@@ -138,6 +138,14 @@ pub type BlakeDelegationDestinationHolder<'a> = DelegationDestinationHolder<
     24,
     0,
 >;
+pub type KeccakDelegationDestinationHolder<'a> = DelegationDestinationHolder<
+    'a,
+    { common_constants::keccak_special5::KECCAK_SPECIAL5_CSR_REGISTER as u16 },
+    2,
+    0,
+    { common_constants::keccak_special5::KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS * 2 },
+    { common_constants::keccak_special5::KECCAK_SPECIAL5_NUM_VARIABLE_OFFSETS },
+>;
 
 // Holder for destination buffer for one particular delegation type. It may represent only part
 // of the destination circuit's capacity

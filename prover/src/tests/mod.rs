@@ -138,7 +138,7 @@ pub mod keccak_special5_delegation_with_gpu_tracer {
     use ::cs::cs::witness_placer::WitnessTypeSet;
     use ::cs::cs::witness_placer::{
         WitnessComputationCore, WitnessComputationalField, WitnessComputationalInteger,
-        WitnessComputationalU16, WitnessComputationalU32,
+        WitnessComputationalU16, WitnessComputationalU32, WitnessComputationalU8, WitnessMask,
     };
     use ::field::Mersenne31Field;
     use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
@@ -153,6 +153,30 @@ pub mod keccak_special5_delegation_with_gpu_tracer {
             SimpleWitnessProxy<'a, DelegationCircuitOracle<'b>>,
         >;
         (fn_ptr)(proxy);
+    }
+}
+
+pub mod keccak_special5_delegation_with_transpiler {
+    use crate::tracers::oracles::transpiler_oracles::delegation::KeccakDelegationOracle;
+    use crate::witness_evaluator::SimpleWitnessProxy;
+    use crate::witness_proxy::WitnessProxy;
+
+    use ::cs::cs::witness_placer::WitnessTypeSet;
+    use ::cs::cs::witness_placer::{
+        WitnessComputationCore, WitnessComputationalField, WitnessComputationalInteger,
+        WitnessComputationalU16, WitnessComputationalU32, WitnessComputationalU8, WitnessMask,
+    };
+    use ::field::Mersenne31Field;
+    use cs::cs::witness_placer::scalar_witness_type_set::ScalarWitnessTypeSet;
+
+    include!("../../keccak_delegation_generated.rs");
+
+    pub fn witness_eval_fn<'a, 'b>(proxy: &mut SimpleWitnessProxy<'a, KeccakDelegationOracle<'b>>) {
+        let fn_ptr = evaluate_witness_fn::<
+            ScalarWitnessTypeSet<Mersenne31Field, true>,
+            SimpleWitnessProxy<'a, KeccakDelegationOracle<'b>>,
+        >;
+        fn_ptr(proxy);
     }
 }
 
@@ -496,6 +520,12 @@ fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
 fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
     let src = std::fs::File::open(filename).unwrap();
     serde_json::from_reader(src).unwrap()
+}
+
+#[cfg(test)]
+fn fast_serialize_to_file<T: serde::Serialize>(el: &T, filename: &str) {
+    let mut dst = std::fs::File::create(filename).unwrap();
+    bincode::serialize_into(&mut dst, el).unwrap();
 }
 
 #[cfg(test)]
