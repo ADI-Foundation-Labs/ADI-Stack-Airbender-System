@@ -21,6 +21,13 @@ struct DelegationChallenges {
   const e4 gamma;
 };
 
+constexpr unsigned NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES = 3;
+
+struct MachineStateChallenges {
+  const e4 linearization_challenges[NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES];
+  const e4 additive_term;
+};
+
 struct DelegationRequestMetadata {
   const unsigned multiplicity_col;
   const unsigned timestamp_col;
@@ -246,6 +253,7 @@ constexpr unsigned MAX_LAZY_INIT_TEARDOWN_SETS = 1;
 struct LazyInitTeardownLayouts {
   const LazyInitTeardownLayout layouts[MAX_LAZY_INIT_TEARDOWN_SETS];
   const unsigned num_init_teardown_sets;
+  const unsigned grand_product_contributions_start;
   const bool process_shuffle_ram_init;
 };
 

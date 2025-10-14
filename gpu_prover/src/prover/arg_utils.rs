@@ -7,8 +7,8 @@ use cs::definitions::{
     MEM_ARGUMENT_CHALLENGE_POWERS_TIMESTAMP_HIGH_IDX,
     MEM_ARGUMENT_CHALLENGE_POWERS_TIMESTAMP_LOW_IDX, MEM_ARGUMENT_CHALLENGE_POWERS_VALUE_HIGH_IDX,
     MEM_ARGUMENT_CHALLENGE_POWERS_VALUE_LOW_IDX, NUM_DELEGATION_ARGUMENT_KEY_PARTS,
-    NUM_LOOKUP_ARGUMENT_KEY_PARTS, NUM_MEM_ARGUMENT_KEY_PARTS, NUM_TIMESTAMP_COLUMNS_FOR_RAM,
-    REGISTER_SIZE,
+    NUM_LOOKUP_ARGUMENT_KEY_PARTS, NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES,
+    NUM_MEM_ARGUMENT_KEY_PARTS, NUM_TIMESTAMP_COLUMNS_FOR_RAM, REGISTER_SIZE,
 };
 use cs::one_row_compiler::{
     ColumnAddress, CompiledCircuitArtifact, LookupWidth1SourceDestInformation,
@@ -16,7 +16,10 @@ use cs::one_row_compiler::{
     RegisterOrRamAccessAddress, ShuffleRamAddress, ShuffleRamQueryColumns,
 };
 use field::{Field, FieldExtension, PrimeField};
-use prover::definitions::{ExternalDelegationArgumentChallenges, ExternalMemoryArgumentChallenges};
+use prover::definitions::{
+    ExternalDelegationArgumentChallenges, ExternalMachineStateArgumentChallenges,
+    ExternalMemoryArgumentChallenges
+};
 use prover::prover_stages::cached_data::ProverCachedData;
 
 use super::{BF, E4};
@@ -24,6 +27,7 @@ use std::mem::size_of;
 // TODO: Once we have an overall prove function, consider making a big standalone helper
 // that creates all args common to stages 2 and 3.
 
+// explicit repackaging struct ensures layout matches what cuda expects
 #[derive(Clone, Default)]
 #[repr(C)]
 pub struct DelegationChallenges {
@@ -31,12 +35,6 @@ pub struct DelegationChallenges {
     pub gamma: E4,
 }
 
-// At the time I write this, DelegationChallenges happens to have the same layout as
-// zksync_airbender's ExternalDelegationArgumentChallenges.
-// But I shouldn't pass an ExternalDelegationArgumentChallenges to a kernel launch,
-// because CUDA blindly bitcopies inputs into kernel args, and the kernel expects
-// a certain layout. If zksync_airbender changed its layout, I'd get silent data corruption.
-// Therefore, I always repack zksync_airbender's struct into a struct I explicitly control.
 impl DelegationChallenges {
     pub fn new(challenges: &ExternalDelegationArgumentChallenges) -> Self {
         // ensures size matches corresponding cuda struct
@@ -52,6 +50,31 @@ impl DelegationChallenges {
         Self {
             linearization_challenges,
             gamma: challenges.delegation_argument_gamma,
+        }
+    }
+}
+
+// explicit repackaging struct ensures layout matches what cuda expects
+#[derive(Clone, Default)]
+#[repr(C)]
+pub struct MachineStateChallenges {
+    pub linearization_challenges: [E4; NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES],
+    pub additive_term: E4,
+}
+
+impl MachineStateChallenges {
+    pub fn new(challenges: &ExternalMachineStateArgumentChallenges) -> Self {
+        // ensures size matches corresponding cuda struct
+        assert_eq!(NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES, 3);
+        assert_eq!(
+            challenges.linearization_challenges.len(),
+            NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES
+        );
+        let linearization_challenges: [E4; NUM_MACHINE_STATE_LINEARIZATION_CHALLENGES] =
+            std::array::from_fn(|i| challenges.linearization_challenges[i]);
+        Self {
+            linearization_challenges,
+            additive_term: challenges.additive_term,
         }
     }
 }
@@ -274,7 +297,7 @@ impl StateLinkageConstraints {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[repr(C)]
 pub struct MemoryChallenges {
     pub address_low_challenge: E4,
@@ -704,6 +727,7 @@ pub const MAX_LAZY_INIT_TEARDOWN_SETS: usize = 1;
 pub struct LazyInitTeardownLayouts {
     pub layouts: [LazyInitTeardownLayout; MAX_LAZY_INIT_TEARDOWN_SETS],
     pub num_init_teardown_sets: u32,
+    pub grand_product_contributions_start: u32,
     pub process_shuffle_ram_init: bool,
 }
 
@@ -734,13 +758,15 @@ impl LazyInitTeardownLayouts {
             num_init_teardown_sets,
             lookup_set.ext_4_field_oracles.num_elements()
         );
+        let intermediate_polys_for_memory_init_teardown = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_memory_init_teardown
         assert_eq!(
             num_init_teardown_sets,
-            circuit
-                .stage_2_layout
-                .intermediate_polys_for_memory_init_teardown
-                .num_elements()
+            intermediate_polys_for_memory_init_teardown.num_elements(),
         );
+        let grand_product_contributions_start =
+            translate_e4_offset(intermediate_polys_for_memory_init_teardown.start()) as u32;
         let mut layouts = [LazyInitTeardownLayout::default(); MAX_LAZY_INIT_TEARDOWN_SETS];
         for (i, (init_and_teardown, aux_vars)) in shuffle_ram_inits_and_teardowns
             .iter()
@@ -777,6 +803,7 @@ impl LazyInitTeardownLayouts {
             layouts,
             num_init_teardown_sets: num_init_teardown_sets as u32,
             process_shuffle_ram_init: true,
+            grand_product_contributions_start,
         }
     }
 }

@@ -22,7 +22,6 @@ cuda_kernel!(
     memory_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     memory_timestamp_high_from_circuit_idx: BF,
-    lazy_init_teardown_args_start: u32,
     memory_args_start: u32,
     log_n: u32,
 );
@@ -52,14 +51,8 @@ pub(crate) fn stage2_process_lazy_init_and_ram_access<F: Fn(usize) -> usize>(
     stage_2_e4_cols: MutPtrAndStride<BF>,
     memory_args_start: usize,
     log_n: u32,
-    translate_e4_offset: &F,
     stream: &CudaStream,
 ) -> CudaResult<()> {
-    let raw_lazy_init_teardown_args_start = circuit
-        .stage_2_layout
-        .intermediate_polys_for_memory_init_teardown
-        .start();
-    let lazy_init_teardown_args_start = translate_e4_offset(raw_lazy_init_teardown_args_start);
     assert_eq!(lazy_init_teardown_layouts.process_shuffle_ram_init, true);
     let write_timestamp_in_setup_start = circuit.setup_layout.timestamp_setup_columns.start();
     let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
@@ -76,12 +69,61 @@ pub(crate) fn stage2_process_lazy_init_and_ram_access<F: Fn(usize) -> usize>(
         memory_cols,
         stage_2_e4_cols,
         memory_timestamp_high_from_circuit_idx,
-        lazy_init_teardown_args_start as u32,
         memory_args_start as u32,
         log_n,
     );
     LazyInitAndRamAccessFunction(ab_lazy_init_and_ram_access_kernel).launch(&config, &args)
 }
+
+// Invokes a single kernel to conditionally handle lazy init, ram access,
+// machine state permutation, and masking.
+// pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -> usize>(
+//     circuit: &CompiledCircuitArtifact<BF>,
+//     memory_challenges: MemoryChallenges,
+//     machine_stage_argument_challenges: MachineStateArgumentChallenges,
+//     lazy_init_teardown_layouts: Option<LazyInitTeardownLayouts>,
+//     setup_cols: PtrAndStride<BF>,
+//     memory_cols: PtrAndStride<BF>,
+//     stage_2_e4_cols: MutPtrAndStride<BF>,
+//     log_n: u32,
+//     translate_e4_offset: &F,
+//     stream: &CudaStream,
+// ) -> CudaResult<()> {
+//     let lazy_init_teardown_layouts =
+//         lazy_init_teardown_layouts.unwrap_or(LazyInitTeardownLayouts::default());
+//     let lazy_init_teardown_args_start = if lazy_init_teardown_layouts.process_shuffle_ram_init {
+//         let raw_lazy_init_teardown_args_start = circuit
+//             .stage_2_layout
+//             .intermediate_polys_for_memory_init_teardown
+//             .start();
+//         translate_e4_offset(raw_lazy_init_teardown_args_start
+//     } else {
+//         0
+//     };
+// 
+//     let 
+// 
+//     let write_timestamp_in_setup_start = circuit.setup_layout.timestamp_setup_columns.start();
+//     let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
+//     let shuffle_ram_accesses =
+//         ShuffleRamAccesses::new(shuffle_ram_access_sets, write_timestamp_in_setup_start);
+//     let block_dim = WARP_SIZE * 4;
+//     let grid_dim = ((1 << log_n) + block_dim - 1) / block_dim;
+//     let config = CudaLaunchConfig::basic(grid_dim, block_dim, stream);
+//     let args = LazyInitAndRamAccessArguments::new(
+//         challenges,
+//         shuffle_ram_accesses,
+//         lazy_init_teardown_layouts,
+//         setup_cols,
+//         memory_cols,
+//         stage_2_e4_cols,
+//         memory_timestamp_high_from_circuit_idx,
+//         lazy_init_teardown_args_start as u32,
+//         memory_args_start as u32,
+//         log_n,
+//     );
+//     LazyInitAndRamAccessFunction(ab_lazy_init_and_ram_access_kernel).launch(&config, &args)
+// }
 
 pub(crate) fn stage2_process_registers_and_indirect_access_in_delegation(
     circuit: &CompiledCircuitArtifact<BF>,

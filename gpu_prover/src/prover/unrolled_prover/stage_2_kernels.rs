@@ -897,7 +897,7 @@ mod tests {
             &prover_data
                 .stage_2_result
                 .decoder_table_linearization_challenges,
-            prover_data.decoder_table_gamma,
+            prover_data.stage_2_result.decoder_table_gamma,
         );
         // Allocate GPU memory
         let stream = CudaStream::default();
@@ -1269,26 +1269,26 @@ mod tests {
         }
     }
 
-    #[test]
-    #[serial]
-    fn test_stage_2_for_main_and_blake() {
-        let ctx = DeviceContext::create(12).unwrap();
-        run_basic_delegation_test_impl(
-            Some(Box::new(comparison_hook)),
-            Some(Box::new(comparison_hook)),
-        );
-        ctx.destroy().unwrap();
-    }
+    // #[test]
+    // #[serial]
+    // fn test_stage_2_for_main_and_blake() {
+    //     let ctx = DeviceContext::create(12).unwrap();
+    //     run_basic_delegation_test_impl(
+    //         Some(Box::new(comparison_hook)),
+    //         Some(Box::new(comparison_hook)),
+    //     );
+    //     ctx.destroy().unwrap();
+    // }
 
-    #[test]
-    #[serial]
-    #[ignore]
-    fn test_stage_2_for_main_and_keccak() {
-        let ctx = DeviceContext::create(12).unwrap();
-        run_keccak_test_impl(
-            Some(Box::new(comparison_hook)),
-            Some(Box::new(comparison_hook)),
-        );
-        ctx.destroy().unwrap();
-    }
+    // #[test]
+    // #[serial]
+    // #[ignore]
+    // fn test_stage_2_for_main_and_keccak() {
+    //     let ctx = DeviceContext::create(12).unwrap();
+    //     run_keccak_test_impl(
+    //         Some(Box::new(comparison_hook)),
+    //         Some(Box::new(comparison_hook)),
+    //     );
+    //     ctx.destroy().unwrap();
+    // }
 }

@@ -493,9 +493,9 @@ pub fn compute_stage_2_args_on_main_domain(
             log_n,
             stream,
         )?;
-        Some(lazy_init_teardown_layouts)
+        lazy_init_teardown_layouts
     } else {
-        None
+        LazyInitTeardownLayouts::default()
     };
 
     stage2_process_timestamp_range_check_expressions(
@@ -574,13 +574,12 @@ pub fn compute_stage_2_args_on_main_domain(
             circuit,
             memory_challenges.clone(),
             memory_timestamp_high_from_circuit_idx,
-            lazy_init_teardown_layouts.unwrap(),
+            lazy_init_teardown_layouts,
             setup_cols,
             memory_cols,
             d_stage_2_e4_cols,
             memory_args_start,
             log_n,
-            &translate_e4_offset,
             stream,
         )?;
     }
