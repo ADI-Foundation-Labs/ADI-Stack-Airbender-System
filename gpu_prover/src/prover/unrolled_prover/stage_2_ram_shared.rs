@@ -36,17 +36,16 @@ cuda_kernel!(
     unrolled_grand_product_contributions,
     memory_challenges: MemoryChallenges,
     machine_state_challenges: MachineStateChallenges,
-    shuffle_ram_accesses: ShuffleRamAccesses,
     lazy_init_teardown_layouts: LazyInitTeardownLayouts,
+    shuffle_ram_accesses: ShuffleRamAccesses,
+    machine_state_layout: MachineStateLayout,
     setup_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     ram_access_args_start: u32,
-    machine_state_permutation_arg_col: u32,
     mask_arg_col: u32,
     execute_col: u32,
     process_ram_access: bool,
-    process_machine_state_permutation: bool,
     process_mask: bool,
     log_n: u32,
 );
@@ -123,15 +122,10 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
         intermediate_polys_for_memory_argument.num_elements(),
         circuit.memory_layout.shuffle_ram_access_sets.len(),
     );
-    let intermediate_polys_for_state_permutation =
-        &circuit.stage_2_layout.intermediate_polys_for_state_permutation;
-    assert_eq!(intermediate_polys_for_state_permutation.num_elements(), 1);
     let intermediate_polys_for_permutation_masking =
         &circuit.stage_2_layout.intermediate_polys_for_permutation_masking;
     assert_eq!(intermediate_polys_for_permutation_masking.num_elements(), 1);
     let process_ram_access = intermediate_polys_for_memory_argument.num_elements() > 0;
-    let process_machine_state_permutation =
-        intermediate_polys_for_state_permutation.num_elements() > 0;
     let process_mask = intermediate_polys_for_permutation_masking.num_elements() > 0;
     let (shuffle_ram_accesses, ram_access_args_start) = if process_ram_access {
         let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
@@ -142,11 +136,7 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
     } else {
         (ShuffleRamAccesses::default(), 0)
     };
-    let machine_state_permutation_arg_col = if process_machine_state_permutation {
-        translate_e4_offset(intermediate_polys_for_state_permutation.start())
-    } else {
-        0
-    };
+    let machine_state_layout = MachineStateLayout::new(circuit, translate_e4_offset);
     let (mask_arg_col, execute_col) = if process_mask {
         let intermediate_state_layout = circuit.memory_layout.intermediate_state_layout.unwrap();
         (
@@ -162,17 +152,16 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
     let args = UnrolledGrandProductContributionsArguments::new(
         memory_challenges,
         machine_state_challenges,
-        shuffle_ram_accesses,
         lazy_init_teardown_layouts,
+        shuffle_ram_accesses,
+        machine_state_layout,
         setup_cols,
         memory_cols,
         stage_2_e4_cols,
         ram_access_args_start as u32,
-        machine_state_permutation_arg_col as u32,
         mask_arg_col as u32,
         execute_col as u32,
         process_ram_access,
-        process_machine_state_permutation,
         process_mask,
         log_n,
     );

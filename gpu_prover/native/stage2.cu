@@ -495,7 +495,7 @@ void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
 
     // flush result
     num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
-    e4 denom_inv{e4::inv(denom)};
+    const e4 denom_inv{e4::inv(denom)};
     num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
     stage_2_e4_cols.set_at_col(memory_args_start + i, num_over_denom_acc);
   }
@@ -540,27 +540,45 @@ void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
 }
 
 DEVICE_FORCEINLINE
-void grand_product_machine_state_contributions(
+void grand_product_machine_state_contributions(const MachineStateChallenges &challenges,
+                                               const MachineStateLayout &layout,
+                                               matrix_getter<bf, ld_modifier::cs> memory_cols,
+                                               vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                               e4 &num_over_denom_acc) {
+  e4 numerator{challenges.additive_term};
+  numerator = e4::add(numerator, memory_cols.get_at_col(layout.final_pc_start));
+  const unsigned final_cols[3] = {layout.final_pc_start + 1, layout.final_timestamp_start, layout.final_timestamp_start + 1};
+#pragma unroll
+  for (unsigned i = 0; i < 3; i++)
+    numerator = e4::add(numerator, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(final_cols[i])));
+  num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
 
-) {
+  e4 denom{challenges.additive_term};
+  denom = e4::add(denom, memory_cols.get_at_col(layout.initial_pc_start));
+  const unsigned initial_cols[3] = {layout.initial_pc_start + 1, layout.initial_timestamp_start, layout.initial_timestamp_start + 1};
+#pragma unroll
+  for (unsigned i = 0; i < 3; i++)
+    denom = e4::add(denom, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(initial_cols[i])));
+  const e4 denom_inv{e4::inv(denom)};
+  num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
 
+  stage_2_e4_cols.set_at_col(layout.arg_col, num_over_denom_acc);
 }
 
 // one kernel handles all cases, to avoid re-reading e4 column
 EXTERN __launch_bounds__(128, 8) __global__
     void ab_unrolled_grand_product_contributions_kernel(__grid_constant__ const MemoryChallenges memory_challenges,
                                                         __grid_constant__ const MachineStateChallenges machine_state_challenges,
-                                                        __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
                                                         __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
+                                                        __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
+                                                        __grid_constant__ const MachineStateLayout machine_state_layout,
                                                         matrix_getter<bf, ld_modifier::cs> setup_cols,
                                                         matrix_getter<bf, ld_modifier::cs> memory_cols,
                                                         vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                                         const unsigned ram_access_args_start,
-                                                        const unsigned machine_state_permutation_arg_col,
                                                         const unsigned mask_arg_col,
                                                         const unsigned execute_col,
                                                         const bool process_ram_access,
-                                                        const bool process_machine_state_permutation,
                                                         const bool process_mask,
                                                         const unsigned log_n) {
   const unsigned n = 1u << log_n;
@@ -585,8 +603,9 @@ EXTERN __launch_bounds__(128, 8) __global__
   //   grand_product_unrolled_ram_access_contributions();
   // }
 
-  if (process_machine_state_permutation) {
-    grand_product_machine_state_contributions();
+  if (machine_state_layout.process_machine_state) {
+    grand_product_machine_state_contributions(machine_state_challenges, machine_state_layout, memory_cols, stage_2_e4_cols,
+                                              num_over_denom_acc);
   }
 
   // apply mask

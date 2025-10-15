@@ -819,6 +819,58 @@ impl Default for LazyInitTeardownLayouts {
     }
 }
 
+#[derive(Clone)]
+#[repr(C)]
+pub struct MachineStateLayout {
+    pub initial_pc_start: u32,
+    pub initial_timestamp_start: u32,
+    pub final_pc_start: u32,
+    pub final_timestamp_start: u32,
+    pub arg_col: u32,
+    pub process_machine_state: bool,
+}
+
+impl MachineStateLayout {
+    pub fn new<F: Fn(usize) -> usize>(
+        circuit: &CompiledCircuitArtifact<BF>,
+        translate_e4_offset: &F
+    ) -> Self {
+        let initial_machine_state = &circuit.memory_layout.intermediate_state_layout;
+        let final_machine_state = &circuit.memory_layout.machine_state_layout;
+        let intermediate_polys_for_state_permutation =
+            &circuit.stage_2_layout.intermediate_polys_for_state_permutation;
+        if intermediate_polys_for_state_permutation.num_elements() > 0 {
+            assert_eq!(intermediate_polys_for_state_permutation.num_elements(), 1);
+            let initial_machine_state = initial_machine_state.as_ref().unwrap();
+            let final_machine_state = final_machine_state.as_ref().unwrap();
+            return Self {
+                initial_pc_start: initial_machine_state.pc.start() as u32,
+                initial_timestamp_start: initial_machine_state.timestamp.start() as u32,
+                final_pc_start: final_machine_state.pc.start() as u32,
+                final_timestamp_start: final_machine_state.timestamp.start() as u32,
+                arg_col: translate_e4_offset(intermediate_polys_for_state_permutation.start()) as u32,
+                process_machine_state: true,
+            }
+        }
+        assert!(initial_machine_state.is_none());
+        assert!(final_machine_state.is_none());
+        Self::default()
+    }
+}
+
+impl Default for MachineStateLayout {
+    fn default() -> Self {
+        Self {
+            initial_pc_start: 0,
+            initial_timestamp_start: 0,
+            final_pc_start: 0,
+            final_timestamp_start: 0,
+            arg_col: 0,
+            process_machine_state: false,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct ShuffleRamAccess {
@@ -1146,6 +1198,8 @@ impl Default for RegisterAndIndirectAccesses {
         }
     }
 }
+
+
 
 pub fn print_size<T>(name: &str) -> usize {
     let size = size_of::<T>();

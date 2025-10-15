@@ -257,6 +257,15 @@ struct LazyInitTeardownLayouts {
   const bool process_shuffle_ram_init;
 };
 
+struct MachineStateLayout {
+  const unsigned initial_pc_start;
+  const unsigned initial_timestamp_start;
+  const unsigned final_pc_start;
+  const unsigned final_timestamp_start;
+  const unsigned arg_col;
+  const bool process_machine_state;
+};
+
 constexpr unsigned MAX_SHUFFLE_RAM_ACCESSES = 3;
 
 struct ShuffleRamAccess {
