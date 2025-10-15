@@ -18,7 +18,7 @@ use cs::one_row_compiler::{
 use field::{Field, FieldExtension, PrimeField};
 use prover::definitions::{
     ExternalDelegationArgumentChallenges, ExternalMachineStateArgumentChallenges,
-    ExternalMemoryArgumentChallenges
+    ExternalMemoryArgumentChallenges,
 };
 use prover::prover_stages::cached_data::ProverCachedData;
 
@@ -833,12 +833,13 @@ pub struct MachineStateLayout {
 impl MachineStateLayout {
     pub fn new<F: Fn(usize) -> usize>(
         circuit: &CompiledCircuitArtifact<BF>,
-        translate_e4_offset: &F
+        translate_e4_offset: &F,
     ) -> Self {
         let initial_machine_state = &circuit.memory_layout.intermediate_state_layout;
         let final_machine_state = &circuit.memory_layout.machine_state_layout;
-        let intermediate_polys_for_state_permutation =
-            &circuit.stage_2_layout.intermediate_polys_for_state_permutation;
+        let intermediate_polys_for_state_permutation = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_state_permutation;
         if intermediate_polys_for_state_permutation.num_elements() > 0 {
             assert_eq!(intermediate_polys_for_state_permutation.num_elements(), 1);
             let initial_machine_state = initial_machine_state.as_ref().unwrap();
@@ -848,9 +849,10 @@ impl MachineStateLayout {
                 initial_timestamp_start: initial_machine_state.timestamp.start() as u32,
                 final_pc_start: final_machine_state.pc.start() as u32,
                 final_timestamp_start: final_machine_state.timestamp.start() as u32,
-                arg_col: translate_e4_offset(intermediate_polys_for_state_permutation.start()) as u32,
+                arg_col: translate_e4_offset(intermediate_polys_for_state_permutation.start())
+                    as u32,
                 process_machine_state: true,
-            }
+            };
         }
         assert!(initial_machine_state.is_none());
         assert!(final_machine_state.is_none());
@@ -1199,8 +1201,6 @@ impl Default for RegisterAndIndirectAccesses {
     }
 }
 
-
-
 pub fn print_size<T>(name: &str) -> usize {
     let size = size_of::<T>();
     println!("{}: {}", name, size);
@@ -1225,30 +1225,40 @@ pub fn get_grand_product_src_dst_cols(
     let grand_product_dst = translate_e4_offset(raw_grand_product_dst);
     if unrolled {
         let mut grand_product_src = usize::MAX;
-        let next = &circuit.stage_2_layout.intermediate_polys_for_permutation_masking;
+        let next = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_permutation_masking;
         if next.num_elements() > 0 {
             assert_eq!(next.num_elements(), 1);
             grand_product_src = translate_e4_offset(next.start());
         }
-        let next = &circuit.stage_2_layout.intermediate_polys_for_state_permutation;
+        let next = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_state_permutation;
         if next.num_elements() > 0 {
             assert_eq!(next.num_elements(), 1);
             grand_product_src = translate_e4_offset(next.start());
         }
-        let next = &circuit.stage_2_layout.intermediate_polys_for_memory_argument;
+        let next = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_memory_argument;
         if next.num_elements() > 0 {
             grand_product_src = translate_e4_offset(next.start());
             grand_product_src += next.num_elements() - 1;
         }
-        let next = &circuit.stage_2_layout.intermediate_polys_for_memory_init_teardown;
+        let next = &circuit
+            .stage_2_layout
+            .intermediate_polys_for_memory_init_teardown;
         if next.num_elements() > 0 {
             grand_product_src = translate_e4_offset(next.start());
             grand_product_src += next.num_elements() - 1;
         }
         assert!(grand_product_src != usize::MAX);
-        return (grand_product_src, grand_product_dst)
+        return (grand_product_src, grand_product_dst);
     }
-    let memory_args = &circuit.stage_2_layout.intermediate_polys_for_memory_argument;
+    let memory_args = &circuit
+        .stage_2_layout
+        .intermediate_polys_for_memory_argument;
     assert!(memory_args.num_elements() > 0);
     let memory_args_start = translate_e4_offset(memory_args.start());
     let num_memory_args = memory_args.num_elements();

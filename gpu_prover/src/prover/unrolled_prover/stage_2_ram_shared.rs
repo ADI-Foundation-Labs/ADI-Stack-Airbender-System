@@ -10,7 +10,7 @@ use era_cudart::execution::{CudaLaunchConfig, KernelFunction};
 use era_cudart::result::CudaResult;
 use era_cudart::stream::CudaStream;
 use prover::definitions::{
-    ExternalMachineStateArgumentChallenges, ExternalMemoryArgumentChallenges
+    ExternalMachineStateArgumentChallenges, ExternalMemoryArgumentChallenges,
 };
 
 type BF = BaseField;
@@ -116,14 +116,16 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
     let memory_challenges = MemoryChallenges::new(memory_challenges);
     let machine_state_challenges = MachineStateChallenges::new(machine_state_challenges);
 
-    let intermediate_polys_for_memory_argument =
-        &circuit.stage_2_layout.intermediate_polys_for_memory_argument;
+    let intermediate_polys_for_memory_argument = &circuit
+        .stage_2_layout
+        .intermediate_polys_for_memory_argument;
     assert_eq!(
         intermediate_polys_for_memory_argument.num_elements(),
         circuit.memory_layout.shuffle_ram_access_sets.len(),
     );
-    let intermediate_polys_for_permutation_masking =
-        &circuit.stage_2_layout.intermediate_polys_for_permutation_masking;
+    let intermediate_polys_for_permutation_masking = &circuit
+        .stage_2_layout
+        .intermediate_polys_for_permutation_masking;
     assert_eq!(intermediate_polys_for_permutation_masking.num_elements(), 1);
     let process_ram_access = intermediate_polys_for_memory_argument.num_elements() > 0;
     let process_mask = intermediate_polys_for_permutation_masking.num_elements() > 0;

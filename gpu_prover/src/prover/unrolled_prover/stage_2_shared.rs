@@ -809,12 +809,9 @@ pub(crate) fn stage2_compute_grand_product(
     let stride = stage_2_e4_cols.stride();
     let offset = stage_2_e4_cols.offset();
     let src_slice_start = 4 * grand_product_src * stride;
-    let (_, rest) = stage_2_e4_cols
-        .slice_mut()
-        .split_at_mut(src_slice_start);
+    let (_, rest) = stage_2_e4_cols.slice_mut().split_at_mut(src_slice_start);
     let (src_slice, rest) = rest.split_at_mut(4 * stride);
-    let grand_product_slice_start_in_rest =
-        4 * (grand_product_dst - grand_product_src - 1);
+    let grand_product_slice_start_in_rest = 4 * (grand_product_dst - grand_product_src - 1);
     let (_, rest) = rest.split_at_mut(grand_product_slice_start_in_rest);
     let (grand_product_slice, _) = rest.split_at_mut(4 * stride);
     let src_matrix = DeviceMatrixChunk::new(src_slice, stride, offset, n);

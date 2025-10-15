@@ -5,22 +5,17 @@ use super::unrolled_prover::stage_2_ram_shared::{
     stage2_process_registers_and_indirect_access_in_delegation,
 };
 use super::unrolled_prover::stage_2_shared::{
-    stage2_process_range_check_16_trivial_checks,
-    stage2_process_range_check_16_expressions,
-    stage2_process_timestamp_range_check_expressions,
-    stage2_process_lazy_init_range_checks,
-    stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution,
-    stage2_process_generic_lookup_intermediate_polys,
-    stage2_process_range_check_16_entry_invs_and_multiplicity,
-    stage2_process_timestamp_range_check_entry_invs_and_multiplicity,
+    stage2_compute_grand_product, stage2_handle_delegation_requests, stage2_process_delegations,
     stage2_process_generic_lookup_entry_invs_and_multiplicity,
-    stage2_handle_delegation_requests,
-    stage2_process_delegations,
-    stage2_compute_grand_product,
+    stage2_process_generic_lookup_intermediate_polys, stage2_process_lazy_init_range_checks,
+    stage2_process_range_check_16_entry_invs_and_multiplicity,
+    stage2_process_range_check_16_expressions, stage2_process_range_check_16_trivial_checks,
+    stage2_process_timestamp_range_check_entry_invs_and_multiplicity,
+    stage2_process_timestamp_range_check_expressions,
+    stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution,
 };
 use crate::device_structures::{
-    DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut,
-    DeviceMatrixChunkMutImpl,
+    DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut, DeviceMatrixChunkMutImpl,
 };
 use crate::field::{BaseField, Ext4Field};
 use crate::ops_cub::device_reduce::{
@@ -554,7 +549,7 @@ pub fn compute_stage_2_args_on_main_domain(
     assert_eq!(
         process_shuffle_ram_init,
         circuit.memory_layout.shuffle_ram_access_sets.len() > 0,
-    ); 
+    );
     assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
     let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);
     let raw_memory_args_start = circuit
@@ -563,7 +558,7 @@ pub fn compute_stage_2_args_on_main_domain(
         .start();
     let memory_args_start = translate_e4_offset(raw_memory_args_start);
 
-    if process_shuffle_ram_init{
+    if process_shuffle_ram_init {
         assert!(!process_registers_and_indirect_access);
         // reminder of what needs to change for unrolled circuits
         assert_eq!(
@@ -1042,11 +1037,8 @@ mod tests {
             .intermediate_polys_for_memory_argument
             .start();
         let memory_args_start = translate_e4_offset(raw_col);
-        let (_, grand_product_col) = get_grand_product_src_dst_cols(
-            circuit,
-            &translate_e4_offset,
-            false,
-        );
+        let (_, grand_product_col) =
+            get_grand_product_src_dst_cols(circuit, &translate_e4_offset, false);
         let h_stage_2_bf_cols = &h_stage_2_cols[0..num_stage_2_bf_cols * domain_size];
         let start = e4_cols_offset * domain_size;
         let end = start + 4 * num_stage_2_e4_cols * domain_size;
