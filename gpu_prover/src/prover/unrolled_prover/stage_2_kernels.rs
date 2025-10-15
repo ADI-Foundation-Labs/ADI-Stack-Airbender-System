@@ -1,5 +1,7 @@
 use super::stage_2_ram_shared::stage2_process_unrolled_grand_product_contributions;
 use super::stage_2_shared::{
+    get_stage_2_col_sums_scratch, get_stage_2_cub_and_batch_reduce_intermediate_scratch,
+    get_stage_2_cub_and_batch_reduce_intermediate_scratch_internal, get_stage_2_e4_scratch,
     stage2_compute_grand_product, stage2_handle_delegation_requests, stage2_process_delegations,
     stage2_process_executor_family_decoder_entry_invs_and_multiplicity,
     stage2_process_executor_family_decoder_intermediate_poly,
@@ -15,11 +17,7 @@ use crate::device_structures::{
     DeviceMatrixChunk, DeviceMatrixChunkImpl, DeviceMatrixChunkMut, DeviceMatrixChunkMutImpl,
 };
 use crate::field::{BaseField, Ext4Field};
-use crate::ops_cub::device_reduce::{
-    batch_reduce_with_adaptive_parallelism,
-    get_batch_reduce_with_adaptive_parallelism_temp_storage, ReduceOperation,
-};
-use crate::ops_cub::device_scan::{get_scan_temp_storage_bytes, ScanOperation};
+use crate::ops_cub::device_reduce::{batch_reduce_with_adaptive_parallelism, ReduceOperation};
 use crate::ops_simple::{set_to_zero, sub_into_x};
 use crate::prover::arg_utils::*;
 use crate::prover::context::DeviceProperties;
@@ -35,97 +33,6 @@ use std::cmp::max;
 
 type BF = BaseField;
 type E4 = Ext4Field;
-
-pub fn get_stage_2_e4_scratch(domain_size: usize, circuit: &CompiledCircuitArtifact<BF>) -> usize {
-    max(
-        (1 << 16)
-            + (1 << TIMESTAMP_COLUMNS_NUM_BITS)
-            + circuit.executor_family_decoder_table_size
-            + circuit.total_tables_size,
-        2 * domain_size, // for transposed grand product
-    )
-}
-
-pub fn get_stage_2_cub_and_batch_reduce_intermediate_scratch_internal(
-    domain_size: usize,
-    num_stage_2_bf_cols: usize,
-    handle_delegation_requests: bool,
-    process_delegations: bool,
-    device_properties: &DeviceProperties,
-) -> CudaResult<((usize, usize, usize), (usize, usize))> {
-    let (bf_args_batch_reduce_scratch_bytes, bf_args_batch_reduce_intermediate_elems) =
-        get_batch_reduce_with_adaptive_parallelism_temp_storage::<BF>(
-            ReduceOperation::Sum,
-            num_stage_2_bf_cols,
-            domain_size,
-            device_properties,
-        )?;
-    let (delegation_aux_batch_reduce_scratch_bytes, delegation_aux_batch_reduce_intermediate_elems) =
-        if handle_delegation_requests || process_delegations {
-            let (x, y) = get_batch_reduce_with_adaptive_parallelism_temp_storage::<BF>(
-                ReduceOperation::Sum,
-                4, // one vectorized E4 col
-                domain_size,
-                device_properties,
-            )?;
-            (x, y)
-        } else {
-            (0, 0)
-        };
-    let grand_product_scratch_bytes =
-        get_scan_temp_storage_bytes::<E4>(ScanOperation::Product, false, domain_size as i32)?;
-    Ok((
-        (
-            bf_args_batch_reduce_scratch_bytes,
-            delegation_aux_batch_reduce_scratch_bytes,
-            grand_product_scratch_bytes,
-        ),
-        (
-            bf_args_batch_reduce_intermediate_elems,
-            delegation_aux_batch_reduce_intermediate_elems,
-        ),
-    ))
-}
-
-pub fn get_stage_2_cub_and_batch_reduce_intermediate_scratch(
-    domain_size: usize,
-    num_stage_2_bf_cols: usize,
-    handle_delegation_requests: bool,
-    process_delegations: bool,
-    device_properties: &DeviceProperties,
-) -> CudaResult<(usize, usize)> {
-    let (
-        (
-            bf_args_batch_reduce_scratch_bytes,
-            delegation_aux_batch_reduce_scratch_bytes,
-            grand_product_scratch_bytes,
-        ),
-        (bf_args_batch_reduce_intermediate_elems, delegation_aux_batch_reduce_intermediate_elems),
-    ) = get_stage_2_cub_and_batch_reduce_intermediate_scratch_internal(
-        domain_size,
-        num_stage_2_bf_cols,
-        handle_delegation_requests,
-        process_delegations,
-        device_properties,
-    )?;
-    Ok((
-        max(
-            max(
-                bf_args_batch_reduce_scratch_bytes,
-                delegation_aux_batch_reduce_scratch_bytes,
-            ),
-            grand_product_scratch_bytes,
-        ),
-        max(
-            bf_args_batch_reduce_intermediate_elems,
-            delegation_aux_batch_reduce_intermediate_elems,
-        ),
-    ))
-}
-
-pub fn get_stage_2_col_sums_scratch(num_stage_2_bf_cols: usize) -> usize {
-    max(num_stage_2_bf_cols, 4)
-}
 
 pub fn compute_stage_2_args_on_main_domain(
     setup_cols: &(impl DeviceMatrixChunkImpl<BF> + ?Sized),

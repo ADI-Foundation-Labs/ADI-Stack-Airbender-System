@@ -4,8 +4,12 @@ use crate::device_structures::{
 };
 use crate::field::{BaseField, Ext4Field};
 use crate::ops_complex::transpose;
-use crate::ops_cub::device_scan::{scan, ScanOperation};
+use crate::ops_cub::device_reduce::{
+    get_batch_reduce_with_adaptive_parallelism_temp_storage, ReduceOperation,
+};
+use crate::ops_cub::device_scan::{get_scan_temp_storage_bytes, scan, ScanOperation};
 use crate::prover::arg_utils::*;
+use crate::prover::context::DeviceProperties;
 use crate::utils::WARP_SIZE;
 
 use cs::definitions::{
@@ -22,6 +26,7 @@ use era_cudart::slice::DeviceSlice;
 use era_cudart::stream::CudaStream;
 use field::{Field, PrimeField};
 use prover::definitions::ExternalDelegationArgumentChallenges;
+use std::cmp::max;
 
 type BF = BaseField;
 type E4 = Ext4Field;
@@ -841,4 +846,98 @@ pub(crate) fn stage2_compute_grand_product(
         unsafe { grand_product_e4_scratch_slice.transmute_mut::<BF>() };
     let grand_product_transposed = DeviceMatrix::new(grand_product_e4_scratch_slice, 4);
     transpose(&grand_product_transposed, &mut grand_product, stream)
+}
+
+pub(crate) fn get_stage_2_e4_scratch(
+    domain_size: usize,
+    circuit: &CompiledCircuitArtifact<BF>,
+) -> usize {
+    max(
+        (1 << 16)
+            + (1 << TIMESTAMP_COLUMNS_NUM_BITS)
+            + circuit.executor_family_decoder_table_size
+            + circuit.total_tables_size,
+        2 * domain_size, // for transposed grand product
+    )
+}
+
+pub(crate) fn get_stage_2_cub_and_batch_reduce_intermediate_scratch_internal(
+    domain_size: usize,
+    num_stage_2_bf_cols: usize,
+    handle_delegation_requests: bool,
+    process_delegations: bool,
+    device_properties: &DeviceProperties,
+) -> CudaResult<((usize, usize, usize), (usize, usize))> {
+    let (bf_args_batch_reduce_scratch_bytes, bf_args_batch_reduce_intermediate_elems) =
+        get_batch_reduce_with_adaptive_parallelism_temp_storage::<BF>(
+            ReduceOperation::Sum,
+            num_stage_2_bf_cols,
+            domain_size,
+            device_properties,
+        )?;
+    let (delegation_aux_batch_reduce_scratch_bytes, delegation_aux_batch_reduce_intermediate_elems) =
+        if handle_delegation_requests || process_delegations {
+            let (x, y) = get_batch_reduce_with_adaptive_parallelism_temp_storage::<BF>(
+                ReduceOperation::Sum,
+                4, // one vectorized E4 col
+                domain_size,
+                device_properties,
+            )?;
+            (x, y)
+        } else {
+            (0, 0)
+        };
+    let grand_product_scratch_bytes =
+        get_scan_temp_storage_bytes::<E4>(ScanOperation::Product, false, domain_size as i32)?;
+    Ok((
+        (
+            bf_args_batch_reduce_scratch_bytes,
+            delegation_aux_batch_reduce_scratch_bytes,
+            grand_product_scratch_bytes,
+        ),
+        (
+            bf_args_batch_reduce_intermediate_elems,
+            delegation_aux_batch_reduce_intermediate_elems,
+        ),
+    ))
+}
+
+pub(crate) fn get_stage_2_cub_and_batch_reduce_intermediate_scratch(
+    domain_size: usize,
+    num_stage_2_bf_cols: usize,
+    handle_delegation_requests: bool,
+    process_delegations: bool,
+    device_properties: &DeviceProperties,
+) -> CudaResult<(usize, usize)> {
+    let (
+        (
+            bf_args_batch_reduce_scratch_bytes,
+            delegation_aux_batch_reduce_scratch_bytes,
+            grand_product_scratch_bytes,
+        ),
+        (bf_args_batch_reduce_intermediate_elems, delegation_aux_batch_reduce_intermediate_elems),
+    ) = get_stage_2_cub_and_batch_reduce_intermediate_scratch_internal(
+        domain_size,
+        num_stage_2_bf_cols,
+        handle_delegation_requests,
+        process_delegations,
+        device_properties,
+    )?;
+    Ok((
+        max(
+            max(
+                bf_args_batch_reduce_scratch_bytes,
+                delegation_aux_batch_reduce_scratch_bytes,
+            ),
+            grand_product_scratch_bytes,
+        ),
+        max(
+            bf_args_batch_reduce_intermediate_elems,
+            delegation_aux_batch_reduce_intermediate_elems,
+        ),
+    ))
+}
+
+pub(crate) fn get_stage_2_col_sums_scratch(num_stage_2_bf_cols: usize) -> usize {
+    max(num_stage_2_bf_cols, 4)
 }
