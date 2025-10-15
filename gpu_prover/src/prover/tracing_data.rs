@@ -5,7 +5,7 @@ use crate::circuit_type::CircuitType;
 use crate::ops_simple::set_to_zero;
 use crate::witness::trace::{ShuffleRamInitsAndTeardownsDevice, ShuffleRamInitsAndTeardownsHost};
 use crate::witness::trace_delegation::{DelegationTraceDevice, DelegationTraceHost};
-use crate::witness::trace_main::{MainTraceDevice, MainTraceHost};
+use crate::witness::trace_unified::{UnifiedTraceDevice, UnifiedTraceHost};
 use crate::witness::trace_unrolled::{
     UnrolledMemoryTraceDevice, UnrolledMemoryTraceHost, UnrolledNonMemoryTraceDevice,
     UnrolledNonMemoryTraceHost,
@@ -20,11 +20,11 @@ pub enum UnrolledTracingDataDevice {
 }
 
 pub enum TracingDataDevice {
-    Main {
-        inits_and_teardowns: ShuffleRamInitsAndTeardownsDevice,
-        trace: MainTraceDevice,
-    },
     Delegation(DelegationTraceDevice),
+    Unified {
+        inits_and_teardowns: ShuffleRamInitsAndTeardownsDevice,
+        trace: UnifiedTraceDevice,
+    },
     Unrolled(UnrolledTracingDataDevice),
 }
 
@@ -37,11 +37,11 @@ pub enum UnrolledTracingDataHost<A: GoodAllocator> {
 
 #[derive(Clone)]
 pub enum TracingDataHost<A: GoodAllocator> {
-    Main {
-        inits_and_teardowns: Option<ShuffleRamInitsAndTeardownsHost<A>>,
-        trace: MainTraceHost<A>,
-    },
     Delegation(DelegationTraceHost<A>),
+    Unified {
+        inits_and_teardowns: Option<ShuffleRamInitsAndTeardownsHost<A>>,
+        trace: UnifiedTraceHost<A>,
+    },
     Unrolled(UnrolledTracingDataHost<A>),
 }
 
@@ -59,24 +59,6 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
         context: &ProverContext,
     ) -> CudaResult<Self> {
         let data_device = match &data_host {
-            TracingDataHost::Main {
-                inits_and_teardowns,
-                trace,
-            } => {
-                let len = trace.cycle_data.len();
-                if let Some(inits_and_teardowns) = inits_and_teardowns {
-                    assert_eq!(inits_and_teardowns.inits_and_teardowns.len(), len);
-                };
-                let inits_and_teardowns = ShuffleRamInitsAndTeardownsDevice {
-                    inits_and_teardowns: context.alloc(len, AllocationPlacement::Top)?,
-                };
-                let cycle_data = context.alloc(len, AllocationPlacement::Top)?;
-                let trace = MainTraceDevice { cycle_data };
-                TracingDataDevice::Main {
-                    inits_and_teardowns,
-                    trace,
-                }
-            }
             TracingDataHost::Delegation(trace) => {
                 let d_write_timestamp =
                     context.alloc(trace.write_timestamp.len(), AllocationPlacement::Top)?;
@@ -108,6 +90,24 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
                     indirect_offset_variables: d_indirect_offset_variables,
                 };
                 TracingDataDevice::Delegation(trace)
+            }
+            TracingDataHost::Unified {
+                inits_and_teardowns,
+                trace,
+            } => {
+                let len = trace.cycle_data.len();
+                if let Some(inits_and_teardowns) = inits_and_teardowns {
+                    assert_eq!(inits_and_teardowns.inits_and_teardowns.len(), len);
+                };
+                let inits_and_teardowns = ShuffleRamInitsAndTeardownsDevice {
+                    inits_and_teardowns: context.alloc(len, AllocationPlacement::Top)?,
+                };
+                let cycle_data = context.alloc(len, AllocationPlacement::Top)?;
+                let trace = UnifiedTraceDevice { cycle_data };
+                TracingDataDevice::Unified {
+                    inits_and_teardowns,
+                    trace,
+                }
             }
             TracingDataHost::Unrolled(unrolled) => match unrolled {
                 UnrolledTracingDataHost::Memory(trace) => {
@@ -150,35 +150,6 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
 
     pub fn schedule_transfer(&mut self, context: &ProverContext) -> CudaResult<()> {
         match &self.data_host {
-            TracingDataHost::Main {
-                inits_and_teardowns: h_inits_and_teardowns,
-                trace: h_trace,
-            } => match &mut self.data_device {
-                TracingDataDevice::Main {
-                    inits_and_teardowns: d_inits_and_teardowns,
-                    trace: d_trace,
-                } => {
-                    if let Some(h_inits_and_teardowns) = h_inits_and_teardowns {
-                        self.transfer.schedule(
-                            h_inits_and_teardowns.inits_and_teardowns.clone(),
-                            &mut d_inits_and_teardowns.inits_and_teardowns,
-                            context,
-                        )?;
-                    } else {
-                        self.transfer.ensure_allocated(context)?;
-                        set_to_zero(
-                            &mut d_inits_and_teardowns.inits_and_teardowns,
-                            context.get_h2d_stream(),
-                        )?;
-                    }
-                    self.transfer.schedule(
-                        h_trace.cycle_data.clone(),
-                        &mut d_trace.cycle_data,
-                        context,
-                    )?;
-                }
-                _ => panic!("expected main trace"),
-            },
             TracingDataHost::Delegation(h_witness) => match &mut self.data_device {
                 TracingDataDevice::Delegation(d_trace) => {
                     self.transfer.schedule(
@@ -208,6 +179,35 @@ impl<'a, A: GoodAllocator + 'a> TracingDataTransfer<'a, A> {
                     )?;
                 }
                 _ => panic!("expected delegation trace"),
+            },
+            TracingDataHost::Unified {
+                inits_and_teardowns: h_inits_and_teardowns,
+                trace: h_trace,
+            } => match &mut self.data_device {
+                TracingDataDevice::Unified {
+                    inits_and_teardowns: d_inits_and_teardowns,
+                    trace: d_trace,
+                } => {
+                    if let Some(h_inits_and_teardowns) = h_inits_and_teardowns {
+                        self.transfer.schedule(
+                            h_inits_and_teardowns.inits_and_teardowns.clone(),
+                            &mut d_inits_and_teardowns.inits_and_teardowns,
+                            context,
+                        )?;
+                    } else {
+                        self.transfer.ensure_allocated(context)?;
+                        set_to_zero(
+                            &mut d_inits_and_teardowns.inits_and_teardowns,
+                            context.get_h2d_stream(),
+                        )?;
+                    }
+                    self.transfer.schedule(
+                        h_trace.cycle_data.clone(),
+                        &mut d_trace.cycle_data,
+                        context,
+                    )?;
+                }
+                _ => panic!("expected unified trace"),
             },
             TracingDataHost::Unrolled(unrolled) => match unrolled {
                 UnrolledTracingDataHost::Memory(h_trace) => match &mut self.data_device {

@@ -514,7 +514,7 @@ fn create_proof(
         let circuit_sequence = circuit_sequence as u16;
         let delegation_type = delegation_processing_type;
         let proof = match circuit_type {
-            CircuitType::Main(_) | CircuitType::Delegation(_) => {
+            CircuitType::Delegation(_) => {
                 let external_values = ExternalValues {
                     challenges: external_challenges,
                     aux_boundary_values: aux_boundary_values[0],
@@ -541,7 +541,7 @@ fn create_proof(
                 };
                 ProofType::Regular(proof)
             }
-            CircuitType::Unrolled(_) => {
+            CircuitType::Unified | CircuitType::Unrolled(_) => {
                 let proof = UnrolledModeProof {
                     external_challenges,
                     public_inputs,

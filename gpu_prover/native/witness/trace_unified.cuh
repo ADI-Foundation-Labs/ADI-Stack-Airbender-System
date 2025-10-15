@@ -6,7 +6,7 @@
 using namespace ::airbender::witness::placeholder;
 using namespace ::airbender::witness::trace;
 
-namespace airbender::witness::trace::main {
+namespace airbender::witness::trace::unified {
 
 struct __align__(8) SingleCycleTracingData {
   u32 pc;
@@ -27,13 +27,13 @@ struct __align__(8) SingleCycleTracingData {
   u32 non_determinism_read;
 };
 
-struct MainTrace {
+struct UnifiedTrace {
   const SingleCycleTracingData *const __restrict__ cycle_data;
 
   template <typename T> [[nodiscard]] T get_witness_from_placeholder(Placeholder, unsigned) const;
 };
 
-template <> DEVICE_FORCEINLINE u32 MainTrace::get_witness_from_placeholder<u32>(const Placeholder placeholder, const unsigned trace_step) const {
+template <> DEVICE_FORCEINLINE u32 UnifiedTrace::get_witness_from_placeholder<u32>(const Placeholder placeholder, const unsigned trace_step) const {
   const SingleCycleTracingData *const data = &cycle_data[trace_step];
   switch (placeholder.tag) {
   case PcInit:
@@ -101,7 +101,7 @@ template <> DEVICE_FORCEINLINE u32 MainTrace::get_witness_from_placeholder<u32>(
   }
 }
 
-template <> DEVICE_FORCEINLINE u16 MainTrace::get_witness_from_placeholder<u16>(const Placeholder placeholder, const unsigned trace_step) const {
+template <> DEVICE_FORCEINLINE u16 UnifiedTrace::get_witness_from_placeholder<u16>(const Placeholder placeholder, const unsigned trace_step) const {
   const SingleCycleTracingData *const data = &cycle_data[trace_step];
   switch (placeholder.tag) {
   case DelegationABIOffset:
@@ -127,7 +127,7 @@ template <> DEVICE_FORCEINLINE u16 MainTrace::get_witness_from_placeholder<u16>(
   }
 }
 
-template <> DEVICE_FORCEINLINE bool MainTrace::get_witness_from_placeholder<bool>(const Placeholder placeholder, const unsigned trace_step) const {
+template <> DEVICE_FORCEINLINE bool UnifiedTrace::get_witness_from_placeholder<bool>(const Placeholder placeholder, const unsigned trace_step) const {
   const SingleCycleTracingData *data = &cycle_data[trace_step];
   switch (placeholder.tag) {
   case ShuffleRamIsRegisterAccess:
@@ -149,7 +149,7 @@ template <> DEVICE_FORCEINLINE bool MainTrace::get_witness_from_placeholder<bool
 }
 
 template <>
-DEVICE_FORCEINLINE TimestampData MainTrace::get_witness_from_placeholder<TimestampData>(const Placeholder placeholder, const unsigned trace_step) const {
+DEVICE_FORCEINLINE TimestampData UnifiedTrace::get_witness_from_placeholder<TimestampData>(const Placeholder placeholder, const unsigned trace_step) const {
   const SingleCycleTracingData *data = &cycle_data[trace_step];
   switch (placeholder.tag) {
   case ShuffleRamReadTimestamp:
@@ -168,4 +168,4 @@ DEVICE_FORCEINLINE TimestampData MainTrace::get_witness_from_placeholder<Timesta
   }
 }
 
-} // namespace airbender::witness::trace::main
+} // namespace airbender::witness::trace::unified

@@ -1,21 +1,30 @@
 use crate::prover::context::DeviceAllocation;
+use crate::witness::trace::ShuffleRamInitsAndTeardownsRaw;
+use crate::witness::trace_unrolled::ExecutorFamilyDecoderData;
 use era_cudart::slice::CudaSlice;
 use fft::GoodAllocator;
 use prover::risc_v_simulator::cycle::MachineConfig;
 use prover::tracers::main_cycle_optimized::{CycleData, SingleCycleTracingData};
 use std::sync::Arc;
 
-pub struct MainTraceDevice {
-    pub(crate) cycle_data: DeviceAllocation<SingleCycleTracingData>,
+pub struct UnifiedOracle {
+    pub inits_and_teardowns: ShuffleRamInitsAndTeardownsRaw,
+    pub trace: UnifiedTraceRaw,
+    pub decoder_table: *const ExecutorFamilyDecoderData,
+    pub default_pc_value_in_padding: u32,
+}
+
+pub struct UnifiedTraceDevice {
+    pub cycle_data: DeviceAllocation<SingleCycleTracingData>,
 }
 
 #[repr(C)]
-pub(crate) struct MainTraceRaw {
+pub(crate) struct UnifiedTraceRaw {
     cycle_data: *const SingleCycleTracingData,
 }
 
-impl From<&MainTraceDevice> for MainTraceRaw {
-    fn from(value: &MainTraceDevice) -> Self {
+impl From<&UnifiedTraceDevice> for UnifiedTraceRaw {
+    fn from(value: &UnifiedTraceDevice) -> Self {
         Self {
             cycle_data: value.cycle_data.as_ptr(),
         }
@@ -23,13 +32,13 @@ impl From<&MainTraceDevice> for MainTraceRaw {
 }
 
 #[derive(Clone)]
-pub struct MainTraceHost<A: GoodAllocator> {
+pub struct UnifiedTraceHost<A: GoodAllocator> {
     pub cycles_traced: usize,
     pub cycle_data: Arc<Vec<SingleCycleTracingData, A>>,
     pub num_cycles_chunk_size: usize,
 }
 
-impl<M: MachineConfig, A: GoodAllocator> From<CycleData<M, A>> for MainTraceHost<A> {
+impl<M: MachineConfig, A: GoodAllocator> From<CycleData<M, A>> for UnifiedTraceHost<A> {
     fn from(value: CycleData<M, A>) -> Self {
         Self {
             cycles_traced: value.cycles_traced,

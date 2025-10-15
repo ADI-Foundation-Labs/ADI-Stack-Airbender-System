@@ -1,16 +1,16 @@
 #include "layout.cuh"
 #include "memory.cuh"
 #include "option.cuh"
-#include "trace_main.cuh"
+#include "trace_unified.cuh"
 
 using namespace ::airbender::witness::layout;
 using namespace ::airbender::witness::memory;
 using namespace ::airbender::witness::option;
-using namespace ::airbender::witness::trace::main;
+using namespace ::airbender::witness::trace::unified;
 
-namespace airbender::witness::memory::main {
+namespace airbender::witness::memory::unified {
 
-struct MainMemorySubtree {
+struct UnifiedMemorySubtree {
   const ShuffleRamInitAndTeardownLayouts shuffle_ram_init_and_teardown_layouts;
   const ShuffleRamAccessSets shuffle_ram_access_sets;
   const OptionU32::Option<DelegationRequestLayout> delegation_request_layout;
@@ -19,7 +19,7 @@ struct MainMemorySubtree {
 template <bool COMPUTE_WITNESS>
 DEVICE_FORCEINLINE void process_shuffle_ram_access_sets(const ShuffleRamAccessSets &shuffle_ram_access_sets,
                                                         const MemoryQueriesTimestampComparisonAuxVars &memory_queries_timestamp_comparison_aux_vars,
-                                                        const MainTrace &oracle, const TimestampScalar timestamp_high_from_circuit_sequence,
+                                                        const UnifiedTrace &oracle, const TimestampScalar timestamp_high_from_circuit_sequence,
                                                         const matrix_setter<bf, st_modifier::cg> memory, const matrix_setter<bf, st_modifier::cg> witness,
                                                         const unsigned index) {
 #pragma unroll
@@ -91,7 +91,7 @@ DEVICE_FORCEINLINE void process_shuffle_ram_access_sets(const ShuffleRamAccessSe
   }
 }
 
-DEVICE_FORCEINLINE void process_delegation_requests(const DelegationRequestLayout &delegation_request_layout, const MainTrace &oracle,
+DEVICE_FORCEINLINE void process_delegation_requests(const DelegationRequestLayout &delegation_request_layout, const UnifiedTrace &oracle,
                                                     const matrix_setter<bf, st_modifier::cg> memory, const unsigned index) {
   const auto [multiplicity, delegation_type, abi_mem_offset_high] = delegation_request_layout;
   const bool execute_delegation_value = oracle.get_witness_from_placeholder<bool>({ExecuteDelegation}, index);
@@ -106,9 +106,10 @@ DEVICE_FORCEINLINE void process_delegation_requests(const DelegationRequestLayou
 }
 
 template <bool COMPUTE_WITNESS>
-DEVICE_FORCEINLINE void generate(const MainMemorySubtree &subtree, const MemoryQueriesTimestampComparisonAuxVars &memory_queries_timestamp_comparison_aux_vars,
+DEVICE_FORCEINLINE void generate(const UnifiedMemorySubtree &subtree,
+                                 const MemoryQueriesTimestampComparisonAuxVars &memory_queries_timestamp_comparison_aux_vars,
                                  const ShuffleRamInitsAndTeardowns &inits_and_teardowns, const ShuffleRamAuxComparisonSets &aux_comparison_sets,
-                                 const MainTrace &oracle, const TimestampScalar timestamp_high_from_circuit_sequence,
+                                 const UnifiedTrace &oracle, const TimestampScalar timestamp_high_from_circuit_sequence,
                                  matrix_setter<bf, st_modifier::cg> memory, matrix_setter<bf, st_modifier::cg> witness, const unsigned count) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count)
@@ -123,21 +124,21 @@ DEVICE_FORCEINLINE void generate(const MainMemorySubtree &subtree, const MemoryQ
     process_delegation_requests(subtree.delegation_request_layout.value, oracle, memory, gid);
 }
 
-EXTERN __global__ void ab_generate_memory_values_main_kernel(const __grid_constant__ MainMemorySubtree subtree,
+EXTERN __global__ void ab_generate_memory_values_main_kernel(const __grid_constant__ UnifiedMemorySubtree subtree,
                                                              const __grid_constant__ ShuffleRamInitsAndTeardowns inits_and_teardowns,
-                                                             const __grid_constant__ MainTrace oracle, const matrix_setter<bf, st_modifier::cg> memory,
+                                                             const __grid_constant__ UnifiedTrace oracle, const matrix_setter<bf, st_modifier::cg> memory,
                                                              const unsigned count) {
   generate<false>(subtree, {}, inits_and_teardowns, {}, oracle, {}, memory, memory, count);
 }
 
 EXTERN __global__ void ab_generate_memory_and_witness_values_main_kernel(
-    const __grid_constant__ MainMemorySubtree subtree,
+    const __grid_constant__ UnifiedMemorySubtree subtree,
     const __grid_constant__ MemoryQueriesTimestampComparisonAuxVars memory_queries_timestamp_comparison_aux_vars,
     const __grid_constant__ ShuffleRamInitsAndTeardowns inits_and_teardowns, const __grid_constant__ ShuffleRamAuxComparisonSets aux_comparison_sets,
-    const __grid_constant__ MainTrace oracle, const __grid_constant__ TimestampScalar timestamp_high_from_circuit_sequence,
+    const __grid_constant__ UnifiedTrace oracle, const __grid_constant__ TimestampScalar timestamp_high_from_circuit_sequence,
     const matrix_setter<bf, st_modifier::cg> memory, const matrix_setter<bf, st_modifier::cg> witness, const unsigned count) {
   generate<true>(subtree, memory_queries_timestamp_comparison_aux_vars, inits_and_teardowns, aux_comparison_sets, oracle, timestamp_high_from_circuit_sequence,
                  memory, witness, count);
 }
 
-} // namespace airbender::witness::memory::main
+} // namespace airbender::witness::memory::unified

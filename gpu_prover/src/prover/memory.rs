@@ -5,7 +5,7 @@ use super::tracing_data::{TracingDataDevice, TracingDataTransfer, UnrolledTracin
 use super::{device_tracing, BF};
 use crate::device_structures::DeviceMatrixMut;
 use crate::witness::memory_delegation::generate_memory_values_delegation;
-use crate::witness::memory_main::generate_memory_values_main;
+use crate::witness::memory_unified::generate_memory_values_unified;
 use crate::witness::memory_unrolled::{
     generate_memory_values_inits_and_teardowns, generate_memory_values_unrolled_memory,
     generate_memory_values_unrolled_non_memory,
@@ -84,20 +84,22 @@ pub fn commit_memory<'a>(
     let mut evaluations = memory_holder.get_uninit_evaluations_mut();
     let memory = &mut DeviceMatrixMut::new(&mut evaluations, trace_len);
     match data_device {
-        TracingDataDevice::Main {
+        TracingDataDevice::Delegation(trace) => {
+            generate_memory_values_delegation(memory_subtree, &trace, memory, stream)?;
+        }
+        TracingDataDevice::Unified {
             inits_and_teardowns,
             trace,
         } => {
-            generate_memory_values_main(
+            generate_memory_values_unified(
                 memory_subtree,
+                decoder_table.unwrap(),
+                default_pc_value_in_padding,
                 &inits_and_teardowns,
                 &trace,
                 memory,
                 stream,
             )?;
-        }
-        TracingDataDevice::Delegation(trace) => {
-            generate_memory_values_delegation(memory_subtree, &trace, memory, stream)?;
         }
         TracingDataDevice::Unrolled(unrolled) => match unrolled {
             UnrolledTracingDataDevice::Memory(trace) => {

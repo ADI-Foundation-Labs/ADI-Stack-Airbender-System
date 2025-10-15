@@ -148,6 +148,14 @@ impl DelegationCircuitType {
         let num_delegation_cycles = self.get_num_delegation_cycles();
         move |allocator| f(delegation_type_id, num_delegation_cycles, allocator)
     }
+    
+    pub fn get_all_delegation_types() -> &'static [DelegationCircuitType] {
+        &[
+            DelegationCircuitType::BigIntWithControl,
+            DelegationCircuitType::Blake2WithCompression,
+            DelegationCircuitType::KeccakSpecial5,
+        ]
+    }
 }
 
 impl From<u16> for DelegationCircuitType {

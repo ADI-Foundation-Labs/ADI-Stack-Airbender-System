@@ -8,7 +8,7 @@ use crate::allocator::tracker::AllocationPlacement;
 use crate::device_structures::{DeviceMatrix, DeviceMatrixChunk, DeviceMatrixMut};
 use crate::ops_simple::{set_by_ref, set_to_zero};
 use crate::witness::memory_delegation::generate_memory_and_witness_values_delegation;
-use crate::witness::memory_main::generate_memory_and_witness_values_main;
+use crate::witness::memory_unified::generate_memory_and_witness_values_unified;
 use crate::witness::memory_unrolled::{
     generate_memory_and_witness_values_inits_and_teardowns,
     generate_memory_and_witness_values_unrolled_memory,
@@ -19,7 +19,7 @@ use crate::witness::multiplicities::{
 };
 use crate::witness::trace_unrolled::ExecutorFamilyDecoderData;
 use crate::witness::witness_delegation::generate_witness_values_delegation;
-use crate::witness::witness_main::generate_witness_values_main;
+use crate::witness::witness_unified::generate_witness_values_unified;
 use crate::witness::witness_unrolled::{
     generate_witness_values_unrolled_memory, generate_witness_values_unrolled_non_memory,
 };
@@ -177,33 +177,6 @@ impl StageOneOutput {
             [multiplicities_range_start << log_domain_size..]
             [..multiplicities_columns_count << log_domain_size];
         match data_device {
-            TracingDataDevice::Main {
-                inits_and_teardowns,
-                trace,
-            } => {
-                set_to_zero(&mut witness_evaluations, stream)?;
-                generate_memory_and_witness_values_main(
-                    memory_subtree,
-                    &circuit.memory_queries_timestamp_comparison_aux_vars,
-                    &inits_and_teardowns,
-                    &circuit.lazy_init_address_aux_vars,
-                    &trace,
-                    timestamp_high_from_circuit_sequence,
-                    &mut DeviceMatrixMut::new(&mut memory_evaluations, trace_len),
-                    &mut DeviceMatrixMut::new(&mut witness_evaluations, trace_len),
-                    stream,
-                )?;
-                assert_ne!(generic_multiplicities_columns.num_elements, 0);
-                generate_witness_values_main(
-                    circuit_type.as_main().unwrap(),
-                    &trace,
-                    &DeviceMatrix::new(&generic_lookup_tables, trace_len),
-                    &DeviceMatrix::new(&memory_evaluations, trace_len),
-                    &mut DeviceMatrixMut::new(&mut witness_evaluations, trace_len),
-                    &mut DeviceMatrixMut::new(&mut generic_lookup_mapping, trace_len),
-                    stream,
-                )?;
-            }
             TracingDataDevice::Delegation(trace) => {
                 set_to_zero(all_multiplicities, stream)?;
                 generate_memory_and_witness_values_delegation(
@@ -217,6 +190,33 @@ impl StageOneOutput {
                 assert_ne!(generic_multiplicities_columns.num_elements, 0);
                 generate_witness_values_delegation(
                     circuit_type.as_delegation().unwrap(),
+                    &trace,
+                    &DeviceMatrix::new(&generic_lookup_tables, trace_len),
+                    &DeviceMatrix::new(&memory_evaluations, trace_len),
+                    &mut DeviceMatrixMut::new(&mut witness_evaluations, trace_len),
+                    &mut DeviceMatrixMut::new(&mut generic_lookup_mapping, trace_len),
+                    stream,
+                )?;
+            }
+            TracingDataDevice::Unified {
+                inits_and_teardowns,
+                trace,
+            } => {
+                set_to_zero(&mut witness_evaluations, stream)?;
+                generate_memory_and_witness_values_unified(
+                    memory_subtree,
+                    &circuit.memory_queries_timestamp_comparison_aux_vars,
+                    &circuit.lazy_init_address_aux_vars,
+                    decoder_table.unwrap(),
+                    default_pc_value_in_padding,
+                    &inits_and_teardowns,
+                    &trace,
+                    &mut DeviceMatrixMut::new(&mut memory_evaluations, trace_len),
+                    &mut DeviceMatrixMut::new(&mut witness_evaluations, trace_len),
+                    stream,
+                )?;
+                assert_ne!(generic_multiplicities_columns.num_elements, 0);
+                generate_witness_values_unified(
                     &trace,
                     &DeviceMatrix::new(&generic_lookup_tables, trace_len),
                     &DeviceMatrix::new(&memory_evaluations, trace_len),

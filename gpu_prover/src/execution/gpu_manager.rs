@@ -27,8 +27,8 @@ pub struct GpuManager {
 
 impl GpuManager {
     pub fn new(
-        setups_to_cache: Vec<SetupToCache>, // vector of setups to cache on the device by each GPU worker
         initialized_wait_group: WaitGroup, // wait group is a synchronization mechanism to signal that all GPU workers are initialized and ready to process requests
+        prover_context_config: ProverContextConfig,
     ) -> Self {
         let (batches_sender, batches_receiver) = unbounded();
         trace!("GPU_MANAGER spawning");
@@ -36,7 +36,7 @@ impl GpuManager {
         let wait_group_clone = wait_group.clone();
         thread::spawn(move || {
             let result = scope(|s| {
-                gpu_manager(initialized_wait_group, setups_to_cache, batches_receiver, s)
+                gpu_manager(initialized_wait_group, prover_context_config, batches_receiver, s)
             })
             .unwrap();
             if let Err(e) = result {
@@ -66,17 +66,12 @@ impl Drop for GpuManager {
 }
 fn gpu_manager(
     initialized_wait_group: WaitGroup,
-    setups_to_cache: Vec<SetupToCache>,
+    prover_context_config: ProverContextConfig,
     batches_receiver: Receiver<GpuWorkBatch<ConcurrentStaticHostAllocator>>,
     scope: &Scope,
 ) -> CudaResult<()> {
     let device_count = get_device_count()? as usize;
     info!("GPU_MANAGER found {} CUDA capable device(s)", device_count);
-    let prover_context_config = {
-        let mut c = ProverContextConfig::default();
-        c.allocation_block_log_size = 22;
-        c
-    };
     let (worker_initialized_sender, worker_initialized_receiver) = bounded(device_count);
     let mut worker_senders = Vec::with_capacity(device_count);
     let mut worker_receivers = Vec::with_capacity(device_count);
@@ -90,7 +85,6 @@ fn gpu_manager(
         let gpu_worker_func = get_gpu_worker_func(
             device_id,
             prover_context_config,
-            setups_to_cache.clone(),
             worker_initialized_sender.clone(),
             request_receiver,
             result_sender,
