@@ -1207,27 +1207,53 @@ pub fn print_size<T>(name: &str) -> usize {
     size
 }
 
-pub fn get_grand_product_col(circuit: &CompiledCircuitArtifact<BF>) -> usize {
-    // Get storage offset for grand product in stage_2_e4_cols
-    // It's a little tricky because afaict zksync_airbender regards
-    // bf and e4 stage 2 cols as chunks of a unified allocation,
-    // and uses raw pointer arithmetic and casts to read some cols as e4.
-    // Our case is different: we have a separate allocation for stage_2_e4_cols.
-    // We need to translate zksync_airbender's offset in its unified allocation
-    // to the offset we need in the separate stage_2_e4_cols allocation.
-    // The following code is copied from zksync_airbender's stage4.rs:
-    // Now translate zksync_airbender's offset into the offset we need:
-    let raw_offset_for_grand_product_poly = circuit
+pub fn get_grand_product_src_dst_cols(
+    circuit: &CompiledCircuitArtifact<BF>,
+    unrolled: bool,
+) -> (usize, usize) {
+    let e4_cols_offset = circuit.stage_2_layout.ext4_polys_offset;
+    assert_eq!(e4_cols_offset % 4, 0);
+    let translate_e4_offset = |raw_col: usize| -> usize {
+        assert_eq!(raw_col % 4, 0);
+        assert!(raw_col >= e4_cols_offset);
+        (raw_col - e4_cols_offset) / 4
+    };
+    let raw_grand_product_dst = circuit
         .stage_2_layout
         .intermediate_poly_for_grand_product
         .start();
-    assert!(raw_offset_for_grand_product_poly >= circuit.stage_2_layout.ext4_polys_offset);
-    assert_eq!(raw_offset_for_grand_product_poly % 4, 0);
-    assert_eq!(circuit.stage_2_layout.ext4_polys_offset % 4, 0);
-    let bf_elems_offset =
-        raw_offset_for_grand_product_poly - circuit.stage_2_layout.ext4_polys_offset;
-    let stage_2_memory_grand_product_offset = bf_elems_offset / 4;
-    stage_2_memory_grand_product_offset
+    let grand_product_dst = translate_e4_offset(raw_grand_product_dst);
+    if unrolled {
+        let mut grand_product_src = usize::MAX;
+        let next = &circuit.stage_2_layout.intermediate_polys_for_permutation_masking;
+        if next.num_elements() > 0 {
+            assert_eq!(next.num_elements(), 1);
+            grand_product_src = translate_e4_offset(next.start());
+        }
+        let next = &circuit.stage_2_layout.intermediate_polys_for_state_permutation;
+        if next.num_elements() > 0 {
+            assert_eq!(next.num_elements(), 1);
+            grand_product_src = translate_e4_offset(next.start());
+        }
+        let next = &circuit.stage_2_layout.intermediate_polys_for_memory_argument;
+        if next.num_elements() > 0 {
+            grand_product_src = translate_e4_offset(next.start());
+            grand_product_src += next.num_elements() - 1;
+        }
+        let next = &circuit.stage_2_layout.intermediate_polys_for_memory_init_teardown;
+        if next.num_elements() > 0 {
+            grand_product_src = translate_e4_offset(next.start());
+            grand_product_src += next.num_elements() - 1;
+        }
+        assert!(grand_product_src != usize::MAX);
+        return (grand_product_src, grand_product_dst)
+    }
+    let memory_args = &circuit.stage_2_layout.intermediate_polys_for_memory_argument;
+    assert!(memory_args.num_elements() > 0);
+    let memory_args_start = translate_e4_offset(memory_args.start());
+    let num_memory_args = memory_args.num_elements();
+    let grand_product_src = memory_args_start + num_memory_args - 1;
+    (grand_product_src, grand_product_dst)
 }
 
 #[allow(dead_code)]

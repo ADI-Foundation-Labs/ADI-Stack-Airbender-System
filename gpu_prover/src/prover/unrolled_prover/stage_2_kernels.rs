@@ -602,7 +602,7 @@ pub fn compute_stage_2_args_on_main_domain(
     )?;
 
     if process_registers_and_indirect_access {
-        panic!("REquires non-unrolled stage_2_kernels");
+        panic!("Requires non-unrolled stage_2_kernels");
     }
 
     // quick and dirty c0 = 0 adjustment for bf cols
@@ -716,18 +716,16 @@ pub fn compute_stage_2_args_on_main_domain(
         )?;
     }
 
-    // stage2_compute_grand_product(
-    //     circuit,
-    //     &mut stage_2_e4_cols,
-    //     scratch_for_aggregated_entry_invs,
-    //     scratch_for_cub_ops,
-    //     grand_product_scratch_bytes,
-    //     memory_args_start,
-    //     num_memory_args,
-    //     n,
-    //     stream,
-    // )
-    Ok(())
+    stage2_compute_grand_product(
+        circuit,
+        &mut stage_2_e4_cols,
+        scratch_for_aggregated_entry_invs,
+        scratch_for_cub_ops,
+        grand_product_scratch_bytes,
+        n,
+        true,
+        stream,
+    )
 }
 
 #[cfg(test)]
@@ -1055,7 +1053,7 @@ mod tests {
             .intermediate_polys_for_memory_argument
             .start();
         let memory_args_start = translate_e4_offset(raw_col);
-        let grand_product_col = get_grand_product_col(circuit);
+        let (_, grand_product_col) = get_grand_product_src_dst_cols(circuit, true);
         let h_stage_2_bf_cols = &h_stage_2_cols[0..num_stage_2_bf_cols * domain_size];
         let start = e4_cols_offset * domain_size;
         let end = start + 4 * num_stage_2_e4_cols * domain_size;

@@ -726,9 +726,8 @@ pub fn compute_stage_2_args_on_main_domain(
         scratch_for_aggregated_entry_invs,
         scratch_for_cub_ops,
         grand_product_scratch_bytes,
-        memory_args_start,
-        num_memory_args,
         n,
+        false,
         stream,
     )
 }
@@ -1043,7 +1042,11 @@ mod tests {
             .intermediate_polys_for_memory_argument
             .start();
         let memory_args_start = translate_e4_offset(raw_col);
-        let grand_product_col = get_grand_product_col(circuit);
+        let (_, grand_product_col) = get_grand_product_src_dst_cols(
+            circuit,
+            &translate_e4_offset,
+            false,
+        );
         let h_stage_2_bf_cols = &h_stage_2_cols[0..num_stage_2_bf_cols * domain_size];
         let start = e4_cols_offset * domain_size;
         let end = start + 4 * num_stage_2_e4_cols * domain_size;

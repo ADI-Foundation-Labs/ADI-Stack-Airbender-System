@@ -4,7 +4,7 @@ use crate::device_structures::{
 };
 use crate::field::{BaseField, Ext2Field, Ext4Field};
 use crate::ops_complex::BatchInv;
-use crate::prover::arg_utils::{get_grand_product_col, StateLinkageConstraints};
+use crate::prover::arg_utils::{get_grand_product_src_dst_cols, StateLinkageConstraints};
 use crate::utils::WARP_SIZE;
 
 use cs::one_row_compiler::CompiledCircuitArtifact;
@@ -267,7 +267,7 @@ pub fn compute_deep_quotient_on_main_domain(
     let num_terms_total = num_terms_at_z + num_terms_at_z_omega;
     assert_eq!(num_terms_total, scratch_e4.len());
     // prepare data matrix args
-    let stage_2_memory_grand_product_offset = get_grand_product_col(circuit);
+    let (_, stage_2_memory_grand_product_offset) = get_grand_product_src_dst_cols(circuit, false);
     let setup_cols = setup_cols.as_ptr_and_stride();
     let witness_cols = witness_cols.as_ptr_and_stride();
     let memory_cols = memory_cols.as_ptr_and_stride();
