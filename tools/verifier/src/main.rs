@@ -209,7 +209,11 @@ unsafe fn workload() -> ! {
 
     use verifier::verifier_common::ProofOutput;
 
-    let mut proof_output: ProofOutput<TREE_CAP_SIZE, NUM_COSETS, NUM_DELEGATION_CHALLENGES, 1> =
+    let mut proof_output: ProofOutput<TREE_CAP_SIZE,
+        NUM_COSETS,
+        NUM_DELEGATION_CHALLENGES,
+        NUM_AUX_BOUNDARY_VALUES,
+        NUM_MACHINE_STATE_PERMUTATION_CHALLENGES> =
         unsafe { MaybeUninit::uninit().assume_init() };
     let mut state_variables = ProofPublicInputs::uninit();
 
