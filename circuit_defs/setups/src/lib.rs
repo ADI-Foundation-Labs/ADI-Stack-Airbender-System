@@ -26,7 +26,7 @@ use prover::unrolled::NonMemoryCircuitOracle;
 use prover::DEFAULT_TRACE_PADDING_MULTIPLE;
 use prover::*;
 use risc_v_simulator::cycle::IMStandardIsaConfig;
-use risc_v_simulator::cycle::IMWithoutSignedMulDivIsaConfig;
+use risc_v_simulator::cycle::IMStandardIsaConfigWithUnsignedMulDiv;
 use risc_v_simulator::cycle::IWithoutByteAccessIsaConfig;
 use risc_v_simulator::cycle::IWithoutByteAccessIsaConfigWithDelegation;
 use risc_v_simulator::cycle::MachineConfig;
@@ -61,7 +61,7 @@ pub fn is_reduced_machine_configuration<C: MachineConfig>() -> bool {
 }
 
 pub fn is_machine_without_signed_mul_div_configuration<C: MachineConfig>() -> bool {
-    std::any::TypeId::of::<C>() == std::any::TypeId::of::<IMWithoutSignedMulDivIsaConfig>()
+    std::any::TypeId::of::<C>() == std::any::TypeId::of::<IMStandardIsaConfigWithUnsignedMulDiv>()
 }
 
 pub fn is_final_reduced_machine_configuration<C: MachineConfig>() -> bool {
@@ -313,12 +313,12 @@ pub fn get_delegation_compiled_circuits_for_machine_without_signed_mul_div_confi
 
     assert_eq!(
         machines.len(),
-        IMWithoutSignedMulDivIsaConfig::ALLOWED_DELEGATION_CSRS.len()
+        IMStandardIsaConfigWithUnsignedMulDiv::ALLOWED_DELEGATION_CSRS.len()
     );
     for i in 0..machines.len() {
         assert_eq!(
             machines[i].0,
-            IMWithoutSignedMulDivIsaConfig::ALLOWED_DELEGATION_CSRS[i]
+            IMStandardIsaConfigWithUnsignedMulDiv::ALLOWED_DELEGATION_CSRS[i]
         );
     }
 
