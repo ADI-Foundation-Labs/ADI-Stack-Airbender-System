@@ -536,8 +536,7 @@ void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
                                             vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                             const unsigned memory_args_start,
                                             const bool num_over_denom_acc_is_initialized,
-                                            e4 &num_over_denom_acc,
-                                                ) {
+                                            e4 &num_over_denom_acc) {
 }
 
 DEVICE_FORCEINLINE
@@ -550,14 +549,15 @@ void grand_product_machine_state_contributions(
 // one kernel handles all cases, to avoid re-reading e4 column
 EXTERN __launch_bounds__(128, 8) __global__
     void ab_unrolled_grand_product_contributions_kernel(__grid_constant__ const MemoryChallenges memory_challenges,
-                                                        __grid_constant__ const MachineStateArgumentChallenges machine_state_argument_challenges,
+                                                        __grid_constant__ const MachineStateChallenges machine_state_challenges,
                                                         __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
                                                         __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
                                                         matrix_getter<bf, ld_modifier::cs> setup_cols,
                                                         matrix_getter<bf, ld_modifier::cs> memory_cols,
                                                         vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                                         const unsigned ram_access_args_start,
-                                                        const unsigned machine_state_permutation_arg_start,
+                                                        const unsigned machine_state_permutation_arg_col,
+                                                        const unsigned mask_arg_col,
                                                         const unsigned execute_col,
                                                         const bool process_ram_access,
                                                         const bool process_machine_state_permutation,
@@ -576,14 +576,14 @@ EXTERN __launch_bounds__(128, 8) __global__
   e4 num_over_denom_acc{};
   bool num_over_denom_acc_is_initialized = false;
 
-  if (lazy_init_teardown_layout.process_shuffle_ram_init) {
-    grand_product_lazy_init_contributions(challenges, lazy_init_teardown_layouts, memory_cols, stage_2_e4_cols, num_over_denom_acc);
+  if (lazy_init_teardown_layouts.process_shuffle_ram_init) {
+    grand_product_lazy_init_contributions(memory_challenges, lazy_init_teardown_layouts, memory_cols, stage_2_e4_cols, num_over_denom_acc);
     num_over_denom_acc_is_initialized = true;
   }
 
-  if (process_ram_access) {
-    grand_product_unrolled_ram_access_contributions();
-  }
+  // if (process_ram_access) {
+  //   grand_product_unrolled_ram_access_contributions();
+  // }
 
   if (process_machine_state_permutation) {
     grand_product_machine_state_contributions();
@@ -593,9 +593,9 @@ EXTERN __launch_bounds__(128, 8) __global__
   if (process_mask) {
     const unsigned execute = bf::into_canonical(memory_cols.get_at_col(execute_col)).limb;
     if (execute) {
-      stage_2_e4_cols.set_at_col(mask_col, num_over_denom_acc);
+      stage_2_e4_cols.set_at_col(mask_arg_col, num_over_denom_acc);
     } else {
-      stage_2_e4_cols.set_at_col(mask_col, e4::one());
+      stage_2_e4_cols.set_at_col(mask_arg_col, e4::one());
     }
   }
 }

@@ -760,7 +760,7 @@ impl LazyInitTeardownLayouts {
         );
         let intermediate_polys_for_memory_init_teardown = &circuit
             .stage_2_layout
-            .intermediate_polys_for_memory_init_teardown
+            .intermediate_polys_for_memory_init_teardown;
         assert_eq!(
             num_init_teardown_sets,
             intermediate_polys_for_memory_init_teardown.num_elements(),
@@ -802,8 +802,8 @@ impl LazyInitTeardownLayouts {
         Self {
             layouts,
             num_init_teardown_sets: num_init_teardown_sets as u32,
-            process_shuffle_ram_init: true,
             grand_product_contributions_start,
+            process_shuffle_ram_init: true,
         }
     }
 }
@@ -813,6 +813,7 @@ impl Default for LazyInitTeardownLayouts {
         Self {
             layouts: [LazyInitTeardownLayout::default(); MAX_LAZY_INIT_TEARDOWN_SETS],
             num_init_teardown_sets: 0,
+            grand_product_contributions_start: 0,
             process_shuffle_ram_init: false,
         }
     }

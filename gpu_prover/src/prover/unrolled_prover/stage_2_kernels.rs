@@ -1,7 +1,4 @@
-use super::stage_2_ram_shared::{
-    stage2_process_lazy_init_and_ram_access,
-    stage2_process_registers_and_indirect_access_in_delegation,
-};
+use super::stage_2_ram_shared::stage2_process_unrolled_grand_product_contributions;
 use super::stage_2_shared::{
     stage2_compute_grand_product, stage2_handle_delegation_requests, stage2_process_delegations,
     stage2_process_executor_family_decoder_entry_invs_and_multiplicity,
@@ -229,6 +226,7 @@ pub fn compute_stage_2_args_on_main_domain(
         memory_timestamp_high_from_circuit_idx,
         delegation_type,
         memory_argument_challenges,
+        machine_state_argument_challenges,
         delegation_challenges,
         process_shuffle_ram_init,
         shuffle_ram_inits_and_teardowns,
@@ -517,9 +515,9 @@ pub fn compute_stage_2_args_on_main_domain(
             log_n,
             stream,
         )?;
-        Some(lazy_init_teardown_layouts)
+        lazy_init_teardown_layouts
     } else {
-        None
+        LazyInitTeardownLayouts::default()
     };
 
     stage2_process_timestamp_range_check_expressions(
@@ -590,65 +588,21 @@ pub fn compute_stage_2_args_on_main_domain(
     // inits == 0, access > 0: can happen in unrolled, never in non-unrolled
     // both > 0              : can happen in non-unrolled (main), never in unrolled
     // both == 0             : can happen in non-unrolled (delegated), and also in unrolled
-    // The following asserts might be fail for unrolled circuits.
-    // They're a reminder of what I need to change.
-    assert_eq!(
-        process_shuffle_ram_init,
-        circuit.memory_layout.shuffle_ram_access_sets.len() > 0,
-    );
-    assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-    let memory_challenges = MemoryChallenges::new(&memory_argument_challenges);
-    let raw_memory_args_start = circuit
-        .stage_2_layout
-        .intermediate_polys_for_memory_argument
-        .start();
-    let memory_args_start = translate_e4_offset(raw_memory_args_start);
-
-    if process_shuffle_ram_init {
-        assert!(!process_registers_and_indirect_access);
-        // reminder of what needs to change for unrolled circuits
-        assert_eq!(
-            num_memory_args,
-            circuit.memory_layout.shuffle_ram_access_sets.len(),
-        );
-        stage2_process_lazy_init_and_ram_access(
-            circuit,
-            memory_challenges.clone(),
-            memory_timestamp_high_from_circuit_idx,
-            lazy_init_teardown_layouts.unwrap(),
-            setup_cols,
-            memory_cols,
-            d_stage_2_e4_cols,
-            memory_args_start,
-            log_n,
-            &translate_e4_offset,
-            stream,
-        )?;
-    }
+    stage2_process_unrolled_grand_product_contributions(
+        circuit,
+        &memory_argument_challenges,
+        &machine_state_argument_challenges,
+        lazy_init_teardown_layouts,
+        setup_cols,
+        memory_cols,
+        d_stage_2_e4_cols,
+        log_n,
+        &translate_e4_offset,
+        stream,
+    )?;
 
     if process_registers_and_indirect_access {
-        assert!(!process_shuffle_ram_init);
-        // Layout checks that likely need to be modified for unrolled circuits
-        let mut num_intermediate_polys_for_register_accesses = 0;
-        for el in circuit.memory_layout.register_and_indirect_accesses.iter() {
-            num_intermediate_polys_for_register_accesses += 1;
-            num_intermediate_polys_for_register_accesses += el.indirect_accesses.len();
-        }
-        assert_eq!(
-            num_memory_args,
-            num_intermediate_polys_for_register_accesses,
-        );
-        assert_eq!(num_memory_args, num_set_polys_for_memory_shuffle);
-        stage2_process_registers_and_indirect_access_in_delegation(
-            circuit,
-            memory_challenges,
-            &delegation_processor_layout,
-            memory_cols,
-            d_stage_2_e4_cols,
-            memory_args_start,
-            log_n,
-            stream,
-        )?;
+        panic!("REquires non-unrolled stage_2_kernels");
     }
 
     // quick and dirty c0 = 0 adjustment for bf cols
@@ -762,17 +716,18 @@ pub fn compute_stage_2_args_on_main_domain(
         )?;
     }
 
-    stage2_compute_grand_product(
-        circuit,
-        &mut stage_2_e4_cols,
-        scratch_for_aggregated_entry_invs,
-        scratch_for_cub_ops,
-        grand_product_scratch_bytes,
-        memory_args_start,
-        num_memory_args,
-        n,
-        stream,
-    )
+    // stage2_compute_grand_product(
+    //     circuit,
+    //     &mut stage_2_e4_cols,
+    //     scratch_for_aggregated_entry_invs,
+    //     scratch_for_cub_ops,
+    //     grand_product_scratch_bytes,
+    //     memory_args_start,
+    //     num_memory_args,
+    //     n,
+    //     stream,
+    // )
+    Ok(())
 }
 
 #[cfg(test)]
