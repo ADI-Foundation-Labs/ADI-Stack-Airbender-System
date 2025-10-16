@@ -113,12 +113,21 @@ pub const EXTENDED_IV: [u32; 16] = [
     0x5BE0CD19,
 ];
 
+#[repr(align(64))]
+struct SmallAligner;
+
+#[repr(C)]
+struct AlignedArray64<T, const N: usize> {
+    _aligner: SmallAligner,
+    pub data: [T; N],
+}
+
 #[repr(C)]
 struct BlakeState {
     pub _aligner: Aligner,
     pub state: [u32; 8],
     pub ext_state: [u32; 16],
-    pub input_buffer: [u32; 16],
+    pub input_buffer: AlignedArray64<u32, 16>,
     pub round_bitmask: u32,
     pub t: u32, // we limit ourselves to <4Gb inputs
 }
@@ -147,7 +156,10 @@ unsafe fn workload() -> ! {
             // below.
             state: CONFIGURED_IV,
             ext_state: EXTENDED_IV,
-            input_buffer: [0u32; 16],
+            input_buffer: AlignedArray64{
+                _aligner: SmallAligner,
+                data: [0u32; 16],
+            },
             round_bitmask: 0,
             t: 0,
         };
@@ -157,8 +169,11 @@ unsafe fn workload() -> ! {
         state.t = 4u32;
 
         // our data - no alignment requirements
-        let mut input_buffer = [0u32; 16];
-        input_buffer[0] = hashed_b;
+        let mut input_buffer = AlignedArray64{
+            _aligner: SmallAligner,
+            data: [0u32; 16],
+        };
+        input_buffer.data[0] = hashed_b;
 
         const NORMAL_MODE_FIRST_ROUNDS_CONTROL_REGISTER: u32 = 0b000;
         const NORMAL_MODE_LAST_ROUND_CONTROL_REGISTER: u32 = 0b001;
@@ -175,7 +190,7 @@ unsafe fn workload() -> ! {
             // That's why we're in the 'unsafe' block.
             csr_trigger_delegation(
                 ((&mut state) as *mut BlakeState).cast::<u32>(),
-                input_buffer.as_ptr(),
+                input_buffer.data.as_ptr(),
                 round_bitmask,
                 NORMAL_MODE_FIRST_ROUNDS_CONTROL_REGISTER,
             );
@@ -185,7 +200,7 @@ unsafe fn workload() -> ! {
         // final one with final xor
         csr_trigger_delegation(
             ((&mut state) as *mut BlakeState).cast::<u32>(),
-            input_buffer.as_ptr(),
+            input_buffer.data.as_ptr(),
             round_bitmask,
             NORMAL_MODE_LAST_ROUND_CONTROL_REGISTER,
         );

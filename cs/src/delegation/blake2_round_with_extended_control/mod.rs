@@ -80,7 +80,7 @@ pub fn define_blake2_with_extended_control_delegation_circuit<F: PrimeField, CS:
         .map(|access_idx| IndirectAccessOffset {
             variable_dependent: None,
             offset_constant: (access_idx * core::mem::size_of::<u32>()) as u32,
-            assume_no_alignment_overflow: false,
+            assume_no_alignment_overflow: true,
             is_write_access: false,
         })
         .collect();
@@ -88,7 +88,7 @@ pub fn define_blake2_with_extended_control_delegation_circuit<F: PrimeField, CS:
     let x11_request = RegisterAccessRequest {
         register_index: 11,
         register_write: false,
-        indirects_alignment_log2: 2, // just aligned by machine words
+        indirects_alignment_log2: 6, // just aligned by machine words
         indirect_accesses: input_accesses,
     };
 

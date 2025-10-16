@@ -13356,579 +13356,9 @@
         "Expression": {
           "linear_terms": [
             [
-              536870912,
+              33554432,
               {
                 "MemorySubtree": 154
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 162
-              }
-            ]
-          ],
-          "constant_term": 4
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 162
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 167
-              }
-            ]
-          ],
-          "constant_term": 8
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 167
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 172
-              }
-            ]
-          ],
-          "constant_term": 12
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 172
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 177
-              }
-            ]
-          ],
-          "constant_term": 16
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 177
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 182
-              }
-            ]
-          ],
-          "constant_term": 20
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 182
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 187
-              }
-            ]
-          ],
-          "constant_term": 24
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 187
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 192
-              }
-            ]
-          ],
-          "constant_term": 28
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 192
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 197
-              }
-            ]
-          ],
-          "constant_term": 32
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 197
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 202
-              }
-            ]
-          ],
-          "constant_term": 36
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 202
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 207
-              }
-            ]
-          ],
-          "constant_term": 40
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 207
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 212
-              }
-            ]
-          ],
-          "constant_term": 44
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 212
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 217
-              }
-            ]
-          ],
-          "constant_term": 48
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 217
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 222
-              }
-            ]
-          ],
-          "constant_term": 52
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 222
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 227
-              }
-            ]
-          ],
-          "constant_term": 56
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 227
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 154
-              }
-            ],
-            [
-              2147418111,
-              {
-                "MemorySubtree": 232
-              }
-            ]
-          ],
-          "constant_term": 60
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              1,
-              {
-                "MemorySubtree": 155
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 232
               }
             ]
           ],
@@ -15523,7 +14953,7 @@
             [
               1,
               {
-                "MemorySubtree": 165
+                "MemorySubtree": 164
               }
             ]
           ],
@@ -15554,7 +14984,7 @@
             [
               1,
               {
-                "MemorySubtree": 166
+                "MemorySubtree": 165
               }
             ]
           ],
@@ -15579,7 +15009,7 @@
             [
               1,
               {
-                "MemorySubtree": 170
+                "MemorySubtree": 168
               }
             ]
           ],
@@ -15610,7 +15040,7 @@
             [
               1,
               {
-                "MemorySubtree": 171
+                "MemorySubtree": 169
               }
             ]
           ],
@@ -15635,7 +15065,7 @@
             [
               1,
               {
-                "MemorySubtree": 175
+                "MemorySubtree": 172
               }
             ]
           ],
@@ -15666,7 +15096,7 @@
             [
               1,
               {
-                "MemorySubtree": 176
+                "MemorySubtree": 173
               }
             ]
           ],
@@ -15686,6 +15116,62 @@
               524288,
               {
                 "WitnessSubtree": 159
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 176
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 159
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 177
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 160
               }
             ],
             [
@@ -15716,7 +15202,7 @@
             [
               2147483646,
               {
-                "WitnessSubtree": 159
+                "WitnessSubtree": 160
               }
             ],
             [
@@ -15741,7 +15227,38 @@
             [
               524288,
               {
-                "WitnessSubtree": 160
+                "WitnessSubtree": 161
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 184
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 161
               }
             ],
             [
@@ -15758,93 +15275,6 @@
         "Expression": {
           "linear_terms": [
             [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 160
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 186
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 161
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 190
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 161
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 191
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
               2147483646,
               {
                 "MemorySubtree": 2
@@ -15859,7 +15289,7 @@
             [
               1,
               {
-                "MemorySubtree": 195
+                "MemorySubtree": 188
               }
             ]
           ],
@@ -15890,7 +15320,7 @@
             [
               1,
               {
-                "MemorySubtree": 196
+                "MemorySubtree": 189
               }
             ]
           ],
@@ -15910,6 +15340,118 @@
               524288,
               {
                 "WitnessSubtree": 163
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 192
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 163
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 193
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 164
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 196
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 164
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 197
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 165
               }
             ],
             [
@@ -15940,7 +15482,7 @@
             [
               2147483646,
               {
-                "WitnessSubtree": 163
+                "WitnessSubtree": 165
               }
             ],
             [
@@ -15965,156 +15507,44 @@
             [
               524288,
               {
-                "WitnessSubtree": 164
+                "WitnessSubtree": 166
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 204
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 166
               }
             ],
             [
               1,
               {
                 "MemorySubtree": 205
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 164
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 206
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 165
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 210
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 165
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 211
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 166
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 215
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 166
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 216
               }
             ]
           ],
@@ -16134,6 +15564,174 @@
               524288,
               {
                 "WitnessSubtree": 167
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 208
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 167
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 209
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 168
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 212
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 168
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 213
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 169
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 216
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 169
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 217
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              2147483646,
+              {
+                "MemorySubtree": 2
+              }
+            ],
+            [
+              524288,
+              {
+                "WitnessSubtree": 170
               }
             ],
             [
@@ -16164,7 +15762,7 @@
             [
               2147483646,
               {
-                "WitnessSubtree": 167
+                "WitnessSubtree": 170
               }
             ],
             [
@@ -16189,212 +15787,44 @@
             [
               524288,
               {
-                "WitnessSubtree": 168
+                "WitnessSubtree": 171
+              }
+            ],
+            [
+              1,
+              {
+                "MemorySubtree": 224
+              }
+            ]
+          ],
+          "constant_term": 0
+        }
+      },
+      {
+        "Expression": {
+          "linear_terms": [
+            [
+              524288,
+              {
+                "MemorySubtree": 0
+              }
+            ],
+            [
+              2147483646,
+              {
+                "MemorySubtree": 3
+              }
+            ],
+            [
+              2147483646,
+              {
+                "WitnessSubtree": 171
               }
             ],
             [
               1,
               {
                 "MemorySubtree": 225
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 168
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 226
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 169
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 230
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 169
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 231
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 170
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 235
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 170
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 236
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              2147483646,
-              {
-                "MemorySubtree": 2
-              }
-            ],
-            [
-              524288,
-              {
-                "WitnessSubtree": 171
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 239
-              }
-            ]
-          ],
-          "constant_term": 0
-        }
-      },
-      {
-        "Expression": {
-          "linear_terms": [
-            [
-              524288,
-              {
-                "MemorySubtree": 0
-              }
-            ],
-            [
-              2147483646,
-              {
-                "MemorySubtree": 3
-              }
-            ],
-            [
-              2147483646,
-              {
-                "WitnessSubtree": 171
-              }
-            ],
-            [
-              1,
-              {
-                "MemorySubtree": 240
               }
             ]
           ],
@@ -17020,12 +16450,12 @@
                 "num_elements": 1
               },
               "read_value": {
-                "start": 163,
+                "start": 162,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 162,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 4
@@ -17034,16 +16464,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 165,
+                "start": 164,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 168,
+                "start": 166,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 167,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 8
@@ -17052,16 +16482,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 170,
+                "start": 168,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 173,
+                "start": 170,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 172,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 12
@@ -17070,7 +16500,25 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 175,
+                "start": 172,
+                "num_elements": 1
+              },
+              "read_value": {
+                "start": 174,
+                "num_elements": 1
+              },
+              "address_derivation_carry_bit": {
+                "start": 0,
+                "num_elements": 0
+              },
+              "variable_dependent": null,
+              "offset_constant": 16
+            }
+          },
+          {
+            "ReadAccess": {
+              "read_timestamp": {
+                "start": 176,
                 "num_elements": 1
               },
               "read_value": {
@@ -17078,11 +16526,11 @@
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 177,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
-              "offset_constant": 16
+              "offset_constant": 20
             }
           },
           {
@@ -17092,30 +16540,12 @@
                 "num_elements": 1
               },
               "read_value": {
-                "start": 183,
-                "num_elements": 1
-              },
-              "address_derivation_carry_bit": {
                 "start": 182,
                 "num_elements": 1
               },
-              "variable_dependent": null,
-              "offset_constant": 20
-            }
-          },
-          {
-            "ReadAccess": {
-              "read_timestamp": {
-                "start": 185,
-                "num_elements": 1
-              },
-              "read_value": {
-                "start": 188,
-                "num_elements": 1
-              },
               "address_derivation_carry_bit": {
-                "start": 187,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 24
@@ -17124,16 +16554,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 190,
+                "start": 184,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 193,
+                "start": 186,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 192,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 28
@@ -17142,7 +16572,43 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 195,
+                "start": 188,
+                "num_elements": 1
+              },
+              "read_value": {
+                "start": 190,
+                "num_elements": 1
+              },
+              "address_derivation_carry_bit": {
+                "start": 0,
+                "num_elements": 0
+              },
+              "variable_dependent": null,
+              "offset_constant": 32
+            }
+          },
+          {
+            "ReadAccess": {
+              "read_timestamp": {
+                "start": 192,
+                "num_elements": 1
+              },
+              "read_value": {
+                "start": 194,
+                "num_elements": 1
+              },
+              "address_derivation_carry_bit": {
+                "start": 0,
+                "num_elements": 0
+              },
+              "variable_dependent": null,
+              "offset_constant": 36
+            }
+          },
+          {
+            "ReadAccess": {
+              "read_timestamp": {
+                "start": 196,
                 "num_elements": 1
               },
               "read_value": {
@@ -17150,11 +16616,11 @@
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 197,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
-              "offset_constant": 32
+              "offset_constant": 40
             }
           },
           {
@@ -17164,48 +16630,12 @@
                 "num_elements": 1
               },
               "read_value": {
-                "start": 203,
-                "num_elements": 1
-              },
-              "address_derivation_carry_bit": {
                 "start": 202,
                 "num_elements": 1
               },
-              "variable_dependent": null,
-              "offset_constant": 36
-            }
-          },
-          {
-            "ReadAccess": {
-              "read_timestamp": {
-                "start": 205,
-                "num_elements": 1
-              },
-              "read_value": {
-                "start": 208,
-                "num_elements": 1
-              },
               "address_derivation_carry_bit": {
-                "start": 207,
-                "num_elements": 1
-              },
-              "variable_dependent": null,
-              "offset_constant": 40
-            }
-          },
-          {
-            "ReadAccess": {
-              "read_timestamp": {
-                "start": 210,
-                "num_elements": 1
-              },
-              "read_value": {
-                "start": 213,
-                "num_elements": 1
-              },
-              "address_derivation_carry_bit": {
-                "start": 212,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 44
@@ -17214,16 +16644,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 215,
+                "start": 204,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 218,
+                "start": 206,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 217,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 48
@@ -17232,16 +16662,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 220,
+                "start": 208,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 223,
+                "start": 210,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 222,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 52
@@ -17250,16 +16680,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 225,
+                "start": 212,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 228,
+                "start": 214,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 227,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 56
@@ -17268,16 +16698,16 @@
           {
             "ReadAccess": {
               "read_timestamp": {
-                "start": 230,
+                "start": 216,
                 "num_elements": 1
               },
               "read_value": {
-                "start": 233,
+                "start": 218,
                 "num_elements": 1
               },
               "address_derivation_carry_bit": {
-                "start": 232,
-                "num_elements": 1
+                "start": 0,
+                "num_elements": 0
               },
               "variable_dependent": null,
               "offset_constant": 60
@@ -17290,11 +16720,11 @@
           "ReadAccess": {
             "register_index": 12,
             "read_timestamp": {
-              "start": 235,
+              "start": 220,
               "num_elements": 1
             },
             "read_value": {
-              "start": 237,
+              "start": 222,
               "num_elements": 1
             }
           }
@@ -17306,11 +16736,11 @@
           "ReadAccess": {
             "register_index": 13,
             "read_timestamp": {
-              "start": 239,
+              "start": 224,
               "num_elements": 1
             },
             "read_value": {
-              "start": 241,
+              "start": 226,
               "num_elements": 1
             }
           }
@@ -17318,7 +16748,7 @@
         "indirect_accesses": []
       }
     ],
-    "total_width": 243
+    "total_width": 228
   },
   "setup_layout": {
     "timestamp_setup_columns": {
@@ -17345,14 +16775,14 @@
   },
   "stage_2_layout": {
     "intermediate_polys_for_range_check_16": {
-      "num_pairs": 16,
+      "num_pairs": 1,
       "base_field_oracles": {
         "start": 0,
-        "num_elements": 16
+        "num_elements": 1
       },
       "ext_4_field_oracles": {
-        "start": 60,
-        "num_elements": 16
+        "start": 48,
+        "num_elements": 1
       }
     },
     "remainder_for_range_check_16": null,
@@ -17360,16 +16790,16 @@
     "intermediate_polys_for_timestamp_range_checks": {
       "num_pairs": 44,
       "base_field_oracles": {
-        "start": 16,
+        "start": 1,
         "num_elements": 44
       },
       "ext_4_field_oracles": {
-        "start": 124,
+        "start": 52,
         "num_elements": 44
       }
     },
     "intermediate_polys_for_generic_lookup": {
-      "start": 300,
+      "start": 228,
       "num_elements": 208
     },
     "intermediate_poly_for_decoder_accesses": {
@@ -17377,15 +16807,15 @@
       "num_elements": 0
     },
     "intermediate_poly_for_range_check_16_multiplicity": {
-      "start": 1132,
+      "start": 1060,
       "num_elements": 1
     },
     "intermediate_poly_for_timestamp_range_check_multiplicity": {
-      "start": 1136,
+      "start": 1064,
       "num_elements": 1
     },
     "intermediate_polys_for_generic_multiplicities": {
-      "start": 1140,
+      "start": 1068,
       "num_elements": 1
     },
     "intermediate_polys_for_decoder_multiplicities": {
@@ -17393,15 +16823,15 @@
       "num_elements": 0
     },
     "delegation_processing_aux_poly": {
-      "start": 1144,
+      "start": 1072,
       "num_elements": 1
     },
     "intermediate_polys_for_memory_init_teardown": {
-      "start": 1324,
+      "start": 1252,
       "num_elements": 0
     },
     "intermediate_polys_for_memory_argument": {
-      "start": 1148,
+      "start": 1076,
       "num_elements": 44
     },
     "intermediate_polys_for_state_permutation": {
@@ -17413,11 +16843,11 @@
       "num_elements": 0
     },
     "intermediate_poly_for_grand_product": {
-      "start": 1324,
+      "start": 1252,
       "num_elements": 1
     },
-    "ext4_polys_offset": 60,
-    "total_width": 1328
+    "ext4_polys_offset": 48,
+    "total_width": 1256
   },
   "degree_2_constraints": [
     {
@@ -23044,7 +22474,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 163
+            "MemorySubtree": 162
           }
         ],
         [
@@ -23053,7 +22483,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 163
+            "MemorySubtree": 162
           }
         ],
         [
@@ -23076,7 +22506,7 @@
         [
           1,
           {
-            "MemorySubtree": 163
+            "MemorySubtree": 162
           }
         ]
       ],
@@ -23090,7 +22520,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 164
+            "MemorySubtree": 163
           }
         ],
         [
@@ -23099,7 +22529,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 164
+            "MemorySubtree": 163
           }
         ],
         [
@@ -23122,7 +22552,7 @@
         [
           1,
           {
-            "MemorySubtree": 164
+            "MemorySubtree": 163
           }
         ]
       ],
@@ -23136,7 +22566,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 168
+            "MemorySubtree": 166
           }
         ],
         [
@@ -23145,7 +22575,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 168
+            "MemorySubtree": 166
           }
         ],
         [
@@ -23168,7 +22598,7 @@
         [
           1,
           {
-            "MemorySubtree": 168
+            "MemorySubtree": 166
           }
         ]
       ],
@@ -23182,7 +22612,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 169
+            "MemorySubtree": 167
           }
         ],
         [
@@ -23191,7 +22621,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 169
+            "MemorySubtree": 167
           }
         ],
         [
@@ -23214,7 +22644,7 @@
         [
           1,
           {
-            "MemorySubtree": 169
+            "MemorySubtree": 167
           }
         ]
       ],
@@ -23228,7 +22658,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 173
+            "MemorySubtree": 170
           }
         ],
         [
@@ -23237,7 +22667,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 173
+            "MemorySubtree": 170
           }
         ],
         [
@@ -23260,7 +22690,7 @@
         [
           1,
           {
-            "MemorySubtree": 173
+            "MemorySubtree": 170
           }
         ]
       ],
@@ -23274,7 +22704,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 174
+            "MemorySubtree": 171
           }
         ],
         [
@@ -23283,7 +22713,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 174
+            "MemorySubtree": 171
           }
         ],
         [
@@ -23306,7 +22736,7 @@
         [
           1,
           {
-            "MemorySubtree": 174
+            "MemorySubtree": 171
           }
         ]
       ],
@@ -23320,7 +22750,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 178
+            "MemorySubtree": 174
           }
         ],
         [
@@ -23329,7 +22759,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 178
+            "MemorySubtree": 174
           }
         ],
         [
@@ -23352,6 +22782,98 @@
         [
           1,
           {
+            "MemorySubtree": 174
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 175
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 175
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 35
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 624
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 175
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 178
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 178
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 40
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 625
+          }
+        ],
+        [
+          1,
+          {
             "MemorySubtree": 178
           }
         ]
@@ -23384,7 +22906,7 @@
             "WitnessSubtree": 614
           },
           {
-            "MemorySubtree": 35
+            "MemorySubtree": 41
           }
         ]
       ],
@@ -23392,7 +22914,7 @@
         [
           2147483646,
           {
-            "WitnessSubtree": 624
+            "WitnessSubtree": 626
           }
         ],
         [
@@ -23412,7 +22934,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 183
+            "MemorySubtree": 182
           }
         ],
         [
@@ -23421,99 +22943,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 183
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 40
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 625
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 183
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 184
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 184
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 41
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 626
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 184
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 188
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 188
+            "MemorySubtree": 182
           }
         ],
         [
@@ -23536,7 +22966,7 @@
         [
           1,
           {
-            "MemorySubtree": 188
+            "MemorySubtree": 182
           }
         ]
       ],
@@ -23550,7 +22980,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 189
+            "MemorySubtree": 183
           }
         ],
         [
@@ -23559,7 +22989,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 189
+            "MemorySubtree": 183
           }
         ],
         [
@@ -23582,7 +23012,7 @@
         [
           1,
           {
-            "MemorySubtree": 189
+            "MemorySubtree": 183
           }
         ]
       ],
@@ -23596,7 +23026,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 193
+            "MemorySubtree": 186
           }
         ],
         [
@@ -23605,7 +23035,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 193
+            "MemorySubtree": 186
           }
         ],
         [
@@ -23628,7 +23058,7 @@
         [
           1,
           {
-            "MemorySubtree": 193
+            "MemorySubtree": 186
           }
         ]
       ],
@@ -23642,7 +23072,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 194
+            "MemorySubtree": 187
           }
         ],
         [
@@ -23651,7 +23081,7 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 194
+            "MemorySubtree": 187
           }
         ],
         [
@@ -23674,7 +23104,7 @@
         [
           1,
           {
-            "MemorySubtree": 194
+            "MemorySubtree": 187
           }
         ]
       ],
@@ -23688,7 +23118,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 198
+            "MemorySubtree": 190
           }
         ],
         [
@@ -23720,7 +23150,7 @@
         [
           1,
           {
-            "MemorySubtree": 198
+            "MemorySubtree": 190
           }
         ]
       ],
@@ -23734,7 +23164,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 199
+            "MemorySubtree": 191
           }
         ],
         [
@@ -23766,7 +23196,7 @@
         [
           1,
           {
-            "MemorySubtree": 199
+            "MemorySubtree": 191
           }
         ]
       ],
@@ -23780,7 +23210,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 203
+            "MemorySubtree": 194
           }
         ],
         [
@@ -23798,7 +23228,7 @@
             "WitnessSubtree": 614
           },
           {
-            "MemorySubtree": 163
+            "MemorySubtree": 162
           }
         ]
       ],
@@ -23807,6 +23237,236 @@
           2147483646,
           {
             "WitnessSubtree": 633
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 194
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 195
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 17
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 163
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 634
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 195
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 198
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 22
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 166
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 635
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 198
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 199
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 23
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 167
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 636
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 199
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 202
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 28
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 170
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 637
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 202
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 203
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 29
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 171
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 638
           }
         ],
         [
@@ -23826,237 +23486,7 @@
             "WitnessSubtree": 15
           },
           {
-            "MemorySubtree": 204
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 17
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 164
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 634
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 204
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 208
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 22
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 168
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 635
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 208
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 209
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 23
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 169
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 636
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 209
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 213
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 28
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 173
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 637
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 213
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 214
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 29
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 174
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 638
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 214
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 218
+            "MemorySubtree": 206
           }
         ],
         [
@@ -24074,7 +23504,7 @@
             "WitnessSubtree": 614
           },
           {
-            "MemorySubtree": 178
+            "MemorySubtree": 174
           }
         ]
       ],
@@ -24083,6 +23513,282 @@
           2147483646,
           {
             "WitnessSubtree": 639
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 206
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 207
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 35
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 175
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 640
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 207
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 210
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 40
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 178
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 641
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 210
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 211
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 41
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 179
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 642
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 211
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 214
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 46
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 182
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 643
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 214
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 215
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 47
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 183
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 644
+          }
+        ],
+        [
+          1,
+          {
+            "MemorySubtree": 215
+          }
+        ]
+      ],
+      "constant_term": 0
+    },
+    {
+      "quadratic_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 15
+          },
+          {
+            "MemorySubtree": 218
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 613
+          },
+          {
+            "MemorySubtree": 52
+          }
+        ],
+        [
+          1,
+          {
+            "WitnessSubtree": 614
+          },
+          {
+            "MemorySubtree": 186
+          }
+        ]
+      ],
+      "linear_terms": [
+        [
+          2147483646,
+          {
+            "WitnessSubtree": 645
           }
         ],
         [
@@ -24111,282 +23817,6 @@
             "WitnessSubtree": 613
           },
           {
-            "MemorySubtree": 35
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 179
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 640
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 219
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 223
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 40
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 183
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 641
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 223
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 224
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 41
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 184
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 642
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 224
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 228
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 46
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 188
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 643
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 228
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 229
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 47
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 189
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 644
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 229
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 233
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
-            "MemorySubtree": 52
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 614
-          },
-          {
-            "MemorySubtree": 193
-          }
-        ]
-      ],
-      "linear_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 645
-          }
-        ],
-        [
-          1,
-          {
-            "MemorySubtree": 233
-          }
-        ]
-      ],
-      "constant_term": 0
-    },
-    {
-      "quadratic_terms": [
-        [
-          2147483646,
-          {
-            "WitnessSubtree": 15
-          },
-          {
-            "MemorySubtree": 234
-          }
-        ],
-        [
-          1,
-          {
-            "WitnessSubtree": 613
-          },
-          {
             "MemorySubtree": 53
           }
         ],
@@ -24396,7 +23826,7 @@
             "WitnessSubtree": 614
           },
           {
-            "MemorySubtree": 194
+            "MemorySubtree": 187
           }
         ]
       ],
@@ -24410,7 +23840,7 @@
         [
           1,
           {
-            "MemorySubtree": 234
+            "MemorySubtree": 219
           }
         ]
       ],
@@ -28515,7 +27945,7 @@
         [
           2147483646,
           {
-            "MemorySubtree": 237
+            "MemorySubtree": 222
           }
         ]
       ],
@@ -28544,7 +27974,7 @@
         [
           2147483646,
           {
-            "MemorySubtree": 241
+            "MemorySubtree": 226
           }
         ]
       ],
@@ -31747,106 +31177,106 @@
       "MemorySubtree": 159
     },
     "104": {
-      "MemorySubtree": 163
+      "MemorySubtree": 162
     },
     "105": {
-      "MemorySubtree": 164
+      "MemorySubtree": 163
     },
     "106": {
-      "MemorySubtree": 168
+      "MemorySubtree": 166
     },
     "107": {
-      "MemorySubtree": 169
+      "MemorySubtree": 167
     },
     "108": {
-      "MemorySubtree": 173
+      "MemorySubtree": 170
     },
     "109": {
-      "MemorySubtree": 174
+      "MemorySubtree": 171
     },
     "110": {
-      "MemorySubtree": 178
+      "MemorySubtree": 174
     },
     "111": {
-      "MemorySubtree": 179
+      "MemorySubtree": 175
     },
     "112": {
-      "MemorySubtree": 183
+      "MemorySubtree": 178
     },
     "113": {
-      "MemorySubtree": 184
+      "MemorySubtree": 179
     },
     "114": {
-      "MemorySubtree": 188
+      "MemorySubtree": 182
     },
     "115": {
-      "MemorySubtree": 189
+      "MemorySubtree": 183
     },
     "116": {
-      "MemorySubtree": 193
+      "MemorySubtree": 186
     },
     "117": {
-      "MemorySubtree": 194
+      "MemorySubtree": 187
     },
     "118": {
-      "MemorySubtree": 198
+      "MemorySubtree": 190
     },
     "119": {
-      "MemorySubtree": 199
+      "MemorySubtree": 191
     },
     "120": {
-      "MemorySubtree": 203
+      "MemorySubtree": 194
     },
     "121": {
-      "MemorySubtree": 204
+      "MemorySubtree": 195
     },
     "122": {
-      "MemorySubtree": 208
+      "MemorySubtree": 198
     },
     "123": {
-      "MemorySubtree": 209
+      "MemorySubtree": 199
     },
     "124": {
-      "MemorySubtree": 213
+      "MemorySubtree": 202
     },
     "125": {
-      "MemorySubtree": 214
+      "MemorySubtree": 203
     },
     "126": {
-      "MemorySubtree": 218
+      "MemorySubtree": 206
     },
     "127": {
-      "MemorySubtree": 219
+      "MemorySubtree": 207
     },
     "128": {
-      "MemorySubtree": 223
+      "MemorySubtree": 210
     },
     "129": {
-      "MemorySubtree": 224
+      "MemorySubtree": 211
     },
     "130": {
-      "MemorySubtree": 228
+      "MemorySubtree": 214
     },
     "131": {
-      "MemorySubtree": 229
+      "MemorySubtree": 215
     },
     "132": {
-      "MemorySubtree": 233
+      "MemorySubtree": 218
     },
     "133": {
-      "MemorySubtree": 234
+      "MemorySubtree": 219
     },
     "134": {
-      "MemorySubtree": 237
+      "MemorySubtree": 222
     },
     "135": {
-      "MemorySubtree": 238
+      "MemorySubtree": 223
     },
     "136": {
-      "MemorySubtree": 241
+      "MemorySubtree": 226
     },
     "137": {
-      "MemorySubtree": 242
+      "MemorySubtree": 227
     },
     "138": {
       "WitnessSubtree": 3
@@ -33907,193 +33337,148 @@
       "MemorySubtree": 161
     },
     "824": {
-      "MemorySubtree": 162
+      "WitnessSubtree": 156
     },
     "825": {
-      "WitnessSubtree": 156
+      "MemorySubtree": 164
     },
     "826": {
       "MemorySubtree": 165
     },
     "827": {
-      "MemorySubtree": 166
-    },
-    "828": {
-      "MemorySubtree": 167
-    },
-    "829": {
       "WitnessSubtree": 157
     },
+    "828": {
+      "MemorySubtree": 168
+    },
+    "829": {
+      "MemorySubtree": 169
+    },
     "830": {
-      "MemorySubtree": 170
-    },
-    "831": {
-      "MemorySubtree": 171
-    },
-    "832": {
-      "MemorySubtree": 172
-    },
-    "833": {
       "WitnessSubtree": 158
     },
-    "834": {
-      "MemorySubtree": 175
+    "831": {
+      "MemorySubtree": 172
     },
-    "835": {
-      "MemorySubtree": 176
+    "832": {
+      "MemorySubtree": 173
     },
-    "836": {
-      "MemorySubtree": 177
-    },
-    "837": {
+    "833": {
       "WitnessSubtree": 159
     },
-    "838": {
-      "MemorySubtree": 180
+    "834": {
+      "MemorySubtree": 176
     },
-    "839": {
-      "MemorySubtree": 181
+    "835": {
+      "MemorySubtree": 177
     },
-    "840": {
-      "MemorySubtree": 182
-    },
-    "841": {
+    "836": {
       "WitnessSubtree": 160
     },
-    "842": {
-      "MemorySubtree": 185
+    "837": {
+      "MemorySubtree": 180
     },
-    "843": {
-      "MemorySubtree": 186
+    "838": {
+      "MemorySubtree": 181
     },
-    "844": {
-      "MemorySubtree": 187
-    },
-    "845": {
+    "839": {
       "WitnessSubtree": 161
     },
-    "846": {
-      "MemorySubtree": 190
+    "840": {
+      "MemorySubtree": 184
     },
-    "847": {
-      "MemorySubtree": 191
+    "841": {
+      "MemorySubtree": 185
     },
-    "848": {
-      "MemorySubtree": 192
-    },
-    "849": {
+    "842": {
       "WitnessSubtree": 162
     },
-    "850": {
-      "MemorySubtree": 195
+    "843": {
+      "MemorySubtree": 188
     },
-    "851": {
-      "MemorySubtree": 196
+    "844": {
+      "MemorySubtree": 189
     },
-    "852": {
-      "MemorySubtree": 197
-    },
-    "853": {
+    "845": {
       "WitnessSubtree": 163
     },
-    "854": {
-      "MemorySubtree": 200
+    "846": {
+      "MemorySubtree": 192
     },
-    "855": {
-      "MemorySubtree": 201
+    "847": {
+      "MemorySubtree": 193
     },
-    "856": {
-      "MemorySubtree": 202
-    },
-    "857": {
+    "848": {
       "WitnessSubtree": 164
     },
-    "858": {
-      "MemorySubtree": 205
+    "849": {
+      "MemorySubtree": 196
     },
-    "859": {
-      "MemorySubtree": 206
+    "850": {
+      "MemorySubtree": 197
     },
-    "860": {
-      "MemorySubtree": 207
-    },
-    "861": {
+    "851": {
       "WitnessSubtree": 165
     },
-    "862": {
-      "MemorySubtree": 210
+    "852": {
+      "MemorySubtree": 200
     },
-    "863": {
-      "MemorySubtree": 211
+    "853": {
+      "MemorySubtree": 201
     },
-    "864": {
-      "MemorySubtree": 212
-    },
-    "865": {
+    "854": {
       "WitnessSubtree": 166
     },
-    "866": {
-      "MemorySubtree": 215
+    "855": {
+      "MemorySubtree": 204
     },
-    "867": {
-      "MemorySubtree": 216
+    "856": {
+      "MemorySubtree": 205
     },
-    "868": {
-      "MemorySubtree": 217
-    },
-    "869": {
+    "857": {
       "WitnessSubtree": 167
     },
-    "870": {
-      "MemorySubtree": 220
+    "858": {
+      "MemorySubtree": 208
     },
-    "871": {
-      "MemorySubtree": 221
+    "859": {
+      "MemorySubtree": 209
     },
-    "872": {
-      "MemorySubtree": 222
-    },
-    "873": {
+    "860": {
       "WitnessSubtree": 168
     },
-    "874": {
-      "MemorySubtree": 225
+    "861": {
+      "MemorySubtree": 212
     },
-    "875": {
-      "MemorySubtree": 226
+    "862": {
+      "MemorySubtree": 213
     },
-    "876": {
-      "MemorySubtree": 227
-    },
-    "877": {
+    "863": {
       "WitnessSubtree": 169
     },
-    "878": {
-      "MemorySubtree": 230
+    "864": {
+      "MemorySubtree": 216
     },
-    "879": {
-      "MemorySubtree": 231
+    "865": {
+      "MemorySubtree": 217
     },
-    "880": {
-      "MemorySubtree": 232
-    },
-    "881": {
+    "866": {
       "WitnessSubtree": 170
     },
-    "882": {
-      "MemorySubtree": 235
+    "867": {
+      "MemorySubtree": 220
     },
-    "883": {
-      "MemorySubtree": 236
+    "868": {
+      "MemorySubtree": 221
     },
-    "884": {
+    "869": {
       "WitnessSubtree": 171
     },
-    "885": {
-      "MemorySubtree": 239
+    "870": {
+      "MemorySubtree": 224
     },
-    "886": {
-      "MemorySubtree": 240
+    "871": {
+      "MemorySubtree": 225
     }
   },
   "scratch_space_size_for_witness_gen": 0,
