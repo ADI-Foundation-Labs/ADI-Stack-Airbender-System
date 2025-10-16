@@ -892,13 +892,13 @@ const MAX_SHUFFLE_RAM_ACCESSES: usize = 3;
 pub struct ShuffleRamAccesses {
     pub accesses: [ShuffleRamAccess; MAX_SHUFFLE_RAM_ACCESSES],
     pub num_accesses: u32,
-    pub write_timestamp_in_setup_start: u32,
+    pub write_timestamp_start: u32,
 }
 
 impl ShuffleRamAccesses {
     pub fn new(
         shuffle_ram_access_sets: &Vec<ShuffleRamQueryColumns>,
-        write_timestamp_in_setup_start: usize,
+        write_timestamp_start: usize,
     ) -> Self {
         let mut accesses = [ShuffleRamAccess::default(); MAX_SHUFFLE_RAM_ACCESSES];
         let num_accesses = shuffle_ram_access_sets.len();
@@ -955,7 +955,7 @@ impl ShuffleRamAccesses {
         Self {
             accesses,
             num_accesses: num_accesses as u32,
-            write_timestamp_in_setup_start: write_timestamp_in_setup_start as u32,
+            write_timestamp_start: write_timestamp_start as u32,
         }
     }
 }
@@ -965,7 +965,7 @@ impl Default for ShuffleRamAccesses {
         Self {
             accesses: [ShuffleRamAccess::default(); MAX_SHUFFLE_RAM_ACCESSES],
             num_accesses: 0,
-            write_timestamp_in_setup_start: 0,
+            write_timestamp_start: 0,
         }
     }
 }

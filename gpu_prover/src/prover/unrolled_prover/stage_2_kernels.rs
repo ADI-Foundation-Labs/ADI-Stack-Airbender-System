@@ -365,17 +365,7 @@ pub fn compute_stage_2_args_on_main_domain(
     }
 
     if process_delegations {
-        assert!(!handle_delegation_requests);
-        stage2_process_delegations(
-            &delegation_challenges,
-            delegation_type,
-            &delegation_processor_layout,
-            memory_cols,
-            d_stage_2_e4_cols,
-            translate_e4_offset(delegation_processing_aux_poly.start()),
-            log_n,
-            stream,
-        )?;
+        panic!("Requires non-unrolled compute_stage_2_args_on_main_domain");
     }
 
     stage2_process_range_check_16_trivial_checks(
@@ -442,21 +432,21 @@ pub fn compute_stage_2_args_on_main_domain(
         stream,
     )?;
 
-    stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution(
-        &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
-        setup_cols,
-        witness_cols,
-        memory_cols,
-        aggregated_entry_invs_for_timestamp_range_checks,
-        d_stage_2_bf_cols,
-        d_stage_2_e4_cols,
-        num_stage_2_bf_cols,
-        num_stage_2_e4_cols,
-        memory_timestamp_high_from_circuit_idx,
-        log_n,
-        &translate_e4_offset,
-        stream,
-    )?;
+    // stage2_process_timestamp_range_check_expressions_with_extra_timestamp_contribution(
+    //     &timestamp_range_check_width_1_lookups_access_via_expressions_for_shuffle_ram,
+    //     setup_cols,
+    //     witness_cols,
+    //     memory_cols,
+    //     aggregated_entry_invs_for_timestamp_range_checks,
+    //     d_stage_2_bf_cols,
+    //     d_stage_2_e4_cols,
+    //     num_stage_2_bf_cols,
+    //     num_stage_2_e4_cols,
+    //     memory_timestamp_high_from_circuit_idx,
+    //     log_n,
+    //     &translate_e4_offset,
+    //     stream,
+    // )?;
 
     if circuit
         .stage_2_layout
@@ -500,7 +490,6 @@ pub fn compute_stage_2_args_on_main_domain(
         &memory_argument_challenges,
         &machine_state_argument_challenges,
         lazy_init_teardown_layouts,
-        setup_cols,
         memory_cols,
         d_stage_2_e4_cols,
         log_n,
@@ -509,7 +498,7 @@ pub fn compute_stage_2_args_on_main_domain(
     )?;
 
     if process_registers_and_indirect_access {
-        panic!("Requires non-unrolled stage_2_kernels");
+        panic!("Requires non-unrolled compute_stage_2_args_on_main_domain");
     }
 
     // quick and dirty c0 = 0 adjustment for bf cols

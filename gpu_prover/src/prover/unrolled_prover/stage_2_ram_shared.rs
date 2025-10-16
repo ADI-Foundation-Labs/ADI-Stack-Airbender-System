@@ -39,7 +39,6 @@ cuda_kernel!(
     lazy_init_teardown_layouts: LazyInitTeardownLayouts,
     shuffle_ram_accesses: ShuffleRamAccesses,
     machine_state_layout: MachineStateLayout,
-    setup_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     ram_access_args_start: u32,
@@ -106,7 +105,6 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
     memory_challenges: &ExternalMemoryArgumentChallenges,
     machine_state_challenges: &ExternalMachineStateArgumentChallenges,
     lazy_init_teardown_layouts: LazyInitTeardownLayouts,
-    setup_cols: PtrAndStride<BF>,
     memory_cols: PtrAndStride<BF>,
     stage_2_e4_cols: MutPtrAndStride<BF>,
     log_n: u32,
@@ -130,8 +128,14 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
     let process_ram_access = intermediate_polys_for_memory_argument.num_elements() > 0;
     let process_mask = intermediate_polys_for_permutation_masking.num_elements() > 0;
     let (shuffle_ram_accesses, ram_access_args_start) = if process_ram_access {
+        let cycle_timestamp_columns = circuit
+            .memory_layout
+            .intermediate_state_layout
+            .unwrap()
+            .timestamp;
         let shuffle_ram_access_sets = &circuit.memory_layout.shuffle_ram_access_sets;
-        let shuffle_ram_accesses = ShuffleRamAccesses::new(shuffle_ram_access_sets, 0);
+        let shuffle_ram_accesses =
+            ShuffleRamAccesses::new(shuffle_ram_access_sets, cycle_timestamp_columns.start());
         let ram_access_args_start =
             translate_e4_offset(intermediate_polys_for_memory_argument.start());
         (shuffle_ram_accesses, ram_access_args_start)
@@ -157,7 +161,6 @@ pub(crate) fn stage2_process_unrolled_grand_product_contributions<F: Fn(usize) -
         lazy_init_teardown_layouts,
         shuffle_ram_accesses,
         machine_state_layout,
-        setup_cols,
         memory_cols,
         stage_2_e4_cols,
         ram_access_args_start as u32,

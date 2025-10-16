@@ -281,7 +281,7 @@ struct ShuffleRamAccess {
 struct ShuffleRamAccesses {
   const ShuffleRamAccess accesses[MAX_SHUFFLE_RAM_ACCESSES];
   const unsigned num_accesses;
-  const unsigned write_timestamp_in_setup_start;
+  const unsigned write_timestamp_start;
 };
 
 struct RegisterAccess {

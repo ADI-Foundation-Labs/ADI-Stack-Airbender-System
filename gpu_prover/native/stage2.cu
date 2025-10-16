@@ -425,17 +425,22 @@ void grand_product_lazy_init_contributions(const MemoryChallenges &challenges,
   }
 }
 
-DEVICE_FORCEINLINE
+template <bool UNROLLED> DEVICE_FORCEINLINE
 void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
                                             const ShuffleRamAccesses &shuffle_ram_accesses,
-                                            matrix_getter<bf, ld_modifier::cs> setup_cols,
+                                            matrix_getter<bf, ld_modifier::cs> memory_or_setup_cols,
                                             matrix_getter<bf, ld_modifier::cs> memory_cols,
                                             vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                             const bf memory_timestamp_high_from_circuit_idx,
-                                            const unsigned memory_args_start, e4 &num_over_denom_acc) {
-  // first, read a couple values common across accesses:
-  const bf write_timestamp_in_setup_low = setup_cols.get_at_col(shuffle_ram_accesses.write_timestamp_in_setup_start);
-  const bf write_timestamp_in_setup_high = setup_cols.get_at_col(shuffle_ram_accesses.write_timestamp_in_setup_start + 1);
+                                            const unsigned memory_args_start,
+                                            const bool num_over_denom_acc_is_initialized,
+                                            e4 &num_over_denom_acc) {
+  // first, compute a couple values common across accesses:
+  const bf write_timestamp_for_shuffle_ram_low = memory_or_setup_cols.get_at_col(shuffle_ram_accesses.write_timestamp_start);
+  const bf write_timestamp_for_shuffle_ram_high = memory_or_setup_cols.get_at_col(shuffle_ram_accesses.write_timestamp_start + 1);
+  const bf write_timestamp_high = UNROLLED ? write_timestamp_for_shuffle_ram_high :
+      bf::add(write_timestamp_for_shuffle_ram_high, memory_timestamp_high_from_circuit_idx);
+  const e4 write_timestamp_high_contribution = e4::mul(challenges.timestamp_high_challenge, write_timestamp_high);
 #pragma unroll 1
   for (unsigned i = 0; i < shuffle_ram_accesses.num_accesses; i++) {
     const auto &access = shuffle_ram_accesses.accesses[i];
@@ -488,13 +493,18 @@ void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
     denom = e4::add(denom, e4::mul(challenges.timestamp_high_challenge, read_timestamp_high));
 
     const bf access_index{i};
-    const bf write_timestamp_low = bf::add(write_timestamp_in_setup_low, access_index);
+    const bf write_timestamp_low = bf::add(write_timestamp_for_shuffle_ram_low, access_index);
     numerator = e4::add(numerator, e4::mul(challenges.timestamp_low_challenge, write_timestamp_low));
-    const bf write_timestamp_high = bf::add(write_timestamp_in_setup_high, memory_timestamp_high_from_circuit_idx);
-    numerator = e4::add(numerator, e4::mul(challenges.timestamp_high_challenge, write_timestamp_high));
+    // const bf write_timestamp_high = bf::add(write_timestamp_for_shuffle_ram_high, memory_timestamp_high_from_circuit_idx);
+    // numerator = e4::add(numerator, e4::mul(challenges.timestamp_high_challenge, write_timestamp_high));
+    numerator = e4::add(numerator, write_timestamp_high_contribution);
 
     // flush result
-    num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
+    if (UNROLLED && !num_over_denom_acc_is_initialized) {
+      num_over_denom_acc = numerator;
+    } else {
+      num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
+    }
     const e4 denom_inv{e4::inv(denom)};
     num_over_denom_acc = e4::mul(num_over_denom_acc, denom_inv);
     stage_2_e4_cols.set_at_col(memory_args_start + i, num_over_denom_acc);
@@ -524,19 +534,8 @@ EXTERN __launch_bounds__(128, 8) __global__
 
   grand_product_lazy_init_contributions(challenges, lazy_init_teardown_layouts, memory_cols, stage_2_e4_cols, num_over_denom_acc);
 
-  grand_product_ram_access_contributions(challenges, shuffle_ram_accesses, setup_cols, memory_cols, stage_2_e4_cols,
-                                         memory_timestamp_high_from_circuit_idx, memory_args_start, num_over_denom_acc);
-}
-
-DEVICE_FORCEINLINE
-void grand_product_ram_access_contributions(const MemoryChallenges &challenges,
-                                            const ShuffleRamAccesses &shuffle_ram_accesses,
-                                            matrix_getter<bf, ld_modifier::cs> setup_cols,
-                                            matrix_getter<bf, ld_modifier::cs> memory_cols,
-                                            vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
-                                            const unsigned memory_args_start,
-                                            const bool num_over_denom_acc_is_initialized,
-                                            e4 &num_over_denom_acc) {
+  grand_product_ram_access_contributions<false>(challenges, shuffle_ram_accesses, setup_cols, memory_cols, stage_2_e4_cols,
+                                                memory_timestamp_high_from_circuit_idx, memory_args_start, true, num_over_denom_acc);
 }
 
 DEVICE_FORCEINLINE
@@ -544,6 +543,7 @@ void grand_product_machine_state_contributions(const MachineStateChallenges &cha
                                                const MachineStateLayout &layout,
                                                matrix_getter<bf, ld_modifier::cs> memory_cols,
                                                vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
+                                               const bool num_over_denom_acc_is_initialized,
                                                e4 &num_over_denom_acc) {
   e4 numerator{challenges.additive_term};
   numerator = e4::add(numerator, memory_cols.get_at_col(layout.final_pc_start));
@@ -551,7 +551,11 @@ void grand_product_machine_state_contributions(const MachineStateChallenges &cha
 #pragma unroll
   for (unsigned i = 0; i < 3; i++)
     numerator = e4::add(numerator, e4::mul(challenges.linearization_challenges[0], memory_cols.get_at_col(final_cols[i])));
-  num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
+  if (num_over_denom_acc_is_initialized) {
+    num_over_denom_acc = e4::mul(num_over_denom_acc, numerator);
+  } else {
+    num_over_denom_acc = numerator;
+  }
 
   e4 denom{challenges.additive_term};
   denom = e4::add(denom, memory_cols.get_at_col(layout.initial_pc_start));
@@ -572,7 +576,6 @@ EXTERN __launch_bounds__(128, 8) __global__
                                                         __grid_constant__ const LazyInitTeardownLayouts lazy_init_teardown_layouts,
                                                         __grid_constant__ const ShuffleRamAccesses shuffle_ram_accesses,
                                                         __grid_constant__ const MachineStateLayout machine_state_layout,
-                                                        matrix_getter<bf, ld_modifier::cs> setup_cols,
                                                         matrix_getter<bf, ld_modifier::cs> memory_cols,
                                                         vectorized_e4_matrix_setter<st_modifier::cs> stage_2_e4_cols,
                                                         const unsigned ram_access_args_start,
@@ -588,7 +591,6 @@ EXTERN __launch_bounds__(128, 8) __global__
     return;
 
   stage_2_e4_cols.add_row(gid);
-  setup_cols.add_row(gid);
   memory_cols.add_row(gid);
 
   e4 num_over_denom_acc{};
@@ -599,13 +601,15 @@ EXTERN __launch_bounds__(128, 8) __global__
     num_over_denom_acc_is_initialized = true;
   }
 
-  // if (process_ram_access) {
-  //   grand_product_unrolled_ram_access_contributions();
-  // }
+  if (process_ram_access) {
+    grand_product_ram_access_contributions<true>(memory_challenges, shuffle_ram_accesses, memory_cols, memory_cols, stage_2_e4_cols,
+                                                 bf::zero(), ram_access_args_start, num_over_denom_acc_is_initialized, num_over_denom_acc);
+    num_over_denom_acc_is_initialized = true;
+  }
 
   if (machine_state_layout.process_machine_state) {
     grand_product_machine_state_contributions(machine_state_challenges, machine_state_layout, memory_cols, stage_2_e4_cols,
-                                              num_over_denom_acc);
+                                              num_over_denom_acc_is_initialized, num_over_denom_acc);
   }
 
   // apply mask
