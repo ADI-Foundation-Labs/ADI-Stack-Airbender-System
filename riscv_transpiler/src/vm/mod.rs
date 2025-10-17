@@ -216,10 +216,10 @@ impl<C: Counters> VM<C> {
                             binary::and::<C, S, R, true>(state, ram, snapshotter, instr)
                         }
                         InstructionName::Or => {
-                            binary::and::<C, S, R, false>(state, ram, snapshotter, instr)
+                            binary::or::<C, S, R, false>(state, ram, snapshotter, instr)
                         }
                         InstructionName::Ori => {
-                            binary::and::<C, S, R, true>(state, ram, snapshotter, instr)
+                            binary::or::<C, S, R, true>(state, ram, snapshotter, instr)
                         }
                         InstructionName::Sll => {
                             shifts::sll::<C, S, R, false>(state, ram, snapshotter, instr)
