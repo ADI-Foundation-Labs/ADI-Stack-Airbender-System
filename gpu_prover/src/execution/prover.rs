@@ -44,6 +44,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Deref;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 use trace_and_split::{fs_transform_for_memory_and_delegation_arguments, FinalRegisterValue};
@@ -271,6 +272,26 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         }
     }
 
+    /// Returns a chunk's allocator to the shared pool, the same way the result arms do.
+    fn release_setup_and_teardown(&self, chunk: Option<ShuffleRamSetupAndTeardown<A>>) {
+        let Some(chunk) = chunk else {
+            return;
+        };
+        let allocator = chunk.lazy_init_data.allocator().clone();
+        drop(chunk);
+        assert_eq!(allocator.get_used_mem_current(), 0);
+        self.free_allocator_sender.send(allocator).unwrap();
+    }
+
+    /// Returns a cycles chunk's allocator to the shared pool.
+    fn release_cycles(&self, chunk: CycleTracingData<A>) {
+        let allocator = chunk.per_cycle_data.allocator().clone();
+        drop(chunk);
+        assert_eq!(allocator.get_used_mem_current(), 0);
+        self.free_allocator_sender.send(allocator).unwrap();
+    }
+
+    /// `None` means the run was cancelled through `cancel` and its results are incomplete.
     fn get_results(
         &self,
         proving: bool,
@@ -280,13 +301,14 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         num_instances_upper_bound: usize,
         non_determinism_source: impl NonDeterminism + Send + Sync + 'static,
         external_challenges: Option<ExternalChallenges>,
-    ) -> (
+        cancel: Option<&Arc<AtomicBool>>,
+    ) -> Option<(
         [FinalRegisterValue; 32],
         Vec<Vec<MerkleTreeCapVarLength>>,
         Vec<(u32, Vec<Vec<MerkleTreeCapVarLength>>)>,
         Vec<Proof>,
         Vec<(u32, Vec<Proof>)>,
-    ) {
+    )> {
         assert!(proving ^ external_challenges.is_none());
         let binary = &self.binaries[&binary_key];
         let trace_len = binary.precomputations.compiled_circuit.trace_len;
@@ -468,7 +490,17 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 gpu_work_requests_sender.send(request).unwrap();
             };
         let mut send_main_work_request = Some(send_main_work_request);
+        let mut cancelled = false;
         for result in worker_results_receiver {
+            if !cancelled && cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+                info!("BATCH[{batch_id}] PROVER cancelled, draining work in flight");
+                cancelled = true;
+                // Dropping every request sender closes the channel, so the GPU manager
+                // finishes what it already has and drops its result sender. That is what
+                // ends this loop: there is no early exit, so no buffer is left unreturned.
+                send_main_work_request = None;
+                delegation_work_sender = None;
+            }
             match result {
                 WorkerResult::SetupAndTeardownChunk(chunk) => {
                     let SetupAndTeardownChunk {
@@ -476,7 +508,13 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                         chunk: setup_and_teardown_chunk,
                     } = chunk;
                     trace!("BATCH[{batch_id}] PROVER received setup and teardown chunk {index}");
-                    if let Some(cycles_chunk) = cycles_chunks.remove(&index) {
+                    let cycles_chunk = cycles_chunks.remove(&index);
+                    if cancelled {
+                        self.release_setup_and_teardown(setup_and_teardown_chunk);
+                        if let Some(cycles_chunk) = cycles_chunk {
+                            self.release_cycles(cycles_chunk);
+                        }
+                    } else if let Some(cycles_chunk) = cycles_chunk {
                         let send = send_main_work_request.as_ref().unwrap();
                         send(index, setup_and_teardown_chunk, cycles_chunk);
                         main_work_requests_count += 1;
@@ -496,8 +534,13 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 WorkerResult::CyclesChunk(chunk) => {
                     let CyclesChunk { index, data } = chunk;
                     trace!("BATCH[{batch_id}] PROVER received cycles chunk {index}");
-                    if let Some(setup_and_teardown_chunk) = setup_and_teardown_chunks.remove(&index)
-                    {
+                    let setup_and_teardown_chunk = setup_and_teardown_chunks.remove(&index);
+                    if cancelled {
+                        self.release_cycles(data);
+                        if let Some(chunk) = setup_and_teardown_chunk {
+                            self.release_setup_and_teardown(chunk);
+                        }
+                    } else if let Some(setup_and_teardown_chunk) = setup_and_teardown_chunk {
                         let send = send_main_work_request.as_ref().unwrap();
                         send(index, setup_and_teardown_chunk, data);
                         main_work_requests_count += 1;
@@ -518,8 +561,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 } => {
                     let id = witness.delegation_type;
                     let delegation_circuit_type = DelegationCircuitType::from(id);
-                    if witness.write_timestamp.is_empty() {
-                        trace!("BATCH[{batch_id}] PROVER skipping empty delegation circuit {delegation_circuit_type:?} chunk {circuit_sequence}");
+                    if cancelled || witness.write_timestamp.is_empty() {
+                        trace!("BATCH[{batch_id}] PROVER skipping delegation circuit {delegation_circuit_type:?} chunk {circuit_sequence}");
                         let allocator = witness.write_timestamp.allocator().clone();
                         drop(witness);
                         assert_eq!(allocator.get_used_mem_current(), 0);
@@ -710,6 +753,17 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 }
             }
         }
+        if cancelled {
+            // Chunks that never got paired into a work request still hold pool memory.
+            for (_, chunk) in setup_and_teardown_chunks {
+                self.release_setup_and_teardown(chunk);
+            }
+            for (_, chunk) in cycles_chunks {
+                self.release_cycles(chunk);
+            }
+            info!("BATCH[{batch_id}] PROVER cancelled, work drained");
+            return None;
+        }
         assert!(send_main_work_request.is_none());
         assert!(delegation_work_sender.is_none());
         assert!(setup_and_teardown_chunks.is_empty());
@@ -769,13 +823,13 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 (t as u32, proofs)
             })
             .collect_vec();
-        (
+        Some((
             final_register_values,
             main_memory_commitments,
             delegation_memory_commitments,
             main_proofs,
             delegation_proofs,
-        )
+        ))
     }
 
     fn commit_memory_inner(
@@ -785,11 +839,12 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         binary_key: &K,
         num_instances_upper_bound: usize,
         non_determinism_source: impl NonDeterminism + Send + Sync + 'static,
-    ) -> (
+        cancel: Option<&Arc<AtomicBool>>,
+    ) -> Option<(
         [FinalRegisterValue; 32],
         Vec<Vec<MerkleTreeCapVarLength>>,
         Vec<(u32, Vec<Vec<MerkleTreeCapVarLength>>)>,
-    ) {
+    )> {
         info!(
             "BATCH[{batch_id}] PROVER producing memory commitments for binary with key {:?}",
             &binary_key
@@ -809,7 +864,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             num_instances_upper_bound,
             non_determinism_source,
             None,
-        );
+            cancel,
+        )?;
         assert!(main_proofs.is_empty());
         assert!(delegation_proofs.is_empty());
         info!(
@@ -817,11 +873,11 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             binary_key,
             timer.elapsed().as_secs_f64()
         );
-        (
+        Some((
             final_register_values,
             main_memory_commitments,
             delegation_memory_commitments,
-        )
+        ))
     }
 
     ///  Produces memory commitments.
@@ -855,7 +911,9 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             binary_key,
             num_instances_upper_bound,
             non_determinism_source,
+            None,
         )
+        .expect("cancellation is disabled")
     }
 
     fn prove_inner(
@@ -866,7 +924,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         num_instances_upper_bound: usize,
         non_determinism_source: impl NonDeterminism + Send + Sync + 'static,
         external_challenges: ExternalChallenges,
-    ) -> ([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>) {
+        cancel: Option<&Arc<AtomicBool>>,
+    ) -> Option<([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>)> {
         info!(
             "BATCH[{batch_id}] PROVER producing proofs for binary with key {:?}",
             &binary_key
@@ -886,7 +945,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             num_instances_upper_bound,
             non_determinism_source,
             Some(external_challenges),
-        );
+            cancel,
+        )?;
         assert!(main_memory_commitments.is_empty());
         assert!(delegation_memory_commitments.is_empty());
         info!(
@@ -894,7 +954,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             binary_key,
             timer.elapsed().as_secs_f64()
         );
-        (final_register_values, main_proofs, delegation_proofs)
+        Some((final_register_values, main_proofs, delegation_proofs))
     }
 
     ///  Produces proofs.
@@ -927,7 +987,9 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             num_instances_upper_bound,
             non_determinism_source,
             external_challenges,
+            None,
         )
+        .expect("cancellation is disabled")
     }
 
     ///  Commits to memory and produces proofs using challenge derived from the memory commitments.
@@ -951,6 +1013,29 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         num_instances_upper_bound: usize,
         non_determinism_source: impl NonDeterminism + Clone + Send + Sync + 'static,
     ) -> ([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>) {
+        self.commit_memory_and_prove_cancellable(
+            batch_id,
+            binary_key,
+            num_instances_upper_bound,
+            non_determinism_source,
+            None,
+        )
+        .expect("cancellation is disabled")
+    }
+
+    /// As `commit_memory_and_prove`, but returns `None` once `cancel` is set.
+    ///
+    /// Cancellation is cooperative and checked between GPU work items: in-flight work is
+    /// drained rather than abandoned, so every pool buffer is returned and the next batch
+    /// on this long-lived prover is unaffected.
+    pub fn commit_memory_and_prove_cancellable(
+        &self,
+        batch_id: u64,
+        binary_key: &K,
+        num_instances_upper_bound: usize,
+        non_determinism_source: impl NonDeterminism + Clone + Send + Sync + 'static,
+        cancel: Option<&Arc<AtomicBool>>,
+    ) -> Option<([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>)> {
         let timer = Instant::now();
         let cache_capacity = self.device_count * 2;
         let mut chunks_cache = Some(ChunksCache::new(cache_capacity));
@@ -961,7 +1046,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
                 binary_key,
                 num_instances_upper_bound,
                 non_determinism_source.clone(),
-            );
+                cancel,
+            )?;
         let maximum_cached_count = if CACHE_DELEGATIONS {
             main_memory_commitments.len()
                 + delegation_memory_commitments
@@ -1001,7 +1087,8 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             num_instances_upper_bound,
             non_determinism_source,
             external_challenges,
-        );
+            cancel,
+        )?;
         assert!(chunks_cache.is_none());
         let (prove_final_register_values, main_proofs, delegation_proofs) = &result;
         assert_eq!(&final_register_values, prove_final_register_values);
@@ -1030,7 +1117,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             binary_key,
             timer.elapsed().as_secs_f64()
         );
-        result
+        Some(result)
     }
 
     fn spawn_cpu_worker(
