@@ -52,6 +52,14 @@ use worker::Worker;
 
 type A = ConcurrentStaticHostAllocator;
 
+/// Result of a cancellable call made without a cancel token, where `None` cannot occur.
+fn uncancelled<T>(result: Option<T>) -> T {
+    match result {
+        Some(value) => value,
+        None => unreachable!("proving reported cancellation without a cancel token"),
+    }
+}
+
 const CPU_WORKERS_COUNT: usize = 6;
 const CYCLES_TRACING_WORKERS_COUNT: usize = CPU_WORKERS_COUNT - 2;
 const CACHE_DELEGATIONS: bool = false;
@@ -272,7 +280,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         }
     }
 
-    /// Returns a chunk's allocator to the shared pool, the same way the result arms do.
+    /// Returns a chunk's allocator to the shared pool.
     fn release_setup_and_teardown(&self, chunk: Option<ShuffleRamSetupAndTeardown<A>>) {
         let Some(chunk) = chunk else {
             return;
@@ -495,9 +503,9 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             if !cancelled && cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
                 info!("BATCH[{batch_id}] PROVER cancelled, draining work in flight");
                 cancelled = true;
-                // Dropping every request sender closes the channel, so the GPU manager
-                // finishes what it already has and drops its result sender. That is what
-                // ends this loop: there is no early exit, so no buffer is left unreturned.
+                // Closing the request channel makes the manager finish what it holds and
+                // drop its result sender, which is what ends this loop. No early exit,
+                // so no buffer is left unreturned.
                 send_main_work_request = None;
                 delegation_work_sender = None;
             }
@@ -905,15 +913,14 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         Vec<Vec<MerkleTreeCapVarLength>>,
         Vec<(u32, Vec<Vec<MerkleTreeCapVarLength>>)>,
     ) {
-        self.commit_memory_inner(
+        uncancelled(self.commit_memory_inner(
             &mut None,
             batch_id,
             binary_key,
             num_instances_upper_bound,
             non_determinism_source,
             None,
-        )
-        .expect("cancellation is disabled")
+        ))
     }
 
     fn prove_inner(
@@ -980,7 +987,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         non_determinism_source: impl NonDeterminism + Send + Sync + 'static,
         external_challenges: ExternalChallenges,
     ) -> ([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>) {
-        self.prove_inner(
+        uncancelled(self.prove_inner(
             &mut None,
             batch_id,
             binary_key,
@@ -988,8 +995,7 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
             non_determinism_source,
             external_challenges,
             None,
-        )
-        .expect("cancellation is disabled")
+        ))
     }
 
     ///  Commits to memory and produces proofs using challenge derived from the memory commitments.
@@ -1013,21 +1019,18 @@ impl<K: Clone + Debug + Eq + Hash> ExecutionProver<K> {
         num_instances_upper_bound: usize,
         non_determinism_source: impl NonDeterminism + Clone + Send + Sync + 'static,
     ) -> ([FinalRegisterValue; 32], Vec<Proof>, Vec<(u32, Vec<Proof>)>) {
-        self.commit_memory_and_prove_cancellable(
+        uncancelled(self.commit_memory_and_prove_cancellable(
             batch_id,
             binary_key,
             num_instances_upper_bound,
             non_determinism_source,
             None,
-        )
-        .expect("cancellation is disabled")
+        ))
     }
 
     /// As `commit_memory_and_prove`, but returns `None` once `cancel` is set.
     ///
-    /// Cancellation is cooperative and checked between GPU work items: in-flight work is
-    /// drained rather than abandoned, so every pool buffer is returned and the next batch
-    /// on this long-lived prover is unaffected.
+    /// In-flight work is drained rather than abandoned, so every pool buffer is returned.
     pub fn commit_memory_and_prove_cancellable(
         &self,
         batch_id: u64,
