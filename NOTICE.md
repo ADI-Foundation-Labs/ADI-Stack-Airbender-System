@@ -1,7 +1,7 @@
 # Third‑Party Notices
 
 This project includes source code that is © its respective authors and is
-provided under the licences listed below. All other code is © 2025 Matter Labs
+provided under the licences listed below. All other code is © 2025 ADI Foundation
 and released under the licence(s) stated in LICENSE-*.
 
 ---
