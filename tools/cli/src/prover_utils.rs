@@ -12,6 +12,8 @@ use prover::{
     risc_v_simulator::abstractions::non_determinism::QuasiUARTSource,
     transcript::{Blake2sBufferingTranscript, Seed},
 };
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::{alloc::Global, fs, io::Read, path::Path};
 
 #[cfg(feature = "gpu")]
@@ -24,6 +26,14 @@ fn deserialize_from_file<T: serde::de::DeserializeOwned>(filename: &str) -> T {
 pub fn serialize_to_file<T: serde::Serialize>(el: &T, filename: &Path) {
     let mut dst = std::fs::File::create(filename).unwrap();
     serde_json::to_writer_pretty(&mut dst, el).unwrap();
+}
+
+/// Result of a cancellable call made without a cancel token, where `None` cannot occur.
+fn uncancelled<T>(result: Option<T>) -> T {
+    match result {
+        Some(value) => value,
+        None => unreachable!("proving reported cancellation without a cancel token"),
+    }
 }
 
 /// Default amount of cycles, if no flag is set.
@@ -266,6 +276,29 @@ pub fn create_proofs_internal(
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
     total_proof_time: &mut Option<f64>,
 ) -> (ProofList, ProofMetadata) {
+    uncancelled(create_proofs_internal_cancellable(
+        binary,
+        non_determinism_data,
+        machine,
+        num_instances,
+        prev_end_params_output,
+        gpu_shared_state,
+        total_proof_time,
+        None,
+    ))
+}
+
+/// As `create_proofs_internal`, but returns `None` once `cancel` is set.
+pub fn create_proofs_internal_cancellable(
+    binary: &Vec<u32>,
+    non_determinism_data: Vec<u32>,
+    machine: &Machine,
+    num_instances: usize,
+    prev_end_params_output: Option<([u32; 8], Option<[u32; 16]>)>,
+    gpu_shared_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
+    cancel: Option<&Arc<AtomicBool>>,
+) -> Option<(ProofList, ProofMetadata)> {
     let worker = worker::Worker::new();
 
     let mut non_determinism_source = QuasiUARTSource::default();
@@ -285,13 +318,15 @@ pub fn create_proofs_internal(
                     {
                         println!("**** proving using GPU ****");
                         let timer = std::time::Instant::now();
-                        let (final_register_values, basic_proofs, delegation_proofs) =
-                            gpu_shared_state.prover.commit_memory_and_prove(
+                        let prover = &gpu_shared_state.prover;
+                        let (final_register_values, basic_proofs, delegation_proofs) = prover
+                            .commit_memory_and_prove_cancellable(
                                 0,
                                 &GpuSharedState::MAIN_BINARY_KEY,
                                 num_instances,
                                 non_determinism_source,
-                            );
+                                cancel,
+                            )?;
                         let elapsed = timer.elapsed().as_secs_f64();
                         *total_proof_time.as_mut().unwrap() += elapsed;
                         println!("**** proofs generated in {:.3}s ****", elapsed,);
@@ -304,6 +339,8 @@ pub fn create_proofs_internal(
                     #[cfg(not(feature = "gpu"))]
                     {
                         let _ = gpu_shared_state;
+                        let _ = cancel;
+                        let _ = cancel;
                         let _ = total_proof_time;
                         panic!("GPU not enabled - please compile with --features gpu flag.")
                     }
@@ -340,13 +377,15 @@ pub fn create_proofs_internal(
                     {
                         println!("**** proving using GPU ****");
                         let timer = std::time::Instant::now();
-                        let (final_register_values, basic_proofs, delegation_proofs) =
-                            gpu_shared_state.prover.commit_memory_and_prove(
+                        let prover = &gpu_shared_state.prover;
+                        let (final_register_values, basic_proofs, delegation_proofs) = prover
+                            .commit_memory_and_prove_cancellable(
                                 0,
                                 &GpuSharedState::RECURSION_BINARY_KEY,
                                 num_instances,
                                 non_determinism_source,
-                            );
+                                cancel,
+                            )?;
                         let elapsed = timer.elapsed().as_secs_f64();
                         *total_proof_time.as_mut().unwrap() += elapsed;
                         println!("**** proofs generated in {:.3}s ****", elapsed);
@@ -359,6 +398,7 @@ pub fn create_proofs_internal(
                     #[cfg(not(feature = "gpu"))]
                     {
                         let _ = gpu_shared_state;
+                        let _ = cancel;
                         let _ = total_proof_time;
                         panic!("GPU not enabled - please compile with --features gpu flag.")
                     }
@@ -395,13 +435,15 @@ pub fn create_proofs_internal(
                     {
                         println!("**** proving using GPU ****");
                         let timer = std::time::Instant::now();
-                        let (final_register_values, basic_proofs, delegation_proofs) =
-                            gpu_shared_state.prover.commit_memory_and_prove(
+                        let prover = &gpu_shared_state.prover;
+                        let (final_register_values, basic_proofs, delegation_proofs) = prover
+                            .commit_memory_and_prove_cancellable(
                                 0,
                                 &GpuSharedState::RECURSION_BINARY_KEY,
                                 num_instances,
                                 non_determinism_source,
-                            );
+                                cancel,
+                            )?;
                         let elapsed = timer.elapsed().as_secs_f64();
                         *total_proof_time.as_mut().unwrap() += elapsed;
                         println!("**** proofs generated in {:.3}s ****", elapsed);
@@ -414,6 +456,7 @@ pub fn create_proofs_internal(
                     #[cfg(not(feature = "gpu"))]
                     {
                         let _ = gpu_shared_state;
+                        let _ = cancel;
                         let _ = total_proof_time;
                         panic!("GPU not enabled - please compile with --features gpu flag.")
                     }
@@ -489,7 +532,7 @@ pub fn create_proofs_internal(
         prev_end_params_output,
     };
 
-    (proof_list, proof_metadata)
+    Some((proof_list, proof_metadata))
 }
 
 pub fn create_recursion_proofs(
@@ -500,6 +543,27 @@ pub fn create_recursion_proofs(
     gpu_shared_state: &mut Option<&mut GpuSharedState>,
     total_proof_time: &mut Option<f64>,
 ) -> (ProofList, ProofMetadata) {
+    uncancelled(create_recursion_proofs_cancellable(
+        proof_list,
+        proof_metadata,
+        recursion_mode,
+        tmp_dir,
+        gpu_shared_state,
+        total_proof_time,
+        None,
+    ))
+}
+
+/// As `create_recursion_proofs`, but returns `None` once `cancel` is set.
+pub fn create_recursion_proofs_cancellable(
+    proof_list: ProofList,
+    proof_metadata: ProofMetadata,
+    recursion_mode: RecursionStrategy,
+    tmp_dir: &Option<String>,
+    gpu_shared_state: &mut Option<&mut GpuSharedState>,
+    total_proof_time: &mut Option<f64>,
+    cancel: Option<&Arc<AtomicBool>>,
+) -> Option<(ProofList, ProofMetadata)> {
     assert!(
         proof_metadata.basic_proof_count > 0,
         "Recursion proofs can be created only for basic proofs.",
@@ -516,13 +580,17 @@ pub fn create_recursion_proofs(
             break;
         }
 
+        if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            return None;
+        }
+
         println!("*** Starting recursion level {} ***", recursion_level);
         let non_determinism_data = generate_oracle_data_for_universal_verifier(
             &current_proof_metadata,
             &current_proof_list,
         );
 
-        (current_proof_list, current_proof_metadata) = create_proofs_internal(
+        (current_proof_list, current_proof_metadata) = create_proofs_internal_cancellable(
             &binary,
             non_determinism_data,
             &Machine::Reduced,
@@ -530,7 +598,8 @@ pub fn create_recursion_proofs(
             Some(current_proof_metadata.create_prev_metadata()),
             gpu_shared_state,
             total_proof_time,
-        );
+            cancel,
+        )?;
 
         if let Some(tmp_dir) = tmp_dir {
             let base_tmp_dir = Path::new(tmp_dir).join(format!("recursion_{}", recursion_level));
@@ -548,7 +617,7 @@ pub fn create_recursion_proofs(
             break;
         }
     }
-    (current_proof_list, current_proof_metadata)
+    Some((current_proof_list, current_proof_metadata))
 }
 
 pub fn create_final_proofs_from_program_proof(
