@@ -1,8 +1,8 @@
-# ZKsync Airbender
-
-[![Logo](zksync-airbender-logo.png)](https://zksync.io/)
+# ADI Stack Airbender System
 
 This repository contains the RISC-V compilation and proving tools for the ZKsync project, including the transpiler, proving circuits, and utilities for witness generation, proof creation, and verification.
+
+ADI Stack utilizing the [MatterLabs zkOS stack](https://github.com/matter-labs/zksync-airbender)
 
 ## Documentation
 
@@ -34,7 +34,6 @@ The most recent documentation can be found here:
 
 ## Policies
 
-- [Security policy](SECURITY.md)
 - [Contribution policy](CONTRIBUTING.md)
 
 ## License
@@ -52,14 +51,13 @@ Details on third-party notices can be found in [NOTICE.md](./NOTICE.md), in `ACK
 
 ## Official Links
 
-- [Website](https://zksync.io/)
-- [GitHub](https://github.com/matter-labs)
-- [ZK Credo](https://github.com/zksync/credo)
-- [Twitter](https://twitter.com/zksync)
-- [Twitter for Developers](https://twitter.com/zkSyncDevs)
-- [Discord](https://join.zksync.dev/)
-- [Mirror](https://zksync.mirror.xyz/)
-- [Youtube](https://www.youtube.com/@zkSync-era)
+- [Website](https://adi.foundation)
+- [Docs](https://docs.adi.foundation/)
+- [Github](https://github.com/ADI-Foundation-Labs/)
+- [X](https://x.com/adi_foundation)
+- [X for ADI Chain announcements](https://x.com/ADIChain_)
+- [LinkedIn](https://www.linkedin.com/company/adifoundation/)
+- [Discord](http://discord.gg/adi-foundation)
 
 ## Contribution
 
